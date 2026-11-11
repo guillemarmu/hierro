@@ -2137,10 +2137,34 @@ function notifyRestEnd(name){
   if (!notifOK()) return;
   navigator.serviceWorker.ready.then(r => r.showNotification('¡Descanso terminado!', {body: 'A por la siguiente serie' + (name ? ' · ' + name : ''), tag: 'hierro-descanso', renotify: true, requireInteraction: false, silent: false, vibrate: [300, 120, 300, 120, 400], icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: {url: location.href.split('#')[0]}})).catch(() => {});
 }
+// Avisos con la pantalla bloqueada: un pequeño servidor (Cloudflare, ver push/LEEME) manda la notificación a la hora justa
+const Push = {
+  key: 'BGvDf0vxpoJXJQVZJAgTaLAXB_8HVcLiPVYVwlQYfrP1ESWK88xCU0y6FXVV1Y9QitpN9QL7EXpw6MO7d8Qv_ZM',
+  at: null, okAt: null, sub: null,
+  url(){ return ((window.HIERRO_CONFIG || {}).pushUrl || '').replace(/\/$/, ''); },
+  ok(){ return !!this.url() && notifOK() && 'PushManager' in window; },
+  async getSub(){
+    if (this.sub) return this.sub;
+    const reg = await navigator.serviceWorker.ready;
+    let s = await reg.pushManager.getSubscription();
+    if (!s) { const k = atob(this.key.replace(/-/g, '+').replace(/_/g, '/')), u = new Uint8Array(k.length); for (let i = 0; i < k.length; i++) u[i] = k.charCodeAt(i); s = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: u}); }
+    return this.sub = s;
+  },
+  async call(path, body){ const s = await this.getSub(); const r = await fetch(this.url() + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({sub: s.toJSON(), ...body}), keepalive: true}); if (!r.ok) throw new Error('push ' + r.status); },
+  // Mantiene el servidor al día con el descanso actual: programa, reprograma o cancela
+  sync(){
+    if (!this.ok()) return;
+    const want = REST && !REST.fired ? REST.end : null; if (want === this.at) return;
+    const prev = this.at; this.at = want;
+    if (want) { const name = REST.name; this.call('/schedule', {at: want, body: 'A por la siguiente serie' + (name ? ' · ' + name : '')}).then(() => { if (this.at === want) this.okAt = want; }, e => console.warn(e)); }
+    else if (prev && Date.now() < prev - 1500) { this.okAt = null; this.call('/cancel', {at: prev}).catch(() => {}); }
+  }
+};
 async function askNotif(){
   if (!('Notification' in window)) { toast(IS_IOS ? 'Para avisos, abre Hierro desde el icono de la pantalla de inicio' : 'Este navegador no permite avisos'); return false; }
   let p = Notification.permission; if (p === 'default') { try { p = await Notification.requestPermission(); } catch (e) {} }
   S.settings.notif = p === 'granted'; S.settings.notifAsked = true; Store.mark('meta');
+  if (p === 'granted' && Push.url() && 'PushManager' in window) Push.getSub().catch(e => console.warn('push', e));
   toast(p === 'granted' ? 'Avisos activados ✓' : 'Sin permiso: actívalo en los ajustes del móvil (Notificaciones › Hierro)');
   if (tab === 'me' && !ED) render(); return p === 'granted';
 }
@@ -2151,10 +2175,11 @@ function startRest(sec, name){
   clearInterval(restTimer); restTimer = setInterval(drawRest, 250); drawRest();
 }
 function drawRest(){
+  Push.sync();
   const el = $('#rest');
   if (!REST) { el.classList.remove('show', 'done'); clearInterval(restTimer); return; }
   const left = (REST.end - Date.now()) / 1000;
-  if (left <= 0 && !REST.fired) { REST.fired = true; beep(); notifyRestEnd(REST.name); setTimeout(() => { if (REST && REST.fired) { REST = null; drawRest(); } }, 4000); }
+  if (left <= 0 && !REST.fired) { REST.fired = true; beep(); if (Push.okAt !== REST.end) notifyRestEnd(REST.name); setTimeout(() => { if (REST && REST.fired) { REST = null; drawRest(); } }, 4000); }
   el.classList.add('show'); el.classList.toggle('done', left <= 0); el.classList.toggle('up', !(ED && ED.mode === 'active'));
   const C = 150.8, frac = Math.max(0, Math.min(1, left / REST.total));
   el.innerHTML = `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="7"/><circle cx="30" cy="30" r="24" fill="none" stroke="${left > 0 ? 'url(#gforja)' : '#fff'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${left > 0 ? (C * (1 - frac)).toFixed(1) : 0}" transform="rotate(-90 30 30)"/></svg>
@@ -3378,7 +3403,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.2.0';
+const APP_VERSION = '4.3.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
