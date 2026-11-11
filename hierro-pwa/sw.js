@@ -1,6 +1,7 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-3.1.2';
+const VERSION = 'hierro-3.2.0';
+const PHOTOS = 'hierro-fotos'; // fotos de ejercicios: se guardan al verlas y no se borran al actualizar
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './config.js', './fonts/Boldonse-Regular.woff', './fonts/InstrumentSans-Regular.woff', './fonts/InstrumentSans-Bold.woff'];
 
 self.addEventListener('install', e => {
@@ -8,7 +9,7 @@ self.addEventListener('install', e => {
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== PHOTOS).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(); });
@@ -17,6 +18,10 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.hostname === 'raw.githubusercontent.com' && url.pathname.includes('/free-exercise-db/')) {
+    e.respondWith(caches.open(PHOTOS).then(c => c.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }))));
+    return;
+  }
   if (url.origin !== self.location.origin) return;
   // La app: primero lo guardado (abre al instante y sin cobertura), si no, la red
   if (req.mode === 'navigate') {
