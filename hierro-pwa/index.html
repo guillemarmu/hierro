@@ -506,6 +506,10 @@ h3+.sx{border-top:0;padding-top:0}
 .post-body h3{font-family:var(--rotulo);font-weight:700;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
 .post-body p{font-size:15px;margin-top:-8px}
 .post-body .side{display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex:none}
+.post-photo{border-radius:18px;overflow:hidden;background:var(--sup-2);aspect-ratio:4/5;max-height:460px;width:100%;display:block;padding:0}
+.post-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.post.open .post-photo{aspect-ratio:auto;max-height:none;min-height:120px}.post.open .post-photo img{height:auto}
+.fnphoto{display:flex;gap:10px;align-items:center}.fnphoto img{width:72px;height:90px;object-fit:cover;border-radius:12px;flex:none}
 .post-actions{display:flex;gap:6px;border-top:1px solid var(--linea);margin:2px -6px -8px;padding-top:4px}
 .post-actions button{display:flex;align-items:center;gap:7px;min-height:46px;min-width:46px;padding:0 10px;border-radius:12px;color:var(--apagado);font-weight:700;font-size:14.5px}
 .post-actions button:active{background:var(--sup-2)}
@@ -614,6 +618,7 @@ const ICON = {
   heart: SV(`<path d="${FLAME}"/>`),
   heartFill: `<svg viewBox="0 0 24 24"><path d="${FLAME}" fill="url(#gforja)"/></svg>`,
   comment: SV('<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5z"/>'),
+  camera: SV('<path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.5"/>'),
   copy: SV('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
   compare: SV('<path d="M6 20V10M12 20V4M18 20v-7"/>', 2.6),
   share: SV('<path d="M12 15V4M8 7.5l4-4 4 4M5 12.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5.5"/>'),
@@ -1724,7 +1729,7 @@ function viewHome(){
   const todayIdx = (new Date().getDay() + 6) % 7;
   const nx = routineNext();
   let h = updateCard() + installCard(false);
-  if (backupStale()) h += `<div class="card row between"><div class="small">Hace tiempo que no guardas una copia de tus datos.</div><button class="btn sm" data-act="export-json">Descargar copia</button></div>`;
+  if (!Sync.on() && backupStale()) h += `<div class="card row between"><div class="small">Hace tiempo que no guardas una copia de tus datos.</div><button class="btn sm" data-act="export-json">Descargar copia</button></div>`;
   const d = new Date();
   if (d.getDate() <= 7) { const pm = d.getFullYear() * 12 + d.getMonth() - 1; const pmw = S.workouts.filter(w => { const x = new Date(w.start); return x.getFullYear() * 12 + x.getMonth() === pm; }); if (pmw.length) h += `<button class="card tap row between next" data-act="go-month" data-ym="${pm}"><div><span class="pill accent">Nuevo</span><h3 style="margin-top:6px">Tu informe de ${MONTHS[pm % 12]}</h3><div class="small muted">${pmw.length} entrenos · ${fmtKg(agg(pmw).vol)}</div></div>${ICON.back.replace('<svg', '<svg width="22" height="22" style="transform:scaleX(-1)"')}</button>`; }
   const pc = planHomeCard();
@@ -1909,7 +1914,8 @@ function viewMe(){
   h += `<div class="card stack"><h3>Ajustes</h3>
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
-    <label class="row" style="font-weight:600"><input type="checkbox" id="setSound" style="width:auto" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label></div>`;
+    <label class="row" style="font-weight:600"><input type="checkbox" id="setSound" style="width:auto" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
+    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="setNotif" style="width:auto;margin-top:3px" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label></div>`;
   h += `<div class="card stack"><h3>Tus datos</h3>
     <div class="small muted">${Cloud.session ? 'Se guardan en tu cuenta y en este móvil, así que funciona sin conexión y se sube solo cuando vuelve la cobertura. Solo tú puedes verlos.' : 'Se guardan solo en este móvil. Descarga una copia de vez en cuando y siempre antes de cambiar de móvil.'}</div>
     <button class="btn primary" data-act="import-csv">Importar CSV de Hevy</button>
@@ -2115,21 +2121,40 @@ function edTouch(){
 /* ---------- Temporizador de descanso ---------- */
 let REST = null, restTimer = null, audioCtx = null;
 function unlockAudio(){ try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {} }
+// iPhone: no deja vibrar desde la web; el interruptor de silencio corta el sonido salvo que pidamos sesión de audio «transient» (para avisos cortos, baja la música en vez de pararla)
+function haptic(n = 1){
+  if (navigator.vibrate) { try { navigator.vibrate(n > 1 ? [220, 90, 220, 90, 320] : 12); } catch (e) {} return; }
+  for (let k = 0; k < n; k++) setTimeout(() => { try { const l = document.createElement('label'), i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); l.style.display = 'none'; l.appendChild(i); document.body.appendChild(l); l.click(); l.remove(); } catch (e) {} }, k * 180);
+}
 function beep(){
   if (!S.settings.sound) return;
-  try { const t = audioCtx.currentTime; [0, .22, .44].forEach((d, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = i === 2 ? 1320 : 880; g.gain.setValueAtTime(.0001, t + d); g.gain.exponentialRampToValueAtTime(.35, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + .18); o.connect(g).connect(audioCtx.destination); o.start(t + d); o.stop(t + d + .2); }); } catch (e) {}
-  try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+  try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) {}
+  try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); const t = audioCtx.currentTime + .05; [0, .25, .5, .9, 1.15].forEach((d, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'triangle'; o.frequency.value = i % 3 === 2 ? 1320 : 990; g.gain.setValueAtTime(.0001, t + d); g.gain.exponentialRampToValueAtTime(.8, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + .2); o.connect(g).connect(audioCtx.destination); o.start(t + d); o.stop(t + d + .22); }); } catch (e) {}
+  haptic(3);
+}
+const notifOK = () => 'Notification' in window && Notification.permission === 'granted' && S.settings.notif !== false && 'serviceWorker' in navigator;
+function notifyRestEnd(name){
+  if (!notifOK()) return;
+  navigator.serviceWorker.ready.then(r => r.showNotification('¡Descanso terminado!', {body: 'A por la siguiente serie' + (name ? ' · ' + name : ''), tag: 'hierro-descanso', renotify: true, requireInteraction: false, silent: false, vibrate: [300, 120, 300, 120, 400], icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: {url: location.href.split('#')[0]}})).catch(() => {});
+}
+async function askNotif(){
+  if (!('Notification' in window)) { toast(IS_IOS ? 'Para avisos, abre Hierro desde el icono de la pantalla de inicio' : 'Este navegador no permite avisos'); return false; }
+  let p = Notification.permission; if (p === 'default') { try { p = await Notification.requestPermission(); } catch (e) {} }
+  S.settings.notif = p === 'granted'; S.settings.notifAsked = true; Store.mark('meta');
+  toast(p === 'granted' ? 'Avisos activados ✓' : 'Sin permiso: actívalo en los ajustes del móvil (Notificaciones › Hierro)');
+  if (tab === 'me' && !ED) render(); return p === 'granted';
 }
 function startRest(sec, name){
   if (!sec) return;
   REST = {end: Date.now() + sec * 1000, total: sec, name, fired: false};
+  if ('Notification' in window && Notification.permission === 'default' && !S.settings.notifAsked) { S.settings.notifAsked = true; Store.mark('meta'); setTimeout(() => toast('¿Te aviso con una notificación cuando acabe el descanso?', {label: 'Activar', fn: askNotif}), 700); }
   clearInterval(restTimer); restTimer = setInterval(drawRest, 250); drawRest();
 }
 function drawRest(){
   const el = $('#rest');
   if (!REST) { el.classList.remove('show', 'done'); clearInterval(restTimer); return; }
   const left = (REST.end - Date.now()) / 1000;
-  if (left <= 0 && !REST.fired) { REST.fired = true; beep(); setTimeout(() => { if (REST && REST.fired) { REST = null; drawRest(); } }, 4000); }
+  if (left <= 0 && !REST.fired) { REST.fired = true; beep(); notifyRestEnd(REST.name); setTimeout(() => { if (REST && REST.fired) { REST = null; drawRest(); } }, 4000); }
   el.classList.add('show'); el.classList.toggle('done', left <= 0); el.classList.toggle('up', !(ED && ED.mode === 'active'));
   const C = 150.8, frac = Math.max(0, Math.min(1, left / REST.total));
   el.innerHTML = `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="7"/><circle cx="30" cy="30" r="24" fill="none" stroke="${left > 0 ? 'url(#gforja)' : '#fff'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${left > 0 ? (C * (1 - frac)).toFixed(1) : 0}" transform="rotate(-90 30 30)"/></svg>
@@ -2530,6 +2555,7 @@ const jsv = v => {
 };
 const fsFields = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)]));
 const docData = d => ({_id: d.name.split('/').pop(), _name: d.name, ...Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, jsv(v)]))});
+const POST_FIELDS = {fields: ['uid', 'start', 'body', 'likes', 'commentCount', 'hasPhoto'].map(fieldPath => ({fieldPath}))}; // el feed no descarga las fotos
 const ff = (field, op, value) => ({fieldFilter: {field: {fieldPath: field}, op, value: fsv(value)}});
 function ago(t){
   const s = (Date.now() - t) / 1000;
@@ -2549,6 +2575,26 @@ const Social = {
   myName(){ return (Cloud.session && Cloud.session.name) || (this.me() && this.me().username) || 'Alguien'; },
   ready(){ return Sync.on() && !!(this.me() && this.me().username); },
   canPublish(){ return this.ready() && !this.me().private; },
+  // Fotos de las publicaciones: viven en el documento del post (campo photo), se piden aparte y solo cuando hacen falta
+  photos: new Map(), photoBusy: new Set(),
+  ppKey(){ return 'hierro-pphoto-' + this.myUid(); },
+  pending(){ try { return JSON.parse(localStorage.getItem(this.ppKey()) || '{}'); } catch (e) { return {}; } },
+  queuePhoto(w, url){
+    const pp = this.pending(); pp[w.id] = url || '';
+    try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) { toast('No hay espacio para guardar la foto'); return; }
+    const id = this.postId(w); this.photos.set(id, url || null); const p = this.posts.get(id); if (p) p.hasPhoto = !!url;
+    Sync.schedule(200);
+  },
+  unpend(wid, val){ const pp = this.pending(); if (pp[wid] === val) { delete pp[wid]; try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) {} } },
+  photoOf(p){ const u = this.photos.get(p.id); if (u) return u; if (!p.hasPhoto) return null; this.loadPhoto(p.id); return ''; },
+  async loadPhoto(pid){
+    if (this.photos.has(pid) || this.photoBusy.has(pid)) return; this.photoBusy.add(pid);
+    try {
+      const d = await Cloud.fs('GET', Cloud.name('posts', pid) + '?mask.fieldPaths=photo');
+      const u = d && d.fields && d.fields.photo ? d.fields.photo.stringValue : null; this.photos.set(pid, u);
+      if (u) document.querySelectorAll(`.post-photo[data-pid="${pid}"]`).forEach(el => { el.innerHTML = `<img src="${u}" alt="Foto del entreno">`; });
+    } catch (e) {} finally { this.photoBusy.delete(pid); }
+  },
   reset(){ Object.assign(this, {following: new Set(), followers: [], feed: [], posts: new Map(), users: new Map(), comments: new Map(), loading: false, loaded: false, more: true, err: null, notifs: [], unseen: 0, notifLoaded: false, search: {q: '', res: [], loading: false}}); },
   postId(w){ return `${this.myUid()}_${String(1e13 - w.start).padStart(14, '0')}_${w.id}`; },
   postBody(w){
@@ -2571,10 +2617,14 @@ const Social = {
     const pb = this.profileBody(), ph = hashOf(pb);
     if (ph !== Store.synced.prof) items.push([{update: {name: Cloud.name('profiles', uid), fields: fsFields(pb)}}, () => { Store.synced.prof = ph; }]);
     const want = new Map(); if (this.canPublish()) S.workouts.filter(w => w.shared).forEach(w => want.set(w.id, w));
+    const pp = this.pending();
     for (const [wid, w] of want) {
-      const id = this.postId(w), body = this.postBody(w), h = hashOf(body), cur = sp[wid];
-      if (!cur || cur.h !== h || cur.id !== id) {
-        items.push([{update: {name: Cloud.name('posts', id), fields: {uid: fsv(uid), start: fsv(w.start), body: fsv(JSON.stringify(body))}}, updateMask: {fieldPaths: ['uid', 'start', 'body']}}, () => { sp[wid] = {id, h}; }]);
+      const id = this.postId(w), body = this.postBody(w), h = hashOf(body), cur = sp[wid], pend = wid in pp;
+      if (!cur || cur.h !== h || cur.id !== id || pend) {
+        const f = {uid: fsv(uid), start: fsv(w.start), body: fsv(JSON.stringify(body))}, mask = ['uid', 'start', 'body'];
+        if (pend) { mask.push('photo', 'hasPhoto'); f.hasPhoto = fsv(!!pp[wid]); if (pp[wid]) f.photo = fsv(pp[wid]); }
+        const val = pp[wid];
+        items.push([{update: {name: Cloud.name('posts', id), fields: f}, updateMask: {fieldPaths: mask}}, () => { sp[wid] = {id, h}; if (pend) this.unpend(wid, val); }]);
         if (cur && cur.id !== id) items.push([{delete: Cloud.name('posts', cur.id)}, () => {}]);
       }
     }
@@ -2583,7 +2633,7 @@ const Social = {
   },
   parsePost(doc){
     const d = docData(doc); let b = {}; try { b = JSON.parse(d.body || '{}'); } catch (e) {}
-    const p = {...b, id: d._id, uid: d.uid, start: d.start, likes: d.likes || [], commentCount: d.commentCount || 0, muscles: b.muscles || {}, prs: b.prs || [], ex: b.ex || []};
+    const p = {...b, id: d._id, uid: d.uid, start: d.start, hasPhoto: !!d.hasPhoto, likes: d.likes || [], commentCount: d.commentCount || 0, muscles: b.muscles || {}, prs: b.prs || [], ex: b.ex || []};
     this.posts.set(p.id, p); return p;
   },
   async claim(username, bio, priv){
@@ -2612,7 +2662,7 @@ const Social = {
     this.loading = true;
     try {
       if (!more) await this.loadFollows();
-      const sq = {from: [{collectionId: 'posts'}], orderBy: [{field: {fieldPath: 'start'}, direction: 'DESCENDING'}], limit: 40};
+      const sq = {from: [{collectionId: 'posts'}], select: POST_FIELDS, orderBy: [{field: {fieldPath: 'start'}, direction: 'DESCENDING'}], limit: 40};
       if (more && this.feed.length) sq.where = ff('start', 'LESS_THAN', this.feed[this.feed.length - 1].start);
       const res = await Cloud.queryRoot(sq);
       const posts = res.filter(r => r.document).map(r => this.parsePost(r.document));
@@ -2633,7 +2683,7 @@ const Social = {
     try {
       const [pd, posts, fr, fg] = await Promise.all([
         Cloud.fs('GET', Cloud.name('profiles', uid)),
-        Cloud.queryRoot({from: [{collectionId: 'posts'}], where: ff('uid', 'EQUAL', uid), limit: 60}),
+        Cloud.queryRoot({from: [{collectionId: 'posts'}], select: POST_FIELDS, where: ff('uid', 'EQUAL', uid), limit: 60}),
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid), select: {fields: [{fieldPath: 'from'}]}}),
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: {fields: [{fieldPath: 'to'}]}})
       ]);
@@ -2742,11 +2792,38 @@ function renderTabs(){
 /* ---------- Vistas sociales ---------- */
 const n7Of = uid => uid === Social.myUid() ? inRange(Date.now() - 7 * 864e5, Date.now() + 1).length : (((Social.users.get(uid) || {}).profile || {}).stats || {}).n7;
 const avatar = (name, cls = '', n7) => `<span class="avatar ${cls}${n7 >= 3 ? ' hot' : ''}" aria-hidden="true"${n7 > 0 ? ` style="--aro:${heat(Math.min(1, .1 + n7 * .2))}"` : ''}>${esc((name || '?').slice(0, 1).toUpperCase())}</span>`;
+async function compressPhoto(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    let max = 1080, q = .74, out = '';
+    for (let k = 0; k < 6; k++) {
+      const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); out = c.toDataURL('image/jpeg', q);
+      if (out.length < 260000) break; max = Math.round(max * .82); q = Math.max(.5, q - .06);
+    }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+function pickPhoto(){
+  return new Promise(res => {
+    const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.style.display = 'none'; document.body.appendChild(i);
+    i.addEventListener('change', async () => { const f = i.files[0]; i.remove(); if (!f) return res(null); try { res(await compressPhoto(f)); } catch (e) { toast('No se ha podido leer la foto'); res(null); } });
+    i.click();
+  });
+}
+function fnPhotoHTML(){
+  const u = A._pendingPhoto;
+  return u ? `<div class="fnphoto"><img src="${u}" alt="Foto elegida"><div class="stack" style="gap:6px"><button class="btn sm" data-act="fn-photo">Cambiar foto</button><button class="btn sm ghost danger" data-act="fn-photo-del">Quitar</button></div></div>`
+    : `<button class="btn block" data-act="fn-photo">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} Añadir foto a la publicación</button>`;
+}
 function postCard(p){
   const me = Social.myUid(), liked = p.likes.includes(me);
   const lines = p.ex.slice(0, 3).map(e => { const b = exBestInSets(e.sets || [], e.type); return `<span><b>${e.sets.length} ×</b>${esc(e.name)}${b ? `<em>${esc(setText(b, e.type))}</em>` : ''}</span>`; }).join('');
   return `<article class="card post">
     <div class="row"><button class="row who" data-act="soc-user" data-id="${p.uid}">${avatar(p.name, 'sm', n7Of(p.uid))}<span><b>${esc(p.name)}</b><small>@${esc(p.username)} · ${ago(p.start)}</small></span></button></div>
+    ${(() => { const u = Social.photoOf(p); return u === null ? '' : `<button class="post-photo" data-act="soc-post" data-id="${p.id}" data-pid="${p.id}" aria-label="Ver publicación">${u ? `<img src="${u}" alt="Foto del entreno">` : ''}</button>`; })()}
     <button class="post-body" data-act="soc-post" data-id="${p.id}">
       <h3>${esc(p.title)}</h3>${p.notes ? `<p>${esc(p.notes)}</p>` : ''}
       <div class="bm-row" style="align-items:flex-start"><div class="stack" style="flex:1;min-width:0">
@@ -2758,7 +2835,7 @@ function postCard(p){
       <button class="${liked ? 'liked' : ''}" data-act="soc-like" data-id="${p.id}" aria-pressed="${liked}" aria-label="Me gusta">${liked ? ICON.heartFill : ICON.heart}<span class="num">${p.likes.length || ''}</span></button>
       <button data-act="soc-post" data-id="${p.id}" aria-label="Comentarios">${ICON.comment}<span class="num">${p.commentCount || ''}</span></button>
       <button class="end" data-act="soc-copy" data-id="${p.id}">${ICON.copy}<span>Copiar</span></button>
-      ${p.uid !== me ? `<button data-act="soc-compare" data-id="${p.uid}">${ICON.compare}<span>Comparar</span></button>` : ''}
+      ${p.uid !== me ? `<button data-act="soc-compare" data-id="${p.uid}">${ICON.compare}<span>Comparar</span></button>` : `<button data-act="soc-photo" data-id="${p.id}" aria-label="${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}">${ICON.camera}<span>Foto</span></button>`}
     </div></article>`;
 }
 function socialSetupHTML(edit){
@@ -2793,6 +2870,7 @@ function viewPost(pid){
   const c = Social.comments.get(pid); if (!c || (!c.loaded && !c.loading && !c.err)) setTimeout(() => Social.loadComments(pid), 0);
   const me = Social.myUid(), mine = p.uid === me;
   let h = postCard(p).replace('<article class="card post">', '<article class="card post open">');
+  if (mine && S.workouts.some(w => w.id === p.wid)) h += `<div class="grid2"><button class="btn" data-act="soc-photo" data-id="${p.id}">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} ${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.hasPhoto ? `<button class="btn danger" data-act="soc-photo-del" data-id="${p.id}">Quitar foto</button>` : ''}</div>`;
   if (p.prs.length) h += `<div class="stack"><h3>Chiquipuntos</h3>${p.prs.map(r => `<div class="prcard">${ICON.trophy}<div><b>${esc(r.ex)}</b><small>${esc(r.label)}</small></div><span class="num">${esc(r.txt)}</span></div>`).join('')}</div>`;
   for (const e of p.ex) {
     let n = 0;
@@ -2954,9 +3032,9 @@ const A = {
     modal('Guardar entreno', `<label class="f">Nombre<input id="fnTitle" value="${esc(out.title)}"></label>
       <div class="grid2"><label class="f">Inicio<input type="datetime-local" id="fnStart" value="${toLocalInput(out.start)}"></label><label class="f">Duración (min)<input type="number" inputmode="numeric" id="fnDur" value="${Math.max(1, Math.round((out.end - out.start) / 60000))}"></label></div>
       <label class="f">¿Cómo ha ido?<textarea id="fnNotes" placeholder="Sensaciones, energía, molestias…"></textarea></label>
-      ${Social.ready() ? `<label class="row" style="font-weight:600"><input type="checkbox" id="fnShare" style="width:auto" ${Social.canPublish() ? 'checked' : 'disabled'}> Publicar en el feed de tus amigos${Social.me().private ? ' <span class="small muted">(tu perfil es privado)</span>' : ''}</label>` : ''}`,
+      ${Social.ready() ? `<label class="row" style="font-weight:600"><input type="checkbox" id="fnShare" style="width:auto" ${Social.canPublish() ? 'checked' : 'disabled'}> Publicar en el feed de tus amigos${Social.me().private ? ' <span class="small muted">(tu perfil es privado)</span>' : ''}</label>${Social.canPublish() ? `<div id="fnPhotoBox">${fnPhotoHTML()}</div>` : ''}` : ''}`,
       `<button class="btn" data-act="m-close">Volver</button><button class="btn primary" data-act="fn-save">Guardar</button>`);
-    A._pendingFinish = out;
+    A._pendingFinish = out; A._pendingPhoto = null; const fb = $('#fnPhotoBox'); if (fb) fb.innerHTML = fnPhotoHTML();
   },
   'fn-save'(){
     const out = A._pendingFinish; if (!out) return;
@@ -2964,6 +3042,7 @@ const A = {
     const st = new Date($('#fnStart').value).getTime(); if (st) out.start = st;
     out.end = out.start + Math.max(1, num($('#fnDur').value) || 1) * 60000;
     S.workouts.push(out); sortW(); out.prs = computePRs(out);
+    if (out.shared && A._pendingPhoto) Social.queuePhoto(out, A._pendingPhoto); A._pendingPhoto = null;
     const routine = out.routineId && S.routines.find(r => r.id === out.routineId);
     S.active = null; A._pendingFinish = null;
     Store.mark('active', monthKey(out.start));
@@ -2971,6 +3050,19 @@ const A = {
     closeModal(); closeEditor();
     tab = 'home'; navStack.home = []; render();
     openSummary(out, true);
+  },
+  async 'fn-photo'(){ const u = await pickPhoto(); if (!u) return; A._pendingPhoto = u; const fb = $('#fnPhotoBox'); if (fb) fb.innerHTML = fnPhotoHTML(); const sh = $('#fnShare'); if (sh) sh.checked = true; },
+  'fn-photo-del'(){ A._pendingPhoto = null; const fb = $('#fnPhotoBox'); if (fb) fb.innerHTML = fnPhotoHTML(); },
+  async 'soc-photo'(el){
+    const p = Social.posts.get(el.dataset.id), w = p && S.workouts.find(x => x.id === p.wid);
+    if (!w) { toast('Ese entreno no está en este móvil'); return; }
+    const u = await pickPhoto(); if (!u) return;
+    Social.queuePhoto(w, u); socRender(); toast('Foto añadida: se sube en un momento');
+  },
+  async 'soc-photo-del'(el){
+    const p = Social.posts.get(el.dataset.id), w = p && S.workouts.find(x => x.id === p.wid); if (!w) return;
+    const ok = await ask('Quitar foto', 'La foto dejará de verse en la publicación.', [['0', 'Cancelar'], ['1', 'Quitar', 'danger']]); closeModal();
+    if (ok === '1') { Social.queuePhoto(w, null); socRender(); }
   },
   'rt-update'(el){ const w = S.workouts.find(x => x.id === el.dataset.w), r = S.routines.find(x => x.id === el.dataset.r); if (w && r) { const n = routineFromWorkout(w, r.name); n.id = r.id; S.routines[S.routines.indexOf(r)] = n; Store.mark('meta'); toast('Rutina actualizada con lo de hoy'); } closeModal(); },
   'ed-add-ex'(){ syncTitle(); openPicker('add'); },
@@ -2991,7 +3083,7 @@ const A = {
     if (!s.done) {
       fillFromPh(e, si);
       if (!hasData(s, x.type)) { const row = $(`#r-${ei}-${si}`); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); toast(x.type === 'dur' ? 'Pon el tiempo de la serie' : x.type === 'cardio' ? 'Pon la distancia o los minutos' : 'Pon las repeticiones'); return; }
-      s.done = true; ED.just = ei + '-' + si; try { navigator.vibrate && navigator.vibrate(10); } catch (err) {}
+      s.done = true; ED.just = ei + '-' + si; haptic(1);
       const next = e.ss ? ED.data.exercises[ei + 1] : null;
       const lastInSS = !(next && next.ss === e.ss);
       if (lastInSS) startRest(e.rest ?? S.settings.rest, x.name);
@@ -3253,6 +3345,7 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const el = ev.target;
   if (el.id === 'setRest') { S.settings.rest = +el.value; Store.mark('meta'); toast('Descanso por defecto: ' + (S.settings.rest ? fmtClock(S.settings.rest) : 'sin temporizador')); }
+  if (el.id === 'setNotif') { if (el.checked) askNotif().then(ok => { el.checked = ok; }); else { S.settings.notif = false; Store.mark('meta'); } }
   if (el.id === 'setSound') { S.settings.sound = el.checked; Store.mark('meta'); if (el.checked) { unlockAudio(); beep(); } }
 });
 document.addEventListener('keydown', ev => {
@@ -3285,7 +3378,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.1.0';
+const APP_VERSION = '4.2.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
