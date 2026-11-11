@@ -160,6 +160,15 @@ html.ios-pwa #rest{bottom:auto;top:calc(var(--apph,100vh) - 14px - var(--sab));t
 .exitem{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--linea);text-align:left;width:100%;min-height:60px}
 .exitem .mono{width:42px;height:42px;border-radius:12px;background:var(--sup-2);background:color-mix(in srgb,var(--mt,var(--apagado)) 15%,var(--sup-2));display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--mt,var(--apagado));flex:none;font-size:13.5px;letter-spacing:.02em}
 .exitem .nm{flex:1;min-width:0}
+.exitem .mono{position:relative;overflow:hidden;width:52px;height:52px}
+.ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff;border-radius:inherit}
+.exthumb{position:relative;width:40px;height:40px;border-radius:10px;overflow:hidden;flex:none;background:var(--sup-2)}
+.exhero{position:relative;width:100%;aspect-ratio:4/3;max-height:300px;border-radius:var(--r-l);overflow:hidden;background:#fff}
+.exhero img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.exhero img.f1{animation:exmove 2.4s steps(1,end) infinite}
+@keyframes exmove{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.exhero img.f1{animation:none;opacity:0}}
+.exhero small{position:absolute;left:10px;bottom:8px;font-size:11px;color:#555;background:rgba(255,255,255,.85);padding:2px 7px;border-radius:999px}
 .exitem .nm div:first-child{font-weight:700}
 .exitem.sel{background:linear-gradient(90deg,rgba(214,63,28,.20),rgba(255,171,46,.10));border-radius:12px;border-bottom-color:transparent}
 .exitem.sel .mono{background:var(--forja);color:var(--ascua-tinta)}
@@ -664,6 +673,138 @@ let exMap = new Map();
 function rebuildEx(){ exMap = new Map(); [...LIB, ...S.customEx].forEach(e => exMap.set(e.id, e)); }
 const exOf = id => exMap.get(id) || {id, name: 'Ejercicio borrado', muscle: 'completo', equip: 'otro', type: 'wr', aliases: []};
 const MTINT = {pecho: 'var(--c3)', espalda: 'var(--frio)', lumbares: 'var(--frio)', trapecio: 'var(--frio)', hombros: 'var(--c4)', biceps: 'var(--c5)', triceps: 'var(--c5)', antebrazo: 'var(--c5)', cuadriceps: '#ff8a5c', isquios: '#ff8a5c', gluteos: '#ff8a5c', gemelos: '#ff8a5c', aductores: '#ff8a5c', abductores: '#ff8a5c', abdominales: 'var(--tiza)', cardio: 'var(--peligro)'};
+/* Fotos de ejercicios: base de datos libre free-exercise-db (dominio público, github.com/yuhonas/free-exercise-db).
+   Cada ejercicio trae dos fotos: posición inicial (0) y final (1). */
+const PHOTO_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+const PHOTO_SRC = `
+Press banca (barra)=Barbell_Bench_Press_-_Medium_Grip
+Press banca (mancuernas)=Dumbbell_Bench_Press
+Press inclinado (barra)=Barbell_Incline_Bench_Press_-_Medium_Grip
+Press inclinado (mancuernas)=Incline_Dumbbell_Press
+Press declinado (barra)=Decline_Barbell_Bench_Press
+Press banca (Smith)=Smith_Machine_Bench_Press
+Press inclinado (Smith)=Smith_Machine_Incline_Bench_Press
+Press de pecho (máquina)=Machine_Bench_Press
+Press inclinado (máquina)=Leverage_Incline_Chest_Press
+Aperturas (mancuernas)=Dumbbell_Flyes
+Aperturas en máquina (pec deck)=Butterfly
+Cruce de poleas=Cable_Crossover
+Cruce de poleas de abajo a arriba=Low_Cable_Crossover
+Fondos en paralelas=Dips_-_Chest_Version
+Flexiones=Pushups
+Pullover (mancuerna)=Bent-Arm_Dumbbell_Pullover
+Dominadas=Pullups
+Dominadas supinas=Chin-Up
+Dominadas asistidas (máquina)=Band_Assisted_Pull-Up
+Jalón al pecho (polea)=Wide-Grip_Lat_Pulldown
+Jalón al pecho (máquina)=Full_Range-Of-Motion_Lat_Pulldown
+Jalón agarre estrecho=Close-Grip_Front_Lat_Pulldown
+Jalón unilateral (polea)=One_Arm_Lat_Pulldown
+Remo con barra=Bent_Over_Barbell_Row
+Remo con mancuerna=One-Arm_Dumbbell_Row
+Remo en polea sentado=Seated_Cable_Rows
+Remo en máquina=Leverage_Iso_Row
+Remo en T=T-Bar_Row_with_Handle
+Remo Pendlay=Bent_Over_Barbell_Row
+Remo con apoyo en pecho (mancuernas)=Dumbbell_Incline_Row
+Pullover en polea (brazos rectos)=Straight-Arm_Pulldown
+Peso muerto (barra)=Barbell_Deadlift
+Peso muerto con barra hexagonal=Trap_Bar_Deadlift
+Hiperextensiones=Hyperextensions_Back_Extensions
+Encogimientos (mancuernas)=Dumbbell_Shrug
+Encogimientos (barra)=Barbell_Shrug
+Press militar (barra)=Standing_Military_Press
+Press de hombro (mancuernas)=Dumbbell_Shoulder_Press
+Press de hombro (máquina)=Machine_Shoulder_Military_Press
+Press Arnold=Arnold_Dumbbell_Press
+Elevaciones laterales (mancuernas)=Side_Lateral_Raise
+Elevación lateral (polea)=Cable_Seated_Lateral_Raise
+Elevaciones laterales (máquina)=Side_Lateral_Raise
+Elevaciones frontales (mancuernas)=Front_Dumbbell_Raise
+Pájaros (mancuernas)=Seated_Bent-Over_Rear_Delt_Raise
+Aperturas inversas (máquina)=Reverse_Machine_Flyes
+Face pull=Face_Pull
+Remo al mentón=Upright_Barbell_Row
+Curl con barra=Barbell_Curl
+Curl con barra Z=EZ-Bar_Curl
+Curl con mancuernas=Dumbbell_Bicep_Curl
+Curl martillo=Hammer_Curls
+Curl inclinado (mancuernas)=Incline_Dumbbell_Curl
+Curl predicador=Preacher_Curl
+Curl en polea=Standing_Biceps_Cable_Curl
+Curl concentrado=Concentration_Curls
+Curl bayesiano (polea)=Standing_One-Arm_Cable_Curl
+Extensión de tríceps en polea (cuerda)=Triceps_Pushdown_-_Rope_Attachment
+Extensión de tríceps en polea (barra)=Triceps_Pushdown
+Press francés=EZ-Bar_Skullcrusher
+Extensión sobre la cabeza (polea)=Triceps_Overhead_Extension_with_Rope
+Extensión sobre la cabeza (mancuerna)=Standing_Dumbbell_Triceps_Extension
+Press banca agarre cerrado=Close-Grip_Barbell_Bench_Press
+Fondos en máquina=Dip_Machine
+Patada de tríceps=Tricep_Dumbbell_Kickback
+Curl de muñeca=Palms-Up_Barbell_Wrist_Curl_Over_A_Bench
+Curl inverso=Reverse_Barbell_Curl
+Paseo del granjero=Farmers_Walk
+Sentadilla (barra)=Barbell_Squat
+Sentadilla frontal=Front_Barbell_Squat
+Sentadilla en Smith=Smith_Machine_Squat
+Sentadilla hack=Hack_Squat
+Sentadilla péndulo=Lying_Machine_Squat
+Sentadilla goblet=Goblet_Squat
+Sentadilla búlgara=Split_Squat_with_Dumbbells
+Prensa de piernas=Leg_Press
+Extensión de cuádriceps=Leg_Extensions
+Zancadas (mancuernas)=Dumbbell_Lunges
+Subida al banco=Dumbbell_Step_Ups
+Peso muerto rumano (barra)=Romanian_Deadlift
+Peso muerto rumano (mancuernas)=Stiff-Legged_Dumbbell_Deadlift
+Curl femoral tumbado=Lying_Leg_Curls
+Curl femoral sentado=Seated_Leg_Curl
+Buenos días=Good_Morning
+Hip thrust (barra)=Barbell_Hip_Thrust
+Hip thrust (máquina)=Barbell_Hip_Thrust
+Puente de glúteo=Butt_Lift_Bridge
+Patada de glúteo (polea)=One-Legged_Cable_Kickback
+Abductores (máquina)=Thigh_Abductor
+Aductores (máquina)=Thigh_Adductor
+Gemelos de pie=Standing_Calf_Raises
+Gemelos sentado=Seated_Calf_Raise
+Gemelos en prensa=Calf_Press_On_The_Leg_Press_Machine
+Crunch=Crunches
+Crunch en polea=Cable_Crunch
+Crunch en máquina=Ab_Crunch_Machine
+Elevación de piernas colgado=Hanging_Leg_Raise
+Elevación de piernas tumbado=Flat_Bench_Lying_Leg_Raise
+Plancha=Plank
+Plancha lateral=Side_Bridge
+Rueda abdominal=Ab_Roller
+Giros rusos=Russian_Twist
+Kettlebell swing=One-Arm_Kettlebell_Swings
+Cinta de correr=Running_Treadmill
+Bicicleta estática=Bicycling_Stationary
+Elíptica=Elliptical_Trainer
+Remo ergómetro=Rowing_Stationary
+Escaladora=Stairmaster
+Caminar=Walking_Treadmill
+Comba=Rope_Jumping
+`;
+const PHOTO = new Map(PHOTO_SRC.trim().split('\n').map(l => { const [n, id] = l.split('='); return [norm(n), id]; }));
+const PHOTO_STOP = new Set(['de', 'del', 'con', 'en', 'la', 'el', 'al', 'a', 'por', 'sobre', 'encima', 'y', 'los', 'las', 'para', 'banca']);
+const photoStem = t => t.length > 5 && t.endsWith('es') ? t.slice(0, -2) : t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t;
+const photoTokens = n => new Set(norm(n).replace(/\bmaquina smith\b/g, 'smith').replace(/\bcable\b/g, 'polea').replace(/\bez\b/g, 'z').split(' ').filter(t => t && !PHOTO_STOP.has(t)).map(photoStem));
+const photoCache = new Map();
+function photoId(x){
+  if (!x) return null;
+  if (photoCache.has(x.id)) return photoCache.get(x.id);
+  let id = PHOTO.get(norm(x.name)) || null;
+  if (!id) { /* ejercicio propio o importado de Hevy: busca el más parecido de la biblioteca */
+    const a = photoTokens(x.name); let best = 0;
+    if (a.size) PHOTO.forEach((pid, n) => { const b = photoTokens(n); let k = 0; b.forEach(t => { if (a.has(t)) k++; }); const j = k / (a.size + b.size - k); if (j > best && j >= .5) { best = j; id = pid; } });
+  }
+  photoCache.set(x.id, id); return id;
+}
+const photoUrl = (x, f = 0) => { const id = photoId(x); return id ? `${PHOTO_BASE}${id}/${f}.jpg` : null; };
+const photoImg = (x, cls = '') => { const u = photoUrl(x); return u ? `<img class="ph ${cls}" src="${u}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ''; };
 const allEx = () => [...LIB, ...S.customEx].sort((a, b) => a.name.localeCompare(b.name, 'es'));
 const sortW = () => S.workouts.sort((a, b) => b.start - a.start);
 
@@ -1506,7 +1647,7 @@ function exFilter(q, m){
   return allEx().filter(e => (!m || e.muscle === m) && (!nq || norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')).includes(nq)));
 }
 function exItem(e, count, sel){
-  return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase())}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)} · ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? ' · Propio' : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
+  return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)} · ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? ' · Propio' : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
 }
 function exChips(sel, act){
   const used = new Set(allEx().map(e => e.muscle));
@@ -1544,7 +1685,8 @@ function viewExercise(id){
   const all = exHistory(id).slice().reverse(); // asc
   const span = {'3m': 91, '1y': 365}[UI.exRange];
   const hist = span ? all.filter(h => h.w.start >= Date.now() - span * 864e5) : all;
-  let h = `<div class="stack"><h2>${esc(x.name)}</h2><div class="row"><span class="pill">${esc(MUSCLES[x.muscle] || '')}</span><span class="pill">${esc(EQUIP[x.equip] || '')}</span>${x.custom ? '<span class="pill accent">Propio</span>' : ''}<span class="pill num">${all.length} sesiones</span></div></div>
+  const pu = photoUrl(x), pu1 = photoUrl(x, 1);
+  let h = `${pu ? `<div class="exhero"><img src="${pu}" alt="${esc(x.name)}: posición inicial" onerror="this.parentNode.remove()"><img class="f1" src="${pu1}" alt="" onerror="this.remove()">${x.custom ? '<small>Foto de un ejercicio parecido</small>' : ''}</div>` : ''}<div class="stack"><h2>${esc(x.name)}</h2><div class="row"><span class="pill">${esc(MUSCLES[x.muscle] || '')}</span><span class="pill">${esc(EQUIP[x.equip] || '')}</span>${x.custom ? '<span class="pill accent">Propio</span>' : ''}<span class="pill num">${all.length} sesiones</span></div></div>
   <div class="seg" role="group">${[['prog', 'Progreso'], ['hist', 'Historial'], ['rec', 'Chiquipuntos']].map(([k, l]) => `<button data-act="ex-tab" data-k="${k}" aria-pressed="${UI.exTab === k}">${l}</button>`).join('')}</div>`;
   if (!all.length) return h.slice(0, h.indexOf('<div class="seg" role="group">')) + `<div class="card empty"><h3>Aún sin estrenar</h3><div>Cuando lo hagas en un entreno, aquí verás tu progreso, tu historial y tus chiquipuntos.</div></div>`;
   if (UI.exTab === 'prog') {
@@ -1792,7 +1934,7 @@ function exCardHTML(e, ei){
       ${chk ? `<button class="schk" data-act="set-done" data-ei="${ei}" data-si="${si}" aria-label="Marcar serie hecha" aria-pressed="${!!s.done}">${ICON.check}</button>` : ''}</div>`;
   }).join('');
   return `<div class="excard ${e.ss ? 'ss' : ''}" id="ex-${ei}">
-    <div class="exh"><button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
+    <div class="exh">${photoUrl(x) ? `<button class="exthumb" data-act="ed-ex-info" data-id="${x.id}" aria-label="Ver ${esc(x.name)}">${photoImg(x)}</button>` : ''}<button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
     <textarea class="note" rows="1" data-act="ex-note" data-ei="${ei}" placeholder="Añadir notas…" aria-label="Notas">${esc(e.notes || '')}</textarea>
     ${m !== 'past' ? `<div class="exinfo"><button class="restline" data-act="ex-rest" data-ei="${ei}">${ICON.clock} Descanso: ${rest ? fmtClock(rest) : 'desactivado'}${e.rest == null ? ' (por defecto)' : ''}</button><span class="plates" id="pl-${ei}">${platesHTML(e)}</span></div>` : ''}
     <div class="sgrid hd ${chk ? '' : 'nochk'}"><div>Serie</div><div>Anterior</div><div>${cols[0]}</div><div>${cols[1] || ''}</div>${chk ? '<div></div>' : ''}</div>
@@ -2906,7 +3048,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '3.1.2';
+const APP_VERSION = '3.2.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
