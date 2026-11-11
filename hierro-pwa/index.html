@@ -271,6 +271,29 @@ label.chk{display:flex;align-items:flex-start;gap:10px;font-weight:700;min-heigh
 .mbar .track{height:10px;background:var(--sup-2);border-radius:5px;overflow:hidden}
 .mbar .fill{height:100%;background:var(--c3);border-radius:5px}
 .mbar b{text-align:right;font-variant-numeric:tabular-nums}
+.track.rng{position:relative;overflow:visible}
+.track.rng .band{position:absolute;top:-3px;bottom:-3px;background:rgba(244,241,232,.13);border-radius:4px}
+.track.rng .fill{position:relative}
+.track.rng .real{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1.5px;background:var(--tiza);border-radius:2px}
+.pweek{display:flex;flex-direction:column;border-top:1px solid var(--linea)}
+.pday{display:flex;align-items:center;gap:12px;width:100%;padding:9px 0;min-height:56px;text-align:left;border-bottom:1px solid var(--linea)}
+.pday .dl{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--rotulo);font-size:13px;background:var(--sup-2);color:var(--apagado);flex:none}
+.pday.on .dl{background:var(--forja);color:var(--ascua-tinta)}
+.pday.today .dl{box-shadow:0 0 0 2px var(--fondo),0 0 0 4px var(--tiza)}
+.pday div{flex:1;min-width:0}.pday b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pday:not(.on) b{color:var(--apagado);font-weight:600}
+.pday small{display:block;color:var(--apagado);font-size:13px}
+.pday i{font-style:normal;font-size:22px;color:var(--tenue)}
+.pscore{width:74px;height:74px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--c3) calc(var(--p)*1%),var(--sup-2) 0)}
+.pscore b{width:60px;height:60px;border-radius:50%;background:var(--sup);display:flex;align-items:center;justify-content:center;font-family:var(--rotulo);font-size:20px}
+.pnotes{display:flex;flex-direction:column;gap:10px}
+.pnote{display:flex;gap:10px;align-items:flex-start}
+.pnote>span{width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-top:1px}
+.pnote.ok>span{background:var(--sup-3);color:var(--tiza)}
+.pnote.warn>span{background:var(--c4);color:var(--ascua-tinta)}
+.pnote.bad>span{background:var(--c2);color:#fff}
+.pnote b{display:block;font-size:15px}.pnote small{display:block;color:var(--apagado);font-size:13.5px;line-height:1.4}
+.plan-today h3{line-height:1.3}
 .mbar.sm{grid-template-columns:64px 1fr 40px;font-size:13.5px}
 .seg{display:flex;background:var(--sup);border-radius:var(--r-m);padding:4px;gap:2px}
 .card .seg,#modal .seg{background:var(--sup-2)}
@@ -968,10 +991,163 @@ function setText(s, type){
 }
 function routineNext(){
   if (!S.routines.length) return null;
+  const t = planToday();
+  if (t) return t.r && !t.done ? t.r : t.nr;
   const last = S.workouts.find(w => w.routineId && S.routines.some(r => r.id === w.routineId));
   if (!last) return S.routines[0];
   const i = S.routines.findIndex(r => r.id === last.routineId);
   return S.routines[(i + 1) % S.routines.length];
+}
+
+/* =========================================================
+   Mi plan: semana tipo + análisis
+   ========================================================= */
+const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const PLAN_GOALS = {
+  musculo: {name: 'Ganar músculo', short: 'Músculo', big: [10, 20], small: [6, 14], perSession: 10},
+  fuerza: {name: 'Fuerza', short: 'Fuerza', big: [6, 14], small: [4, 10], perSession: 8},
+  salud: {name: 'Salud y constancia', short: 'Salud', big: [4, 12], small: [2, 8], perSession: 8}
+};
+const PLAN_MUSCLES = ['pecho', 'espalda', 'hombros', 'cuadriceps', 'isquios', 'gluteos', 'biceps', 'triceps', 'gemelos', 'abdominales'];
+const PLAN_BIG = new Set(['pecho', 'espalda', 'hombros', 'cuadriceps', 'isquios', 'gluteos']);
+/* Trabajo que le llega a un músculo pequeño desde los ejercicios de otro (series × factor) */
+const PLAN_INDIRECT = {gluteos: [['cuadriceps', .5], ['isquios', .3]], biceps: [['espalda', .5]], triceps: [['pecho', .5], ['hombros', .3]], abdominales: [['cuadriceps', .15]]};
+const todayIdx = () => (new Date().getDay() + 6) % 7;
+const dayStart = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+function plan(){
+  const p = S.settings.plan;
+  if (!p || !Array.isArray(p.days)) return null;
+  return p.days.some(id => id && S.routines.some(r => r.id === id)) ? p : null;
+}
+const planRoutine = (p, i) => p && p.days[i] ? S.routines.find(r => r.id === p.days[i]) || null : null;
+function planToday(){
+  const p = plan(); if (!p) return null;
+  const i = todayIdx(), r = planRoutine(p, i), t0 = dayStart(Date.now());
+  const doneW = S.workouts.find(w => w.start >= t0);
+  let ni = -1, nr = null;
+  for (let k = 1; k <= 7; k++) { const j = (i + k) % 7, x = planRoutine(p, j); if (x) { ni = j; nr = x; break; } }
+  return {p, i, r, done: !!doneW, doneW, ni, nr, inDays: ni < 0 ? 0 : (ni - i + 7) % 7 || 7};
+}
+function routineSets(r){ const m = {}; r.exercises.forEach(e => { const k = exOf(e.exId).muscle, n = (e.sets || []).filter(isWork).length; if (n) m[k] = (m[k] || 0) + n; }); return m; }
+const effSets = (ms, k) => (ms[k] || 0) + (PLAN_INDIRECT[k] || []).reduce((a, [o, f]) => a + (ms[o] || 0) * f, 0);
+const planRange = (g, k) => PLAN_BIG.has(k) ? g.big : g.small;
+function planAnalysis(p){
+  const g = PLAN_GOALS[p.goal] || PLAN_GOALS.musculo;
+  const rs = [...Array(7)].map((_, i) => planRoutine(p, i));
+  const perDay = rs.map(r => r ? routineSets(r) : {});
+  const week = {}; perDay.forEach(m => Object.entries(m).forEach(([k, v]) => week[k] = (week[k] || 0) + v));
+  const freq = {}; perDay.forEach(m => Object.entries(m).forEach(([k, v]) => { if (v >= 2) freq[k] = (freq[k] || 0) + 1; }));
+  const n = rs.filter(Boolean).length, notes = [], M = k => MUSCLES[k] || k, lc = s => s.toLowerCase();
+  const add = (lvl, t, d, m) => notes.push({lvl, t, d, m});
+  /* Días y descanso */
+  let run = 0, best = 0; for (let i = 0; i < 14; i++) { if (rs[i % 7]) { run++; best = Math.max(best, Math.min(run, 7)); } else run = 0; }
+  if (n === 7) add('bad', 'Ningún día de descanso', 'El músculo crece descansando. Deja al menos un día libre a la semana.');
+  else if (n === 6) add('warn', '6 días de 7', 'Se puede, pero solo si las sesiones son cortas y duermes bien. Vigila el cansancio.');
+  else if (best >= 4) add('warn', `${best} días seguidos entrenando`, 'Mete un descanso en medio para llegar fresco a los últimos días.');
+  else if (n >= 2) add('ok', `${n} días de entreno, ${7 - n} de descanso`, 'Buen equilibrio entre trabajo y recuperación.');
+  if (n === 1) add('warn', 'Solo un día a la semana', 'Con dos días ya notarás mucha más diferencia. Si puedes, añade otro.');
+  /* Recuperación entre días seguidos */
+  for (let i = 0; i < 7; i++) {
+    const j = (i + 1) % 7; if (!rs[i] || !rs[j]) continue;
+    const hit = [...PLAN_BIG].filter(k => (perDay[i][k] || 0) >= 4 && (perDay[j][k] || 0) >= 4);
+    if (hit.length) add('bad', `${hit.map(M).join(' y ')}: ${lc(DAY_NAMES[i])} y ${lc(DAY_NAMES[j])} seguidos`, `Un músculo entrenado fuerte necesita unas 48 h. Separa «${rs[i].name}» y «${rs[j].name}» con otro día por medio.`);
+  }
+  /* Volumen por músculo */
+  const missing = [], low = [];
+  PLAN_MUSCLES.forEach(k => {
+    const e = effSets(week, k), d = week[k] || 0, [lo, hi] = planRange(g, k), r1 = Math.round(e);
+    if (d === 0 && e < lo) { missing.push(k); add(PLAN_BIG.has(k) || e < 1 ? 'bad' : 'warn', `No trabajas ${lc(M(k))}`, e >= 1 ? `Solo le llega trabajo indirecto (~${plural(r1, 'serie', 'series')}). Añade ${lo}–${hi} series directas a la semana.` : `Cero series a la semana. Añade ${lo}–${hi} series repartidas en 2 días.`, k); }
+    else if (e < lo) { low.push(k); add('warn', `${M(k)} se queda corto`, `${plural(r1, 'serie', 'series')} a la semana; para tu objetivo, entre ${lo} y ${hi}. Te faltan ${lo - r1 === 1 ? 'una' : 'unas ' + (lo - r1)}.`, k); }
+    else if (e > hi * 1.15) add('warn', `${M(k)} va sobrado`, `${r1} series a la semana. Más de ${hi} rara vez compensa: recuperas peor y no creces más.`, k);
+    else if (PLAN_BIG.has(k) && d >= 6 && (freq[k] || 0) < 2) add('warn', `${M(k)}, todo en un solo día`, `Las mismas ${d} series rinden más repartidas en 2 días de la semana.`, k);
+  });
+  /* Series en una sola sesión */
+  perDay.forEach((m, i) => Object.entries(m).forEach(([k, v]) => { if (v > g.perSession + 2 && PLAN_MUSCLES.includes(k)) add('warn', `${v} series de ${lc(M(k))} el ${lc(DAY_NAMES[i])}`, `Pasadas unas ${g.perSession} series en una sesión, cada serie extra aporta poco. Mueve algunas a otro día.`, k); }));
+  /* Equilibrios */
+  const push = (week.pecho || 0) + (week.hombros || 0), pull = (week.espalda || 0) + (week.trapecio || 0);
+  const quad = week.cuadriceps || 0, ham = week.isquios || 0;
+  if (push >= 6 && push > pull * 1.5) add('warn', 'Empujas más de lo que tiras', `${push} series de empuje frente a ${pull} de tracción. Equilibra con más espalda: tus hombros lo agradecerán.`);
+  else if (pull >= 6 && pull > push * 2) add('warn', 'Tiras mucho más de lo que empujas', `${pull} series de tracción frente a ${push} de empuje. Sube algo de pecho u hombro.`);
+  else if (push + pull >= 10) add('ok', 'Empuje y tracción equilibrados', `${push} de empuje frente a ${pull} de tracción.`);
+  if (quad >= 6 && quad > ham * 2.5) add('warn', 'Cuádriceps sin su pareja', `${quad} series de cuádriceps frente a ${ham} de isquios. Mete peso muerto rumano o curl femoral.`);
+  else if (quad >= 6 && ham >= 3) add('ok', 'Pierna compensada', `${quad} series de cuádriceps y ${ham} de isquios.`);
+  const okVol = PLAN_MUSCLES.filter(k => { const e = effSets(week, k), [lo, hi] = planRange(g, k); return e >= lo && e <= hi * 1.15; }).length;
+  if (okVol >= 7) add('ok', `${okVol} de ${PLAN_MUSCLES.length} grupos en su punto`, 'El volumen semanal está donde tiene que estar para tu objetivo.');
+  const score = Math.max(0, Math.min(100, 100 - notes.reduce((a, x) => a + (x.lvl === 'bad' ? 12 : x.lvl === 'warn' ? 5 : 0), 0)));
+  const order = {bad: 0, warn: 1, ok: 2}; notes.sort((a, b) => order[a.lvl] - order[b.lvl]);
+  return {g, rs, perDay, week, freq, n, notes, score, missing, low};
+}
+function planSuggest(k, n = 3){
+  const c = exUseCount();
+  return [...LIB, ...S.customEx].filter(e => e.muscle === k).map((e, i) => ({e, s: (c[e.id] || 0) * 100 - i})).sort((a, b) => b.s - a.s).slice(0, n).map(x => x.e);
+}
+/* Rellena el plan con la rutina que más haces cada día de la semana (últimas 8 semanas) */
+function planFromHistory(){
+  const since = Date.now() - 56 * 864e5, cnt = [...Array(7)].map(() => ({}));
+  S.workouts.filter(w => w.start >= since && w.routineId && S.routines.some(r => r.id === w.routineId)).forEach(w => { const i = (new Date(w.start).getDay() + 6) % 7; cnt[i][w.routineId] = (cnt[i][w.routineId] || 0) + 1; });
+  const days = cnt.map(c => { const b = Object.entries(c).sort((a, b) => b[1] - a[1])[0]; return b && b[1] >= 2 ? b[0] : ''; });
+  return days.some(Boolean) ? days : null;
+}
+function planAdherence(p){
+  if (!p.since) return null;
+  const ws = weekStart(Date.now()), k = Math.min(4, Math.floor((ws - weekStart(p.since)) / (7 * 864e5)));
+  if (k < 1) return null;
+  const n = p.days.filter(id => id && S.routines.some(r => r.id === id)).length;
+  const done = S.workouts.filter(w => w.start >= ws - k * 7 * 864e5 && w.start < ws).length;
+  return {k, plan: n * k, done};
+}
+const REST_LINES = ['Hoy toca sofá. Es parte del plan, no es pereza.', 'Día de descanso: el músculo crece ahora, no en el gimnasio.', 'Descansa, que mañana vuelves con más hierro.', 'Hoy no se levanta nada más pesado que el mando de la tele.', 'Recupera, come bien y duerme. Eso también es entrenar.'];
+const DONE_LINES = ['Hecho por hoy. A comer y a dormir como un campeón.', 'Misión cumplida. El hierro de hoy ya está en el saco.', 'Entreno hecho. Ahora toca recuperar.'];
+const pickLine = a => a[Math.floor(dayStart(Date.now()) / 864e5) % a.length];
+function planHomeCard(){
+  const t = planToday(); if (!t || S.active) return null;
+  const ex = r => esc(r.exercises.slice(0, 6).map(e => exOf(e.exId).name).join(', ')) + (r.exercises.length > 6 ? '…' : '');
+  const nxt = t.nr ? `<div class="small muted">${t.inDays === 1 ? 'Mañana' : 'El ' + DAY_NAMES[t.ni].toLowerCase()}: <b style="color:var(--texto)">${esc(t.nr.name)}</b></div>` : '';
+  const link = `<button class="linkbtn" data-act="go-plan">Mi plan</button>`;
+  if (t.r && !t.done) return `<div class="toca"><div class="row between"><span class="sub">Hoy te toca · ${DAY_NAMES[t.i]}</span>${link}</div><h2>${esc(t.r.name)}</h2><div class="ej">${ex(t.r)}</div><button class="btn lg block" data-act="start-routine" data-id="${t.r.id}">Empezar ${esc(t.r.name)}</button></div>`;
+  if (t.done) return `<div class="card stack plan-today"><div class="row between"><span class="pill accent">Hecho hoy</span>${link}</div><h3>${pickLine(DONE_LINES)}</h3>${nxt}</div>`;
+  return `<div class="card stack plan-today"><div class="row between"><span class="pill">Descanso · ${DAY_NAMES[t.i]}</span>${link}</div><h3>${pickLine(REST_LINES)}</h3>${nxt}${t.nr ? `<button class="btn ghost block" data-act="start-routine" data-id="${t.nr.id}">Entrenar igualmente: ${esc(t.nr.name)}</button>` : ''}</div>`;
+}
+function rangeBar(v, lo, hi, max, real){
+  const pc = x => Math.max(0, Math.min(100, x / max * 100));
+  const t = v < lo ? .25 : v > hi * 1.15 ? 1 : .6;
+  return `<div class="track rng"><span class="band" style="left:${pc(lo)}%;width:${pc(hi) - pc(lo)}%"></span><div class="fill" style="width:${pc(v)}%;background:${heat(t)}"></div>${real != null ? `<i class="real" style="left:${pc(real)}%" title="Real"></i>` : ''}</div>`;
+}
+const NOTE_IC = {ok: '✓', warn: '!', bad: '✕'};
+function viewPlan(){
+  const p0 = S.settings.plan || {days: ['', '', '', '', '', '', ''], goal: 'musculo'};
+  const goal = PLAN_GOALS[p0.goal] ? p0.goal : 'musculo', ti = todayIdx();
+  let h = `<div class="card stack"><div><h3>Tu semana</h3><div class="small muted">Elige qué rutina haces cada día. Lo que dejes vacío es descanso.</div></div>`;
+  if (!S.routines.length) return h + `<div class="empty" style="padding:12px 0"><div>Primero necesitas alguna rutina.</div><div class="row"><button class="btn primary" data-act="new-routine">Crear rutina</button>${S.workouts.length ? '<button class="btn" data-act="routines-from-history">Sacarlas de mis entrenos</button>' : ''}</div></div></div>`;
+  h += `<div class="pweek">${p0.days.map((id, i) => { const r = id ? S.routines.find(x => x.id === id) : null; const top = r ? Object.entries(routineSets(r)).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => MUSCLES[k] || k).join(' · ') : ''; return `<button class="pday ${r ? 'on' : ''} ${i === ti ? 'today' : ''}" data-act="plan-day" data-i="${i}"><span class="dl">${'LMXJVSD'[i]}</span><div><b>${r ? esc(r.name) : id ? 'Rutina borrada' : 'Descanso'}</b><small>${i === ti ? 'Hoy · ' : ''}${r ? esc(top || 'Sin ejercicios') : DAY_NAMES[i]}</small></div><i>›</i></button>`; }).join('')}</div>`;
+  h += `<div><div class="small muted" style="margin-bottom:6px">Objetivo</div><div class="chips">${Object.entries(PLAN_GOALS).map(([k, g]) => `<button class="chip" data-act="plan-goal" data-g="${k}" aria-pressed="${goal === k}">${g.short}</button>`).join('')}</div></div>`;
+  const sug = !plan() && planFromHistory();
+  if (sug) h += `<button class="btn block" data-act="plan-auto">Rellenar con lo que sueles hacer cada día</button>`;
+  h += `</div>`;
+  const p = plan();
+  if (!p) return h + `<div class="card empty"><h3>Monta tu semana</h3><div>Cuando asignes rutinas a tus días, aquí verás qué músculos trabajas de más o de menos, si descansas bien entre días y qué ejercicios te faltan.</div></div>`;
+  const a = planAnalysis(p), lbl = a.score >= 85 ? 'Plan de hierro' : a.score >= 65 ? 'Bien, con retoques' : a.score >= 40 ? 'Hay que ajustarlo' : 'Plan en obras';
+  h += `<div class="card stack"><div class="row" style="gap:16px"><div class="pscore" style="--p:${a.score}"><b class="num">${a.score}</b></div><div><h3>${lbl}</h3><div class="small muted">${a.n} ${a.n === 1 ? 'día' : 'días'} a la semana · ${a.g.name.toLowerCase()}</div></div></div>
+    <div class="pnotes">${a.notes.map(x => `<div class="pnote ${x.lvl}"><span>${NOTE_IC[x.lvl]}</span><div><b>${esc(x.t)}</b><small>${esc(x.d)}</small></div></div>`).join('')}</div></div>`;
+  /* Volumen por músculo: plan frente a lo real (media de las últimas 4 semanas) */
+  const now = Date.now(), real = S.workouts.some(w => w.start >= now - 28 * 864e5) ? muscleSets(inRange(now - 28 * 864e5, now + 1)) : null;
+  const rows = PLAN_MUSCLES.map(k => { const [lo, hi] = planRange(a.g, k), e = effSets(a.week, k), d = a.week[k] || 0, rv = real ? effSets(real, k) / 4 : null; return {k, lo, hi, e, d, rv}; });
+  const max = Math.max(...rows.map(r => Math.max(r.hi * 1.2, r.e, r.rv || 0)));
+  h += `<div class="card stack"><div><h3>Series a la semana</h3><div class="small muted">La franja clara es lo recomendado para tu objetivo.${real ? ' La raya es lo que has hecho de media las últimas 4 semanas.' : ''}</div></div>
+    <div class="stack" style="gap:10px">${rows.map(r => `<div class="mbar"><span>${MUSCLES[r.k]}</span>${rangeBar(r.e, r.lo, r.hi, max, r.rv)}<b>${Math.round(r.e)}</b></div>${r.e - r.d >= 1 ? `<div class="small muted" style="margin:-6px 0 0 104px">${r.d} directas + ~${Math.round(r.e - r.d)} indirectas</div>` : ''}`).join('')}</div></div>`;
+  /* Lo que falta */
+  const need = [...a.missing, ...a.low].slice(0, 4);
+  if (need.length) h += `<div class="card stack"><h3>Ejercicios para cubrir huecos</h3>${need.map(k => `<div><div class="small muted" style="margin:4px 0">${MUSCLES[k]}</div>${planSuggest(k, 2).map(e => exItem(e)).join('')}</div>`).join('')}</div>`;
+  /* Días */
+  h += `<div class="card stack"><h3>Cada día, qué trabaja</h3>${a.rs.map((r, i) => { if (!r) return ''; const m = Object.entries(a.perDay[i]).sort((x, y) => y[1] - x[1]); return `<div><div class="row between"><b>${DAY_NAMES[i]} · ${esc(r.name)}</b><span class="small muted num">${m.reduce((s, x) => s + x[1], 0)} series</span></div><div class="small muted">${m.length ? m.map(([k, v]) => `${MUSCLES[k] || k} ${v}`).join(' · ') : 'Rutina sin series'}</div></div>`; }).join('')}</div>`;
+  const ad = planAdherence(p);
+  if (ad && ad.plan) { const pct = Math.round(Math.min(1, ad.done / ad.plan) * 100); h += `<div class="card stack"><div class="row between"><h3>¿Lo estás cumpliendo?</h3><b class="num">${pct}%</b></div><div class="mbar sm" style="grid-template-columns:1fr"><div class="track">${fillBar(pct)}</div></div><div class="small muted">${ad.done} de ${ad.plan} entrenos en ${ad.k === 1 ? 'la última semana' : 'las últimas ' + ad.k + ' semanas'}.</div></div>`; }
+  return h;
+}
+function planSave(days, goal){
+  const old = S.settings.plan || {};
+  S.settings.plan = {days, goal: goal || old.goal || 'musculo', since: old.since && old.days && old.days.some(Boolean) ? old.since : Date.now()};
+  Store.mark('meta'); render();
 }
 
 /* =========================================================
@@ -1162,6 +1338,7 @@ function render(){
   if (v && v.type === 'workout') { const w = S.workouts.find(x => x.id === v.id); if (!w) { navStack[tab].pop(); return render(); } title = 'Entreno'; html = viewWorkout(w); }
   else if (v && v.type === 'exercise') { title = 'Ejercicio'; html = viewExercise(v.id); }
   else if (v && v.type === 'stats') { title = 'Estadísticas'; html = viewStats(); }
+  else if (v && v.type === 'plan') { title = 'Mi plan'; html = viewPlan(); }
   else if (v && v.type === 'month') { title = 'Informe mensual'; html = viewMonth(v.ym); }
   else if (v && v.type === 'post') { title = 'Entreno'; html = viewPost(v.id); }
   else if (v && v.type === 'user') { title = v.id === Social.myUid() ? 'Mi perfil' : 'Perfil'; html = viewUser(v.id); }
@@ -1227,7 +1404,9 @@ function viewHome(){
   if (backupStale()) h += `<div class="card row between"><div class="small">Hace tiempo que no guardas una copia de tus datos.</div><button class="btn sm" data-act="export-json">Descargar copia</button></div>`;
   const d = new Date();
   if (d.getDate() <= 7) { const pm = d.getFullYear() * 12 + d.getMonth() - 1; const pmw = S.workouts.filter(w => { const x = new Date(w.start); return x.getFullYear() * 12 + x.getMonth() === pm; }); if (pmw.length) h += `<button class="card tap row between next" data-act="go-month" data-ym="${pm}"><div><span class="pill accent">Nuevo</span><h3 style="margin-top:6px">Tu informe de ${MONTHS[pm % 12]}</h3><div class="small muted">${pmw.length} entrenos · ${fmtKg(agg(pmw).vol)}</div></div>${ICON.back.replace('<svg', '<svg width="22" height="22" style="transform:scaleX(-1)"')}</button>`; }
-  if (nx && !S.active) h += `<div class="toca"><div class="row between"><span class="sub">Te toca hoy</span><span class="sub">${plural(nx.exercises.length, 'ejercicio', 'ejercicios')}</span></div><h2>${esc(nx.name)}</h2><div class="ej">${esc(nx.exercises.slice(0, 6).map(e => exOf(e.exId).name).join(', '))}${nx.exercises.length > 6 ? '…' : ''}</div><button class="btn lg block" data-act="start-routine" data-id="${nx.id}">Empezar ${esc(nx.name)}</button></div>`;
+  const pc = planHomeCard();
+  if (pc) h += pc;
+  else if (nx && !S.active) h += `<div class="toca"><div class="row between"><span class="sub">Te toca hoy</span><span class="sub">${plural(nx.exercises.length, 'ejercicio', 'ejercicios')}</span></div><h2>${esc(nx.name)}</h2><div class="ej">${esc(nx.exercises.slice(0, 6).map(e => exOf(e.exId).name).join(', '))}${nx.exercises.length > 6 ? '…' : ''}</div><button class="btn lg block" data-act="start-routine" data-id="${nx.id}">Empezar ${esc(nx.name)}</button></div>`;
   if (!S.workouts.length) {
     h += `<div class="empty"><h3>${Cloud.session && Cloud.session.name ? 'Hola, ' + esc(Cloud.session.name.split(' ')[0]) : 'Bienvenido a Hierro'}</h3><div>Empieza un entreno, trae tu historial de Hevy o recupera una copia de Hierro.</div><div class="stack" style="width:100%;max-width:320px"><button class="btn primary" data-act="tab" data-tab="train">Empezar a entrenar</button><button class="btn" data-act="import-csv">Importar de Hevy (CSV)</button><button class="btn" data-act="restore-json">Restaurar copia de Hierro</button></div></div>`;
     return h;
@@ -1283,6 +1462,7 @@ function viewWorkout(w){
 function viewTrain(){
   const nx = routineNext();
   let h = `<button class="btn primary lg block" data-act="start-empty">${ICON.plus.replace('<svg', '<svg width="20" height="20"')} Empezar entreno vacío</button>`;
+  { const pp = plan(), t = planToday(); h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>${pp ? `${pp.days.filter(id => id && S.routines.some(r => r.id === id)).length} días a la semana · ${t && t.r ? 'hoy: ' + esc(t.r.name) : 'hoy descansas'}` : 'Organiza tu semana y analiza tus rutinas'}</small></div><i>›</i></button></div>`; }
   h += `<div class="section-h"><h2>Rutinas</h2><button class="btn ghost" data-act="new-routine">+ Nueva rutina</button></div>${S.workouts.length ? `<button class="btn ghost block" data-act="routines-from-history">Crear rutinas a partir de mis entrenos</button>` : ''}`;
   if (!S.routines.length) {
     h += `<div class="card empty"><h3>Sin rutinas todavía</h3><div>Crea tus días (por ejemplo Torso A, Pierna A…) o impórtalos desde tu historial de Hevy. Aquí no hay límite de rutinas.</div><div class="row"><button class="btn primary" data-act="new-routine">Crear rutina</button><button class="btn" data-act="import-csv">Importar de Hevy</button></div></div>`;
@@ -1386,7 +1566,7 @@ function viewMe(){
   const now = new Date(), pm = now.getFullYear() * 12 + now.getMonth() - 1;
   let h = `<div class="card row" style="gap:14px"><div class="avatar">${esc(name.slice(0, 1).toUpperCase())}</div><div style="flex:1;min-width:0"><h2 style="overflow:hidden;text-overflow:ellipsis">${esc(name)}</h2><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">${Cloud.session ? esc(Cloud.session.email) : 'Sin cuenta · los datos están solo en este móvil'}</div></div></div>`;
   h += `<div class="card stats"><div class="stat"><b>${tot}</b><span>Entrenos</span></div><div class="stat"><b>${fmtKg(vol)}</b><span>Volumen</span></div><div class="stat"><b>${fmtN(ms / 36e5, 0)} h</b><span>Entrenando</span></div></div>`;
-  h += `<div class="card navlist"><button data-act="go-stats"><span>${ICON.chart}</span><div><b>Estadísticas</b><small>Reparto muscular, evolución, ejercicios principales</small></div><i>›</i></button>
+  h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>Tu semana tipo y análisis de tus rutinas</small></div><i>›</i></button><button data-act="go-stats"><span>${ICON.chart}</span><div><b>Estadísticas</b><small>Reparto muscular, evolución, ejercicios principales</small></div><i>›</i></button>
     <button data-act="go-month" data-ym="${S.workouts.some(w => { const d = new Date(w.start); return d.getFullYear() * 12 + d.getMonth() === now.getFullYear() * 12 + now.getMonth(); }) ? now.getFullYear() * 12 + now.getMonth() : pm}"><span>${ICON.trophy}</span><div><b>Informe mensual</b><small>Tu mes comparado con el anterior, chiquipuntos y constancia</small></div><i>›</i></button></div>`;
   const sg = streakGrid(26);
   h += `<div class="card stack"><div class="row between"><h3>Constancia</h3><span class="small muted">${sg.days} días · ${weekStreak()} sem. seguidas</span></div>${sg.svg}</div>`;
@@ -2578,6 +2758,12 @@ const A = {
     Store.mark('meta', 'active', ...months); render(); toast('Datos borrados');
   },
   'go-stats'(){ go({type: 'stats'}); },
+  'go-plan'(){ go({type: 'plan'}); },
+  'plan-day'(el){ const i = +el.dataset.i, cur = (S.settings.plan || {}).days || [];
+    modal(DAY_NAMES[i], `<div class="menu"><button data-act="plan-set" data-i="${i}" data-id="">${cur[i] ? 'Descanso' : 'Descanso ✓'}</button>${S.routines.map(r => `<button data-act="plan-set" data-i="${i}" data-id="${r.id}">${esc(r.name)}${cur[i] === r.id ? ' ✓' : ''}</button>`).join('')}</div>`); },
+  'plan-set'(el){ const i = +el.dataset.i, days = [...((S.settings.plan || {}).days || ['', '', '', '', '', '', ''])]; days[i] = el.dataset.id; closeModal(); planSave(days); },
+  'plan-goal'(el){ const p = S.settings.plan || {days: ['', '', '', '', '', '', '']}; planSave(p.days, el.dataset.g); },
+  'plan-auto'(){ const d = planFromHistory(); if (d) { planSave(d); toast('Semana rellenada con tus costumbres'); } },
   'go-month'(el){ const ym = +el.dataset.ym; if (el.dataset.replace) navStack[tab].pop(); go({type: 'month', ym}); },
   'st-range'(el){ UI.stRange = el.dataset.k; render(); },
   'st-metric'(el){ UI.stMetric = el.dataset.k; render(); },
@@ -2695,7 +2881,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '3.0.1';
+const APP_VERSION = '3.1.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
