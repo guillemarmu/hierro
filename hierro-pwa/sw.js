@@ -1,6 +1,6 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-4.2.0';
+const VERSION = 'hierro-4.3.0';
 const PHOTOS = 'hierro-fotos'; // fotos de ejercicios: se guardan al verlas y no se borran al actualizar
 const FONTS = 'hierro-fuentes'; // tipografías de Google Fonts (Sora y Plus Jakarta Sans): se guardan la primera vez y funcionan sin conexión
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './config.js'];
@@ -14,6 +14,11 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(); });
+// Aviso del servidor (descanso terminado con la pantalla bloqueada o la app cerrada)
+self.addEventListener('push', e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
+  e.waitUntil(self.registration.showNotification(d.title || '¡Descanso terminado!', {body: d.body || 'A por la siguiente serie', tag: d.tag || 'hierro-descanso', renotify: true, silent: false, vibrate: [300, 120, 300, 120, 400], icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: {url: self.registration.scope}}));
+});
 // Al tocar el aviso del descanso, vuelve a la app (o la abre)
 self.addEventListener('notificationclick', e => {
   e.notification.close();
