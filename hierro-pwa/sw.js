@@ -1,6 +1,6 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-3.1.0';
+const VERSION = 'hierro-3.1.1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './config.js', './fonts/Boldonse-Regular.woff', './fonts/InstrumentSans-Regular.woff', './fonts/InstrumentSans-Bold.woff'];
 
 self.addEventListener('install', e => {
