@@ -292,7 +292,25 @@ table.sets tr+tr td{border-top:1px solid var(--linea)}
 .sgrid.nochk{grid-template-columns:44px minmax(0,1.1fr) minmax(0,1fr) minmax(0,.85fr)}
 .sgrid.hd{font-size:12.5px;color:var(--apagado);font-weight:700;text-align:center;padding:2px 0 0}
 .sgrid.hd div:nth-child(2){text-align:left;padding-left:4px}
-.srow{border-radius:18px;padding:3px 0}
+.srow{border-radius:18px;padding:3px 0;touch-action:pan-y;position:relative;background:transparent}
+.srow.swiping{transition:none}.srow.snap{transition:transform .22s cubic-bezier(.2,.9,.3,1)}
+.srow.gone{transition:transform .2s ease-in,opacity .2s;transform:translateX(-110%)!important;opacity:0}
+.swrap{position:relative;border-radius:18px}.swrap.sw{overflow:hidden}
+.swrap::before{content:'Eliminar';position:absolute;top:0;bottom:0;right:0;width:var(--sw,0px);display:flex;align-items:center;justify-content:flex-end;padding-right:16px;box-sizing:border-box;overflow:hidden;white-space:nowrap;background:var(--peligro);color:#fff;font-weight:800;font-size:14px;border-radius:18px;opacity:var(--swo,0)}
+.swrap.arm::before{filter:brightness(1.12)}
+.sbadge{position:relative}
+.medal{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#FFD66B,#F5A524);color:#5A3A00;box-shadow:0 3px 10px -2px rgba(245,165,36,.7);pointer-events:none}
+.medal svg{width:13px;height:13px}
+.srow.just .medal{animation:medalla .7s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes medalla{0%{transform:scale(0) rotate(-40deg)}55%{transform:scale(1.5) rotate(10deg)}100%{transform:none}}
+.srow.prow.done{background:linear-gradient(90deg,var(--pr-soft),var(--sel-tint))}
+.reord{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.ritem{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:56px;border-radius:16px;background:var(--sup-2);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;position:relative}
+.ritem .ph{width:36px;height:36px;border-radius:10px;object-fit:cover;flex:none}
+.ritem span{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ritem .grip{flex:none;color:var(--apagado);font-size:22px;line-height:1}
+.ritem.drag{z-index:2;box-shadow:var(--sombra-flot);background:var(--glass);transform-origin:center;cursor:grabbing}
+#toast button{margin-left:12px;font-weight:800;text-decoration:underline;color:inherit}
 .srow.done{background:var(--sel-tint)}
 .sbadge{height:48px;border-radius:14px;font-family:var(--rotulo);font-weight:700;font-size:18px;background:var(--sup-2);color:var(--apagado)}
 .srow.t-w .sbadge{color:var(--aviso-t)}
@@ -1248,6 +1266,25 @@ function computePRs(w){
   }
   return prs;
 }
+// Chiquipunto de una serie concreta, al momento de marcarla (compara con el historial y con las series anteriores de hoy)
+function setPR(d, ei, si, cache){
+  const e = d.exercises[ei], s = e.sets[si]; if (!s || !s.done || !isWork(s)) return null;
+  const type = exOf(e.exId).type;
+  let base = cache && cache[e.exId];
+  if (!base) { base = exHistory(e.exId, d.start, d.id).length ? bestsOf(e.exId, d.start, d.id) : false; if (cache) cache[e.exId] = base; }
+  if (!base) return null; // primera vez: no cuenta
+  const b = Object.assign({}, base);
+  d.exercises.forEach((x, i) => { if (x.exId !== e.exId) return; x.sets.forEach((q, j) => { if (!(i < ei || (i === ei && j < si)) || !q.done || !isWork(q)) return; b.kg = Math.max(b.kg, q.kg || 0); b.e1rm = Math.max(b.e1rm, e1rm(q)); b.vol = Math.max(b.vol, setVol(q)); b.reps = Math.max(b.reps, q.reps || 0); b.sec = Math.max(b.sec, q.sec || 0); b.km = Math.max(b.km, q.km || 0); }); });
+  if (type === 'wr' || (type === 'bw' && s.kg > 0)) {
+    if ((s.kg || 0) > b.kg) return {label: 'Peso más alto', txt: fmtN(s.kg) + ' kg'};
+    if (e1rm(s) > b.e1rm + 0.01) return {label: '1RM estimado', txt: fmtN(e1rm(s)) + ' kg'};
+    if (setVol(s) > b.vol) return {label: 'Mejor serie', txt: fmtN(setVol(s), 0) + ' kg'};
+  }
+  if (type === 'bw' && (s.reps || 0) > b.reps) return {label: 'Más repeticiones', txt: s.reps + ' reps'};
+  if (type === 'dur' && (s.sec || 0) > b.sec) return {label: 'Más tiempo', txt: fmtClock(s.sec)};
+  if (type === 'cardio' && (s.km || 0) > b.km) return {label: 'Más distancia', txt: fmtN(s.km, 2) + ' km'};
+  return null;
+}
 function setText(s, type){
   if (!s) return '';
   if (type === 'dur') return s.sec ? fmtClock(s.sec) : '';
@@ -2008,7 +2045,7 @@ function edStats(){
 }
 function renderEditor(keepScroll = true){
   const body = $('#editor .ebody'); const st = body && keepScroll ? body.scrollTop : 0;
-  const d = ED.data, m = ED.mode;
+  const d = ED.data, m = ED.mode; ED.prc = null;
   const head = m === 'active'
     ? `<button class="iconbtn" data-act="ed-min" aria-label="Minimizar">${ICON.down}</button><div class="ttl"><span id="edClock" class="num">${fmtClock((Date.now() - d.start) / 1000)}</span><small>Entreno en curso</small></div><button class="btn good" data-act="ed-finish">Terminar</button>`
     : `<button class="btn ghost" data-act="ed-cancel">Cancelar</button><div class="ttl">${m === 'routine' ? (d._new ? 'Nueva rutina' : 'Editar rutina') : 'Editar entreno'}</div><button class="btn primary sm" data-act="ed-save">Guardar</button>`;
@@ -2027,7 +2064,7 @@ function renderEditor(keepScroll = true){
   h += `</div></div>`;
   $('#editor').innerHTML = h;
   if (keepScroll) $('#editor .ebody').scrollTop = st;
-  ED.just = null;
+  ED.just = null; ED.prc = null;
 }
 function platesHTML(e){
   const x = exOf(e.exId); if (!ED || ED.mode !== 'active' || x.equip !== 'barra' || x.type !== 'wr') return '';
@@ -2045,16 +2082,18 @@ function exCardHTML(e, ei){
   const fields = x.type === 'dur' ? ['sec'] : x.type === 'cardio' ? ['km', 'min'] : ['kg', 'reps'];
   const rest = e.rest ?? S.settings.rest;
   let n = 0;
+  if (chk && !ED.prc) ED.prc = {};
   const rows = e.sets.map((s, si) => {
+    const pr = chk && s.done ? setPR(ED.data, ei, si, ED.prc) : null;
     const lab = s.t === 'n' ? ++n : s.t.toUpperCase();
     const ph = phFor(e, si) || {};
     const pv = prev[si], key = ei + '-' + si;
     const inputs = fields.map(f => `<input class="sin" inputmode="${f === 'reps' || f === 'sec' ? 'numeric' : 'decimal'}" data-act="set-in" data-f="${f}" data-ei="${ei}" data-si="${si}" value="${s[f] != null ? String(s[f]).replace('.', ',') : ''}" placeholder="${ph[f] != null ? fmtN(ph[f], 2) : '–'}" aria-label="${f} serie ${si + 1}">`).join('') + (fields.length === 1 ? '<div></div>' : '');
-    return `<div class="sgrid srow t-${s.t} ${chk && s.done ? 'done' : ''} ${chk ? '' : 'nochk'} ${chk && ED.cur === key ? 'cur' : ''} ${ED.just === key ? 'just' : ''}" id="r-${ei}-${si}">
-      <button class="sbadge" data-act="set-menu" data-ei="${ei}" data-si="${si}" aria-label="Tipo de serie">${lab}</button>
+    return `<div class="swrap"><div class="sgrid srow t-${s.t} ${chk && s.done ? 'done' : ''} ${pr ? 'prow' : ''} ${chk ? '' : 'nochk'} ${chk && ED.cur === key ? 'cur' : ''} ${ED.just === key ? 'just' : ''}" id="r-${ei}-${si}" data-ei="${ei}" data-si="${si}">
+      <button class="sbadge" data-act="set-menu" data-ei="${ei}" data-si="${si}" aria-label="Tipo de serie">${lab}${pr ? `<i class="medal" title="Chiquipunto: ${pr.label}">${ICON.trophy}</i>` : ''}</button>
       <button class="sprev" data-act="use-prev" data-ei="${ei}" data-si="${si}">${pv ? esc(setText(pv, x.type)) : '–'}</button>
       ${inputs}
-      ${chk ? `<button class="schk" data-act="set-done" data-ei="${ei}" data-si="${si}" aria-label="Marcar serie hecha" aria-pressed="${!!s.done}">${ICON.check}</button>` : ''}</div>`;
+      ${chk ? `<button class="schk" data-act="set-done" data-ei="${ei}" data-si="${si}" aria-label="Marcar serie hecha" aria-pressed="${!!s.done}">${ICON.check}</button>` : ''}</div></div>`;
   }).join('');
   return `<div class="excard ${e.ss ? 'ss' : ''}" id="ex-${ei}">
     <div class="exh">${photoUrl(x) ? `<button class="exthumb" data-act="ed-ex-info" data-id="${x.id}" aria-label="Ver ${esc(x.name)}">${photoImg(x)}</button>` : ''}<button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
@@ -2128,7 +2167,8 @@ function ask(title, text, buttons){
   });
 }
 let toastT = null;
-function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+let toastFn = null;
+function toast(msg, action){ const t = $('#toast'); t.textContent = msg; toastFn = null; if (action) { toastFn = action.fn; const b = document.createElement('button'); b.dataset.act = 'toast-act'; b.textContent = action.label; t.appendChild(b); } t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove('show'); toastFn = null; }, action ? 4500 : 2600); }
 
 /* ---------- Selector de ejercicios ---------- */
 let PICK = null; // {mode:'add'|'replace', ei, sel:[], q, m}
@@ -2940,7 +2980,9 @@ const A = {
     modal('Tipo de serie', `<div class="menu">${[['n', '1', 'Normal'], ['w', 'W', 'Calentamiento'], ['f', 'F', 'Al fallo'], ['d', 'D', 'Drop set']].map(([t, k, l]) => `<button data-act="set-type" data-t="${t}" data-ei="${ei}" data-si="${si}"><span class="k">${k}</span>${l}</button>`).join('')}<button class="danger" data-act="set-del" data-ei="${ei}" data-si="${si}"><span class="k">×</span>Eliminar serie</button></div>`);
   },
   'set-type'(el){ ED.data.exercises[+el.dataset.ei].sets[+el.dataset.si].t = el.dataset.t; closeModal(); renderEditor(); edTouch(); },
-  'set-del'(el){ const e = ED.data.exercises[+el.dataset.ei]; e.sets.splice(+el.dataset.si, 1); closeModal(); renderEditor(); edTouch(); },
+  'set-del'(el){ closeModal(); delSet(+el.dataset.ei, +el.dataset.si); },
+  'toast-act'(){ const f = toastFn; toastFn = null; $('#toast').classList.remove('show'); if (f) f(); },
+  'ex-reorder'(){ closeModal(); openReorder(); },
   'add-set'(el){ const e = ED.data.exercises[+el.dataset.ei]; const last = e.sets[e.sets.length - 1]; const s = blankSet(last && last.t === 'w' ? 'n' : (last ? last.t : 'n')); if (ED.mode !== 'active' && last) { s.kg = last.kg; s.reps = last.reps; s.sec = last.sec; s.km = last.km; s.min = last.min; } else if (last) { s.ph = {kg: last.kg ?? (last.ph || {}).kg, reps: last.reps ?? (last.ph || {}).reps, sec: last.sec ?? (last.ph || {}).sec, km: last.km ?? (last.ph || {}).km, min: last.min ?? (last.ph || {}).min}; } e.sets.push(s); renderEditor(); edTouch(); },
   'use-prev'(el){ const ei = +el.dataset.ei, si = +el.dataset.si, e = ED.data.exercises[ei]; const p = prevSets(e.exId, ED.mode === 'past' ? ED.data.id : null)[si]; if (!p) return; const s = e.sets[si]; ['kg', 'reps', 'sec', 'km', 'min'].forEach(f => { if (p[f] != null) s[f] = p[f]; }); renderEditor(); edTouch(); },
   'set-done'(el){
@@ -2953,6 +2995,8 @@ const A = {
       const next = e.ss ? ED.data.exercises[ei + 1] : null;
       const lastInSS = !(next && next.ss === e.ss);
       if (lastInSS) startRest(e.rest ?? S.settings.rest, x.name);
+      const pr = setPR(ED.data, ei, si);
+      if (pr) { toast(`🏆 ¡Chiquipunto! ${pr.label}: ${pr.txt}`); try { navigator.vibrate && navigator.vibrate([15, 60, 30]); } catch (err) {} }
     } else s.done = false;
     renderEditor(); edTouch();
   },
@@ -2961,8 +3005,7 @@ const A = {
     modal(esc(exOf(e.exId).name), `<div class="menu">
       <button data-act="ex-replace" data-ei="${ei}">Reemplazar ejercicio</button>
       ${ei < d.exercises.length - 1 ? `<button data-act="ex-ss" data-ei="${ei}">${e.ss && d.exercises[ei + 1].ss === e.ss ? 'Quitar superserie con el siguiente' : 'Hacer superserie con el siguiente'}</button>` : ''}
-      ${ei > 0 ? `<button data-act="ex-move" data-ei="${ei}" data-d="-1">Subir</button>` : ''}
-      ${ei < d.exercises.length - 1 ? `<button data-act="ex-move" data-ei="${ei}" data-d="1">Bajar</button>` : ''}
+      ${d.exercises.length > 1 ? `<button data-act="ex-reorder">Reordenar ejercicios</button>` : ''}
       <button class="danger" data-act="ex-remove" data-ei="${ei}">Quitar ejercicio</button></div>`);
   },
   'ex-replace'(el){ closeModal(); openPicker('replace', +el.dataset.ei); },
@@ -3122,6 +3165,76 @@ function fillFromPh(e, si){
 }
 function syncTitle(){ const t = $('#edTitle'); if (!t || !ED) return; if (ED.mode === 'routine') ED.data.name = t.value; else ED.data.title = t.value; }
 
+function delSet(ei, si){
+  if (!ED) return; const e = ED.data.exercises[ei]; if (!e || !e.sets[si]) return;
+  const [gone] = e.sets.splice(si, 1); renderEditor(); edTouch();
+  toast('Serie eliminada', {label: 'Deshacer', fn: () => { if (ED && ED.data.exercises[ei] === e) { e.sets.splice(si, 0, gone); renderEditor(); edTouch(); } }});
+}
+function fixSS(list){ list.forEach((e, i) => { if (e.ss && (list[i - 1] || {}).ss !== e.ss && (list[i + 1] || {}).ss !== e.ss) e.ss = null; }); }
+function openReorder(){
+  const d = ED.data;
+  modal('Reordenar ejercicios', `<div class="small muted">Mantén y arrastra cada ejercicio a su sitio.</div><div class="reord" id="reord">${d.exercises.map((e, i) => { const x = exOf(e.exId); return `<div class="ritem" data-i="${i}">${photoImg(x)}<span>${esc(x.name)}</span><b class="grip" aria-hidden="true">≡</b></div>`; }).join('')}</div>`, `<button class="btn primary" data-act="m-close">Listo</button>`);
+}
+function applyReorder(){
+  const list = $('#reord'); if (!list || !ED) return;
+  const old = ED.data.exercises, order = [...list.children].map(n => +n.dataset.i);
+  ED.data.exercises = order.map(i => old[i]); fixSS(ED.data.exercises);
+  [...list.children].forEach((n, i) => { n.dataset.i = i; });
+  renderEditor(); edTouch();
+}
+// Gestos: deslizar serie para borrar · arrastrar para reordenar · mantener cabecera de ejercicio para reordenar
+let SW = null, RD = null, LP = null, swallowUntil = 0;
+document.addEventListener('click', ev => { if (Date.now() < swallowUntil) { ev.stopPropagation(); ev.preventDefault(); } }, true);
+document.addEventListener('pointerdown', ev => {
+  if (ev.pointerType === 'mouse' && ev.button) return;
+  const it = ev.target.closest('#reord .ritem');
+  if (it) { const mb = it.closest('.mb'); RD = {el: it, id: ev.pointerId, mb, y0: ev.clientY + (mb ? mb.scrollTop : 0)}; it.classList.add('drag'); try { it.setPointerCapture(ev.pointerId); } catch (e) {} try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} return; }
+  const row = ev.target.closest('#editor .srow');
+  if (row) { SW = {row, wrap: row.parentNode, id: ev.pointerId, x: ev.clientX, y: ev.clientY, dx: 0, on: false}; return; }
+  const hd = ev.target.closest('#editor .excard .exh');
+  if (hd && ED && ED.data.exercises.length > 1 && !ev.target.closest('[data-act="ex-menu"]')) {
+    LP = {x: ev.clientX, y: ev.clientY, id: ev.pointerId, t: setTimeout(() => { LP = null; swallowUntil = Date.now() + 600; try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} openReorder(); }, 480)};
+  }
+});
+document.addEventListener('pointermove', ev => {
+  if (LP && ev.pointerId === LP.id && Math.hypot(ev.clientX - LP.x, ev.clientY - LP.y) > 8) { clearTimeout(LP.t); LP = null; }
+  if (RD && ev.pointerId === RD.id) {
+    const el = RD.el, mb = RD.mb, list = el.parentNode;
+    if (mb) { const r = mb.getBoundingClientRect(); if (ev.clientY < r.top + 40) mb.scrollTop -= 8; else if (ev.clientY > r.bottom - 40) mb.scrollTop += 8; }
+    const y = ev.clientY + (mb ? mb.scrollTop : 0);
+    let dy = y - RD.y0;
+    const prev = el.previousElementSibling, next = el.nextElementSibling;
+    if (next && dy > next.offsetHeight / 2) { const t0 = el.offsetTop; list.insertBefore(next, el); RD.y0 += el.offsetTop - t0; }
+    else if (prev && dy < -prev.offsetHeight / 2) { const t0 = el.offsetTop; list.insertBefore(el, prev); RD.y0 += el.offsetTop - t0; }
+    dy = y - RD.y0; el.style.transform = `translateY(${dy}px) scale(1.02)`;
+    ev.preventDefault(); return;
+  }
+  if (!SW || ev.pointerId !== SW.id) return;
+  const dx = ev.clientX - SW.x, dy = ev.clientY - SW.y;
+  if (!SW.on) {
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { SW = null; return; }
+    if (dx < -12 && Math.abs(dx) > Math.abs(dy) * 1.4) { SW.on = true; SW.row.classList.add('swiping'); SW.wrap.classList.add('sw'); try { SW.row.setPointerCapture(ev.pointerId); } catch (e) {} const a = document.activeElement; if (a && a.classList && a.classList.contains('sin')) a.blur(); }
+    else return;
+  }
+  SW.dx = Math.min(0, dx); const w = SW.row.offsetWidth, arm = -SW.dx > Math.max(90, w * .38);
+  SW.row.style.transform = `translateX(${SW.dx}px)`;
+  SW.wrap.style.setProperty('--sw', (-SW.dx) + 'px'); SW.wrap.style.setProperty('--swo', Math.min(1, -SW.dx / 40));
+  if (arm !== !!SW.arm) { SW.arm = arm; SW.wrap.classList.toggle('arm', arm); if (arm) try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} }
+});
+function endGesture(ev){
+  if (LP && ev.pointerId === LP.id) { clearTimeout(LP.t); LP = null; }
+  if (RD && ev.pointerId === RD.id) { RD.el.classList.remove('drag'); RD.el.style.transform = ''; RD = null; applyReorder(); return; }
+  if (!SW || ev.pointerId !== SW.id) return;
+  const s = SW; SW = null; if (!s.on) return;
+  swallowUntil = Date.now() + 350; s.row.classList.remove('swiping');
+  if (s.arm && ev.type === 'pointerup') { s.row.classList.add('gone'); s.wrap.style.setProperty('--sw', '100%'); setTimeout(() => delSet(+s.row.dataset.ei, +s.row.dataset.si), 190); }
+  else { s.row.classList.add('snap'); s.row.style.transform = ''; s.wrap.style.setProperty('--sw', '0px'); s.wrap.classList.remove('arm'); setTimeout(() => { s.row.classList.remove('snap'); s.wrap.classList.remove('sw'); }, 250); }
+}
+document.addEventListener('pointerup', endGesture); document.addEventListener('pointercancel', endGesture);
+// Al tocar un peso o unas reps ya puestos, se selecciona todo: lo que escribas sustituye al valor anterior
+let selFocus = null;
+document.addEventListener('focusin', ev => { const el = ev.target; if (el.classList && el.classList.contains('sin') && el.value) { selFocus = el; const go = () => { if (document.activeElement === el) try { el.setSelectionRange(0, el.value.length); } catch (e) { el.select(); } }; go(); setTimeout(go, 0); setTimeout(go, 60); } });
+document.addEventListener('mouseup', ev => { if (selFocus && ev.target === selFocus) { ev.preventDefault(); selFocus = null; } });
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-act]'); if (!el) { if (ev.target.id === 'modal') A['m-close'](); return; }
   const act = el.dataset.act;
@@ -3172,7 +3285,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '4.1.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
