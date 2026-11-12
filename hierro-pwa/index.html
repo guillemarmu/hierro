@@ -1381,14 +1381,26 @@ const Sync = {
       await Store.save();
     }
     // perfil público y entrenos publicados (si falla, no bloquea tus datos privados)
-    const sitems = Social.pushItems();
+    // Si el lote falla, se reintenta elemento a elemento: así algo malo no frena lo demás. Borrar una publicación que ya no existe
+    // (la quitaste desde otro dispositivo) lo rechazan las reglas con 403: si de verdad ya no está, se da por hecho.
+    const sitems = Social.pushItems(); let sfail = null;
     for (let i = 0; i < sitems.length; i += 200) {
       const chunk = sitems.slice(i, i + 200);
-      try { await Cloud.commit(chunk.map(x => x[0])); chunk.forEach(x => x[1]()); await Store.save(); }
-      catch (e) { if (e.offline || e.session) throw e; console.warn('Social', e); this.err('social', e); break; }
-      if (i + 200 >= sitems.length) this.err('social');
+      try { await Cloud.commit(chunk.map(x => x[0])); chunk.forEach(x => x[1]()); }
+      catch (e) {
+        if (e.offline || e.session) throw e;
+        for (const x of chunk) {
+          try { await Cloud.commit([x[0]]); x[1](); }
+          catch (e2) {
+            if (e2.offline || e2.session) throw e2;
+            if (x[0].delete && e2.status === 403 && (await Cloud.fs('GET', x[0].delete).catch(() => 'err')) === null) { x[1](); continue; }
+            sfail = e2;
+          }
+        }
+      }
+      await Store.save();
     }
-    if (!sitems.length) this.err('social');
+    if (sfail) { console.warn('Social', sfail); this.err('social', sfail); } else this.err('social');
     const cn = await Clan.push(); // liga de clanes (aparte: si falla, no frena lo demás)
     return items.length + sitems.length + cn;
   },
@@ -4741,7 +4753,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.4';
+const APP_VERSION = '4.5.5';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
