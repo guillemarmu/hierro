@@ -1306,7 +1306,16 @@ const Cloud = {
 const Sync = {
   timer: null, busy: false, again: false, state: 'idle', last: 0,
   on(){ return !!(Cloud.enabled() && Cloud.session); },
-  schedule(ms = 1500){ if (!this.on()) return; clearTimeout(this.timer); this.timer = setTimeout(() => this.run(), ms); },
+  schedule(ms = 1500){ if (!this.on()) return; clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = null; this.run(); }, ms); },
+  // Si tras sincronizar queda algo sin subir y no hay ninguna subida programada (un cambio que no pasó por Store.mark,
+  // como el perfil o el clan cargados después, o un fallo suelto del social o del clan), se reintenta solo con espera creciente.
+  tries: 0,
+  nudge(pend){
+    if (!pend) { this.tries = 0; return; }
+    if (!this.on() || this.busy || this.timer || this.state !== 'ok') return;
+    this.tries = Math.min(this.tries + 1, 9);
+    this.schedule(Math.min(300000, this.tries === 1 ? 1500 : 5000 * 2 ** (this.tries - 2)));
+  },
   diff(){
     const out = {w: [], del: [], meta: null, active: null}, ids = new Set();
     for (const w of S.workouts) { ids.add(w.id); const h = hashOf(w); if (Store.synced.w[w.id] !== h) out.w.push([w, h]); }
@@ -1384,7 +1393,7 @@ const Sync = {
   async run(){
     if (!this.on()) return;
     if (this.busy) { this.again = true; return; }
-    clearTimeout(this.timer);
+    clearTimeout(this.timer); this.timer = null;
     this.busy = true; this.state = 'busy'; syncUI();
     try {
       // primero se baja lo nuevo (sin pisar cambios locales pendientes) y luego se sube lo local
@@ -1407,6 +1416,7 @@ function syncUI(){
   let [cls, txt] = map[Sync.state] || map.idle;
   if (Sync.state === 'ok' && pend) { cls = 'busy'; txt = 'Pendiente de subir'; }
   el.className = 'sync ' + cls; el.innerHTML = `<i></i><span>${txt}</span>`; el.title = txt;
+  if (Sync.state === 'ok') Sync.nudge(pend);
 }
 window.addEventListener('online', () => Sync.schedule(200));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Sync.schedule(600); });
@@ -3710,6 +3720,10 @@ const LOGROS = [
   ['clan', '🛡️', 'Espíritu de clan', 'Únete a un clan o funda uno', s => [s.clan, 1]]
 ];
 const REL_ACH = new Set(['rb1', 'rs15', 'rd2']);
+// Ejercicios propios que son el mismo levantamiento con barra (p. ej. «Press de Banca (Barra)» importado de Hevy)
+const REL_RE = {'x-press-banca-barra': /^(press (de )?banca|bench press)( plano)? (con )?(barra|barbell)$/, 'x-sentadilla-barra': /^(sentadilla|back squat|squat)( trasera)? (con )?(barra|barbell)$/,
+  'x-peso-muerto-barra': /^(peso muerto|deadlift)( convencional)? (con )?(barra|barbell)$/, 'x-press-militar-barra': /^(press militar|press de hombros de pie|overhead press)( de pie)? (con )?(barra|barbell)$/};
+const relIds = id => [id, ...S.customEx.filter(c => REL_RE[id] && REL_RE[id].test(norm(c.name))).map(c => c.id)];
 const STICKY_ACH = new Set(['p100', 'rb1', 'rs15', 'rd2', 'clan']); // se guardan al conseguirlos (no se pierden si cambia el peso o la semana)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
 ICON.shield = SV('<path d="M12 2.8 19.5 6v5.6c0 4.6-3.1 8.3-7.5 9.6-4.4-1.3-7.5-5-7.5-9.6V6z"/><path d="M8.6 10.2 12 12.6l3.4-2.4M8.6 14 12 16.4l3.4-2.4"/>');
@@ -3747,7 +3761,7 @@ function bodyweightAt(t){ let b = null; for (const m of S.measures) if (m.weight
 /* Mi liga: semanas, fuerza relativa y logros, calculados con mis entrenos (se cachea unos segundos: se usa en cada pintado) */
 function myLeague(){
   const now = Date.now(), K = clanKeys(), w0 = S.workouts[0] || {};
-  const key = [S.workouts.length, w0.id, w0.start, w0.end, (w0.prs || []).length, S.measures.length, S.measures.map(m => m.weight).join(), !!S.settings.relShare, S.settings.clan || '', JSON.stringify(S.settings.logros || {}), K.ws].join('|');
+  const key = [S.workouts.length, w0.id, w0.start, w0.end, (w0.prs || []).length, S.measures.length, S.measures.map(m => m.weight).join(), S.customEx.length, !!S.settings.relShare, S.settings.clan || '', JSON.stringify(S.settings.logros || {}), K.ws].join('|');
   const c = myLeague.c; if (c && c.key === key && now - c.t < 5000) return c.v;
   // semanas a calcular: las 8 de la liga y todas las que empiezan en los 13 meses del historial mensual
   const m0 = (d => new Date(d.getFullYear(), d.getMonth() - 12, 1).getTime())(new Date(K.ws));
@@ -3763,7 +3777,7 @@ function myLeague(){
   }
   const relOf = (t0, t1, bw) => {
     const r = {};
-    for (const [k, id] of REL_LIFTS) { let b = 0; for (const p of idx.get(id) || []) if (p.t >= t0 && p.t < t1 && p.v > b) b = p.v; if (b) r[k] = Math.round(Math.min(CL.maxRel, b / bw) * 100) / 100; }
+    for (const [k, id] of REL_LIFTS) { let b = 0; for (const p of relIds(id).flatMap(x => idx.get(x) || [])) if (p.t >= t0 && p.t < t1 && p.v > b) b = p.v; if (b) r[k] = Math.round(Math.min(CL.maxRel, b / bw) * 100) / 100; }
     const tot = (r.banca || 0) + (r.sentadilla || 0) + (r.muerto || 0); if (tot) r.total = Math.round(tot * 100) / 100;
     return r;
   };
@@ -3799,7 +3813,7 @@ function myLeague(){
   for (const k of [...wkDays.keys()].sort((a, b) => a - b)) { run = prev !== null && weekStart(prev + 8 * 864e5) === k ? run + 1 : 1; maxRun = Math.max(maxRun, run); prev = k; }
   let maxDays = 0; wkDays.forEach(s => { maxDays = Math.max(maxDays, s.size); });
   // la fuerza relativa de los logros es la mejor de siempre frente a tu peso actual
-  const relBest = {}; if (bw) for (const [k, id] of REL_LIFTS) { const b = bestsOf(id).e1rm; if (b) relBest[k] = Math.round(b / bw * 100) / 100; }
+  const relBest = {}; if (bw) for (const [k, id] of REL_LIFTS) { const b = Math.max(0, ...relIds(id).map(x => bestsOf(x).e1rm || 0)); if (b) relBest[k] = Math.round(b / bw * 100) / 100; }
   const st = {n: S.workouts.length, prTot, maxRun, maxDays, maxPts, rel: relBest, clan: S.settings.clan ? 1 : 0};
   const got = S.settings.logros || {};
   const ach = LOGROS.filter(([id, , , , f]) => got[id] || (f && (([v, g]) => v >= g)(f(st)))).map(l => l[0]);
@@ -4007,7 +4021,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
     if (has) pos++;
     let sub = kind === 'pts' ? `🔥 ${plural(x.days, 'día', 'días')} · ✨ ${x.prs} · 📈 +${fmtN(x.impr)} %`
       : kind === 'mip' ? `${plural(x.n, 'entreno', 'entrenos')} · ✨ ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}`
-      : kind === 'rel' ? (has ? lift : r.me ? 'Activa «Compartir» para salir' : 'No comparte su fuerza relativa')
+      : kind === 'rel' ? (has ? lift : r.me ? (S.settings.relShare ? `Sin ${Clan.lift === 'total' ? 'banca, sentadilla ni peso muerto' : lift.toLowerCase()} con barra en ${CL.relWeeks} semanas` : 'Activa «Compartir» para salir') : 'No comparte su fuerza relativa')
       : st ? `Racha de ${plural(st, 'semana seguida', 'semanas seguidas')}` : 'Sin racha ahora mismo';
     if (kind !== 'rel' && x.partial) sub = 'App sin actualizar: solo sus 8 últimas semanas';
     const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : kind === 'rel' ? fmtN(r.v, 2) : fmtN(r.v, 0);
@@ -4515,7 +4529,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.0';
+const APP_VERSION = '4.5.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
