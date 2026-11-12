@@ -93,14 +93,94 @@ service cloud.firestore {
     match /scores/{uid} {
       allow read: if signed();
       allow create, update: if signed() && me() == uid && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly(['v', 'uid', 'name', 'username', 'clan', 'wk', 'weeks', 'streak', 'lastWk', 'ach', 'rel', 'updated'])
+        && request.resource.data.keys().hasOnly(['v', 'uid', 'name', 'username', 'clan', 'wk', 'weeks', 'months', 'streak', 'lastWk', 'ach', 'rel', 'updated'])
         && request.resource.data.name is string && request.resource.data.name.size() <= 60
         && request.resource.data.clan is string && request.resource.data.clan.size() <= 40
         && request.resource.data.updated is int
         && request.resource.data.weeks is map && request.resource.data.weeks.size() <= 10
         && request.resource.data.ach is list && request.resource.data.ach.size() <= 60
+        && (!('months' in request.resource.data) || (request.resource.data.months is map && request.resource.data.months.size() <= 14))
         && (!('rel' in request.resource.data) || (request.resource.data.rel is map && request.resource.data.rel.size() <= 6));
       allow delete: if signed() && me() == uid;
+    }
+
+    // ---------- Relaciones entre clanes: alianzas y piques ----------
+    function clanOwner(cid) { return get(/databases/$(database)/documents/clans/$(cid)).data.owner; }
+    function pairId(x, y) { return x < y ? x + '_' + y : y + '_' + x; }
+    function relListOf(t) { return t == 'alianza' ? 'allies' : 'rivals'; }
+    function inLinks(cid, other, t) { return other in getAfter(/databases/$(database)/documents/clanrels/$(cid)).data.get(relListOf(t), []); }
+
+    // relations/{a_b}: a < b (ids de clan). Un solo documento por pareja: o aliados o rivales.
+    // Propone el jefe del clan «from»; acepta solo el jefe del otro; cualquiera de los dos jefes rechaza o termina.
+    match /relations/{rid} {
+      allow read: if signed();
+      allow create: if signed()
+        && request.resource.data.keys().hasOnly(['a', 'b', 'type', 'status', 'from', 'by', 'created', 'msg'])
+        && request.resource.data.a is string && request.resource.data.b is string
+        && request.resource.data.a < request.resource.data.b
+        && rid == request.resource.data.a + '_' + request.resource.data.b
+        && request.resource.data.type in ['alianza', 'pique']
+        && request.resource.data.status == 'pendiente'
+        && request.resource.data.from in [request.resource.data.a, request.resource.data.b]
+        && request.resource.data.by == me()
+        && clanOwner(request.resource.data.from) == me()
+        && exists(/databases/$(database)/documents/clans/$(request.resource.data.from == request.resource.data.a ? request.resource.data.b : request.resource.data.a))
+        && request.resource.data.created is int
+        && (!('msg' in request.resource.data) || (request.resource.data.msg is string && request.resource.data.msg.size() <= 120));
+      // aceptar: solo pasa a «activa» si a la vez entra en las listas de los dos clanes (que tienen como mucho 5)
+      allow update: if signed()
+        && resource.data.status == 'pendiente' && request.resource.data.status == 'activa'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'accepted'])
+        && request.resource.data.accepted is int
+        && clanOwner(resource.data.from == resource.data.a ? resource.data.b : resource.data.a) == me()
+        && inLinks(resource.data.a, resource.data.b, resource.data.type)
+        && inLinks(resource.data.b, resource.data.a, resource.data.type);
+      allow delete: if signed() && (clanOwner(resource.data.a) == me() || clanOwner(resource.data.b) == me());
+
+      // Muro de piques: lo leen todos; escriben los miembros de los dos clanes; borra el autor o cualquiera de los dos jefes
+      match /msgs/{mid} {
+        allow read: if signed();
+        allow create: if signed() && request.resource.data.uid == me()
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'clan', 'text', 'ts'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 140
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60
+          && request.resource.data.ts is int
+          && get(/databases/$(database)/documents/relations/$(rid)).data.status == 'activa'
+          && request.resource.data.clan in [get(/databases/$(database)/documents/relations/$(rid)).data.a, get(/databases/$(database)/documents/relations/$(rid)).data.b]
+          && me() in get(/databases/$(database)/documents/clans/$(request.resource.data.clan)).data.members;
+        allow delete: if signed() && (resource.data.uid == me()
+          || clanOwner(get(/databases/$(database)/documents/relations/$(rid)).data.a) == me()
+          || clanOwner(get(/databases/$(database)/documents/relations/$(rid)).data.b) == me());
+      }
+    }
+
+    // clanrels/{cid}: relaciones activas de un clan (allies y rivals, máximo 5 de cada). Cada escritura cambia un solo clan («last»)
+    // y tiene que cuadrar con relations: se añade si la relación queda activa y se quita si la relación ya no existe.
+    function oldLinks(f) { return resource == null ? [] : resource.data.get(f, []); }
+    function onlyLast(f) {
+      let n = request.resource.data.get(f, []).toSet();
+      let o = oldLinks(f).toSet();
+      return n.difference(o).hasOnly([request.resource.data.last]) && o.difference(n).hasOnly([request.resource.data.last]);
+    }
+    function linkOk(cid, f, t) {
+      let x = request.resource.data.last;
+      let added = (x in request.resource.data.get(f, [])) && !(x in oldLinks(f));
+      let removed = !(x in request.resource.data.get(f, [])) && (x in oldLinks(f));
+      let rel = /databases/$(database)/documents/relations/$(pairId(cid, x));
+      return (!added || (existsAfter(rel) && getAfter(rel).data.status == 'activa' && getAfter(rel).data.type == t))
+        && (!removed || !existsAfter(rel));
+    }
+    match /clanrels/{cid} {
+      allow read: if signed();
+      allow create, update: if signed()
+        && request.resource.data.keys().hasOnly(['allies', 'rivals', 'last'])
+        && request.resource.data.last is string
+        && request.resource.data.get('allies', []) is list && request.resource.data.get('allies', []).size() <= 5
+        && request.resource.data.get('rivals', []) is list && request.resource.data.get('rivals', []).size() <= 5
+        && (clanOwner(cid) == me() || clanOwner(request.resource.data.last) == me())
+        && onlyLast('allies') && onlyLast('rivals')
+        && linkOk(cid, 'allies', 'alianza') && linkOk(cid, 'rivals', 'pique');
+      allow delete: if signed() && clanOwner(cid) == me();
     }
   }
 }
