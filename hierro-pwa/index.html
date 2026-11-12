@@ -1451,7 +1451,26 @@ const Sync = {
     } finally {
       this.busy = false; await Store.save(); syncUI();
       if (this.again) { this.again = false; this.schedule(300); }
+      if ((this.state === 'ok' && this.tries >= 2) || this.state === 'error') setTimeout(() => this.diag(), 2000);
     }
+  },
+  // Si algo se queda sin subir varias veces seguidas, el móvil deja un informe en tu cuenta (users/{uid}/state/diag-{móvil}):
+  // versión, qué queda pendiente y el último error. Solo lo puede leer el dueño de la cuenta. Como mucho uno cada 2 minutos.
+  diagAt: 0,
+  async diag(){
+    try {
+      if (!this.on() || (this.state !== 'ok' && this.state !== 'error') || this.busy || Date.now() - this.diagAt < 120000) return;
+      const d = this.diff(), si = Social.pushItems(), ci = Clan.pushItems();
+      if (!(d.w.length + d.del.length + (d.meta ? 1 : 0) + (d.active ? 1 : 0) + si.length + ci.length)) return;
+      this.diagAt = Date.now();
+      let dev = 'x'; try { dev = localStorage.getItem('hierro.dev') || ''; if (!dev) localStorage.setItem('hierro.dev', dev = Math.random().toString(36).slice(2, 8)); } catch (e) {}
+      const M = metaObj(), parts = {}, sk = {}; for (const k in M) parts[k] = hashOf(M[k]); for (const k in S.settings) sk[k] = hashOf(S.settings[k]);
+      const nm = w => String(w.delete || (w.update && w.update.name) || '').split('/documents/')[1] + (w.updateMask ? ' [' + w.updateMask.fieldPaths.join(',') + ']' : '');
+      const info = {v: APP_VERSION, at: Date.now(), ua: navigator.userAgent.slice(0, 160), sa: isStandalone(), text: syncInfo().text, errs: this.errs,
+        meta: d.meta ? {synced: Store.synced.meta, now: d.meta, parts, sk} : null, w: d.w.map(([w]) => w.id).slice(0, 20), del: d.del.slice(0, 20), active: !!d.active,
+        social: si.map(([w]) => nm(w)).slice(0, 20), clan: ci.length ? {synced: Store.synced.score, now: hashOf(Clan.body()), noMonths: !!Clan.noMonths, body: JSON.stringify(Clan.body()).slice(0, 3000)} : null};
+      await Cloud.commit([Cloud.write(['users', Cloud.session.uid, 'state', 'diag-' + dev], {json: info})]);
+    } catch (e) { console.warn('diag', e); }
   }
 };
 // Qué queda por subir, en palabras (para la ventana que se abre al tocar el estado de la sincronización)
@@ -1481,7 +1500,7 @@ function syncUI(){
   const pend = Sync.state !== 'busy' ? Sync.pendingCount() : 0;
   const map = {ok: ['ok', 'Sincronizado'], idle: ['', 'Sincronizando…'], busy: ['busy', 'Sincronizando…'], offline: ['off', 'Sin conexión'], error: ['off', 'Pendiente de subir'], expired: ['off', 'Sesión caducada']};
   let [cls, txt] = map[Sync.state] || map.idle;
-  if (Sync.state === 'ok' && pend) { cls = 'busy'; txt = 'Pendiente de subir'; }
+  if (Sync.state === 'ok' && pend) [cls, txt] = (Sync.errs.social || Sync.errs.clan) && Sync.tries >= 2 ? ['off', 'Error al subir'] : ['busy', 'Pendiente de subir'];
   el.className = 'sync ' + cls; el.innerHTML = `<i></i><span>${txt}</span>`; el.title = txt; el.dataset.act = 'sync-info'; el.setAttribute('role', 'button');
   if (Sync.state === 'ok') Sync.nudge(pend);
 }
@@ -3820,10 +3839,66 @@ $('#fileJson').addEventListener('change', async ev => {
    Todo se calcula en el móvil; en la nube solo hay un resumen público por persona (scores/{uid}) y los clanes (clans/{cid}),
    protegidos por las reglas de Firestore. El peso corporal nunca sale del móvil: de la fuerza relativa solo se publica el cociente.
    ========================================================= */
-const CL = {maxMembers: 30, weeks: 8, day: 10, maxDays: 5, pr: 3, maxPr: 10, perPct: 2, capEx: 10, maxImpr: 20, minSets: 3, lookback: 8, relWeeks: 12, maxRel: 5, minSes: 2};
+const CL = {maxMembers: 30, weeks: 8, day: 10, maxDays: 5, pr: 3, maxPr: 10, perPct: 2, capEx: 10, maxImpr: 20, minSets: 3, lookback: 8, relWeeks: 12, maxRel: 5, minSes: 2, maxFz: 300};
 const CLAN_EMOJIS = ['🐺', '🦁', '🐻', '🦍', '🐂', '🦅', '🦈', '🐉', '🔥', '⚡', '💀', '🚀'];
 const REL_LIFTS = [['banca', 'x-press-banca-barra', 'Press banca'], ['sentadilla', 'x-sentadilla-barra', 'Sentadilla'], ['muerto', 'x-peso-muerto-barra', 'Peso muerto'], ['militar', 'x-press-militar-barra', 'Press militar']];
-const REL_TABS = [['total', 'Total'], ['banca', 'Banca'], ['sentadilla', 'Sentadilla'], ['muerto', 'Peso muerto'], ['militar', 'Militar']];
+/* Fuerza por grupo muscular (desde 4.5.4). Cada ejercicio con peso tiene un estándar: el 1RM de alguien de nivel intermedio,
+   en veces su peso corporal (en mancuernas, por mancuerna). Las series de más de 12 repeticiones cuentan como de 12. Nivel = 1RM estimado ÷ tu peso ÷ estándar × 100: 100 es intermedio
+   en ese ejercicio. El nivel de un grupo es el de tu mejor serie de las últimas 12 semanas en cualquiera de sus ejercicios, y el
+   total es la media de los 6 grupos (un grupo sin series cuenta 0). Solo se publica el nivel de cada grupo, nunca el peso. */
+const FZ_GROUPS = [['pe', 'Pecho', ['pecho']], ['es', 'Espalda', ['espalda']], ['ho', 'Hombro', ['hombros']], ['bi', 'Bíceps', ['biceps']], ['tr', 'Tríceps', ['triceps']], ['pi', 'Pierna', ['cuadriceps', 'isquios', 'gluteos']]];
+const REL_TABS = [['total', 'Total'], ...FZ_GROUPS.map(([k, l]) => [k, l])];
+const FZ_STD = new Map(`Press banca (barra)|1.25;Press banca (Smith)|1.25;Press banca (mancuernas)|0.45;Press inclinado (barra)|1.05;Press inclinado (Smith)|1.05
+Press inclinado (mancuernas)|0.4;Press inclinado (máquina)|1;Press declinado (barra)|1.3;Press de pecho (máquina)|1.1;Aperturas (mancuernas)|0.22
+Aperturas en máquina (pec deck)|0.9;Cruce de poleas|0.3;Cruce de poleas de abajo a arriba|0.25;Pullover (mancuerna)|0.45;Fondos en paralelas|1.6
+Peso muerto (barra)|1.75;Peso muerto con barra hexagonal|1.85;Remo con barra|1;Remo Pendlay|0.95;Remo en T|1;Remo con mancuerna|0.45
+Remo con apoyo en pecho (mancuernas)|0.35;Remo en máquina|1;Remo en polea sentado|1;Jalón al pecho (polea)|0.95;Jalón al pecho (máquina)|1
+Jalón agarre estrecho|0.95;Jalón unilateral (polea)|0.45;Pullover en polea (brazos rectos)|0.45;Dominadas|1.45;Dominadas supinas|1.5
+Press militar (barra)|0.8;Press de hombro (mancuernas)|0.32;Press de hombro (máquina)|0.8;Press Arnold|0.28;Elevaciones laterales (mancuernas)|0.17
+Elevaciones laterales (máquina)|0.5;Elevación lateral (polea)|0.15;Elevaciones frontales (mancuernas)|0.2;Pájaros (mancuernas)|0.15
+Aperturas inversas (máquina)|0.7;Face pull|0.5;Remo al mentón|0.6;Curl con barra|0.6;Curl con barra Z|0.6;Curl con mancuernas|0.25
+Curl concentrado|0.2;Curl inclinado (mancuernas)|0.2;Curl martillo|0.28;Curl predicador|0.5;Curl en polea|0.5;Curl bayesiano (polea)|0.2
+Press banca agarre cerrado|1.05;Press francés|0.55;Extensión de tríceps en polea (barra)|0.6;Extensión de tríceps en polea (cuerda)|0.5
+Extensión sobre la cabeza (mancuerna)|0.35;Extensión sobre la cabeza (polea)|0.5;Patada de tríceps|0.12;Fondos en máquina|1
+Sentadilla (barra)|1.5;Sentadilla frontal|1.2;Sentadilla en Smith|1.5;Sentadilla hack|1.8;Sentadilla péndulo|1.6;Prensa de piernas|3
+Extensión de cuádriceps|1;Sentadilla búlgara|0.35;Sentadilla goblet|0.5;Zancadas (mancuernas)|0.35;Subida al banco|0.3;Peso muerto rumano (barra)|1.35
+Peso muerto rumano (mancuernas)|0.5;Curl femoral sentado|0.8;Curl femoral tumbado|0.7;Buenos días|0.9;Hip thrust (barra)|1.8;Hip thrust (máquina)|1.6
+Patada de glúteo (polea)|0.3`.split(/[;\n]/).map(x => x.split('|')).map(([n, k]) => ['x-' + norm(n).replace(/ /g, '-'), +k]));
+// Ejercicios propios (p. ej. «De Hevy»): estándar prudente según grupo y equipo; con equipo «Otro» o asistidos no cuentan
+const FZ_FALL = {pe: {barra: 1.15, smith: 1.15, mancuernas: 0.4, maquina: 1, polea: 0.35}, es: {barra: 1, smith: 1, mancuernas: 0.45, maquina: 1, polea: 0.9},
+  ho: {barra: 0.75, smith: 0.75, mancuernas: 0.25, maquina: 0.7, polea: 0.15}, bi: {barra: 0.55, mancuernas: 0.25, maquina: 0.5, polea: 0.45},
+  tr: {barra: 0.6, mancuernas: 0.3, maquina: 0.7, polea: 0.55}, pi: {barra: 1.4, smith: 1.4, mancuernas: 0.4, maquina: 2, polea: 0.3}};
+function fzInfo(id){
+  const x = exMap.get(id); if (!x) return null;
+  const g = FZ_GROUPS.find(G => G[2].includes(x.muscle)); if (!g) return null;
+  let k = FZ_STD.get(id);
+  if (k == null && x.custom && x.type === 'wr' && !/asistid|assist/.test(norm(x.name))) k = (FZ_FALL[g[0]] || {})[x.equip];
+  if (!k || (x.type !== 'wr' && x.type !== 'bw')) return null;
+  return {g: g[0], k, bw: x.type === 'bw'};
+}
+// Nivel por grupo entre t0 y t1 con el peso bw: {r: {pe: 112, …}, ex: {pe: exId de la mejor serie, …}}
+function fuerzaOf(t0, t1, bw){
+  const best = {}, ex = {}, info = new Map(), r = {};
+  if (!(bw > 0)) return {r, ex};
+  for (const w of S.workouts) {
+    if (w.start < t0 || w.start >= t1) continue;
+    for (const e of w.exercises) {
+      let f = info.get(e.exId); if (f === undefined) info.set(e.exId, f = fzInfo(e.exId)); if (!f) continue;
+      for (const s of e.sets) {
+        if (!isWork(s) || !(s.reps > 0)) continue;
+        const load = f.bw ? bw + (+s.kg || 0) : (+s.kg || 0); if (!(load > 0)) continue;
+        const rm = s.reps === 1 ? load : load * (1 + Math.min(s.reps, 12) / 30), sc = Math.min(CL.maxFz, rm / bw / f.k * 100);
+        if (sc > (best[f.g] || 0)) { best[f.g] = sc; ex[f.g] = e.exId; }
+      }
+    }
+  }
+  for (const [g] of FZ_GROUPS) if (best[g] >= 1) r[g] = Math.round(best[g]);
+  return {r, ex};
+}
+// ¿Resumen con el formato por grupos? (los de apps antiguas traen banca/sentadilla/…)
+const fzNew = r => !!(r && typeof r === 'object' && FZ_GROUPS.some(([g]) => g in r));
+const fzTotal = r => fzNew(r) ? Math.round(FZ_GROUPS.reduce((a, [g]) => a + clamp(r[g], 0, CL.maxFz), 0) / FZ_GROUPS.length) : 0;
+const fzName = g => (FZ_GROUPS.find(G => G[0] === g) || [, ''])[1];
 // [id, emoji, nombre, cómo se consigue, progreso (valor, meta) | null si es un premio]
 const LOGROS = [
   ['w1', '🎉', 'Primer entreno', 'Registra tu primer entreno', s => [s.n, 1]],
@@ -3929,10 +4004,10 @@ function myLeague(){
     const ym = ymOf(ws), mo = months[ym] || (months[ym] = {pts: 0, days: 0, prs: 0, impr: 0, n: 0});
     mo.pts += o.pts; mo.days += o.days; mo.prs += o.prs; mo.impr = Math.round((mo.impr + o.impr) * 10) / 10; mo.n += o.n;
     if (i >= CL.weeks) return; // las semanas sueltas solo se publican las 8 últimas
-    if (S.settings.relShare) { const bw = bodyweightAt(we); if (bw) { const r = relOf(we - CL.relWeeks * W, we, bw); if (r.total) o.rel = r.total; } }
+    if (S.settings.relShare) { const bw = bodyweightAt(we); if (bw) { const ft = fzTotal(fuerzaOf(we - CL.relWeeks * W, we, bw).r); if (ft) o.fz = ft; } }
     weeks[isoWeek(ws)] = o;
   });
-  const bw = bodyweightAt(Infinity), rel = bw ? relOf(now - CL.relWeeks * W, Infinity, bw) : {};
+  const bw = bodyweightAt(Infinity), rel = bw ? relOf(now - CL.relWeeks * W, Infinity, bw) : {}, fz = fuerzaOf(now - CL.relWeeks * W, Infinity, bw);
   // logros
   const wkDays = new Map(); let prTot = 0;
   for (const w of S.workouts) { const k = weekStart(w.start); let s = wkDays.get(k); if (!s) wkDays.set(k, s = new Set()); s.add(dayStart(w.start)); prTot += (w.prs || []).length; }
@@ -3944,7 +4019,7 @@ function myLeague(){
   const st = {n: S.workouts.length, prTot, maxRun, maxDays, maxPts, rel: relBest, clan: S.settings.clan ? 1 : 0};
   const got = S.settings.logros || {};
   const ach = LOGROS.filter(([id, , , , f]) => got[id] || (f && (([v, g]) => v >= g)(f(st)))).map(l => l[0]);
-  const v = {weeks, months, cur: weeks[K.cur] || {days: 0, prs: 0, impr: 0, n: 0, pts: 0}, K, rel, bw, ach, st, lastWk: S.workouts.length ? isoWeek(S.workouts[0].start) : ''};
+  const v = {weeks, months, cur: weeks[K.cur] || {days: 0, prs: 0, impr: 0, n: 0, pts: 0}, K, rel, fz, bw, ach, st, lastWk: S.workouts.length ? isoWeek(S.workouts[0].start) : ''};
   myLeague.c = {key, t: now, v};
   return v;
 }
@@ -3995,7 +4070,7 @@ const Clan = {
     const b = {v: 1, uid: Social.myUid(), name: Social.myName(), username: p.username || '', clan: this.myCid(), wk: L.K.cur, weeks: L.weeks, streak: weekStreak(), lastWk: L.lastWk,
       ach: L.ach.filter(id => S.settings.relShare || !REL_ACH.has(id))};
     if (!this.noMonths) b.months = L.months; // meses (versión 4.5): si las reglas publicadas aún no los admiten, se dejan fuera
-    if (S.settings.relShare && Object.keys(L.rel).length) b.rel = L.rel;
+    if (S.settings.relShare && Object.keys(L.fz.r).length) b.rel = L.fz.r; // nivel por grupo (6 claves: las reglas admiten hasta 6)
     return b;
   },
   // Escrituras para la sincronización (van en un commit aparte: si fallan, no frenan nada más)
@@ -4133,28 +4208,38 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
     const x = pv.get(m.uid);
     if (kind === 'pts') return x.pts;
     if (kind === 'mip') return Math.round(x.impr * 10) / 10;
-    if (kind === 'rel') { const r = m.s && m.s.rel, v = r ? +r[Clan.lift] : 0; return v > 0 ? clamp(v, 0, Clan.lift === 'total' ? 3 * CL.maxRel : CL.maxRel) : null; }
+    if (kind === 'rel') { const r = m.s && m.s.rel; if (!fzNew(r)) return null; const v = Clan.lift === 'total' ? fzTotal(r) : clamp(r[Clan.lift], 0, CL.maxFz); return v > 0 ? Math.round(v) : null; }
     return x.days;
   };
   const tie = m => { const x = pv.get(m.uid); return kind === 'con' ? effStreak(m.s) * 1000 + clamp(x.n, 0, 999) : clamp(x.days, 0, 400) * 1000 + clamp(x.n, 0, 999); };
   let rows = ms.map(m => ({...m, v: val(m), t: tie(m)})).sort((a, b) => (b.v ?? -1) - (a.v ?? -1) || b.t - a.t || a.name.localeCompare(b.name, 'es'));
   if (opts.limit) rows = rows.slice(0, opts.limit);
   const max = Math.max(1e-9, ...rows.map(r => r.v || 0));
-  const unit = {pts: 'pts', mip: '%', rel: '×', con: 'días'}[kind];
-  const lift = (REL_LIFTS.find(l => l[0] === Clan.lift) || [, , 'Banca + sentadilla + peso muerto'])[2];
+  const unit = {pts: 'pts', mip: '%', rel: '', con: 'días'}[kind];
+  const gname = Clan.lift === 'total' ? '' : fzName(Clan.lift), L = kind === 'rel' ? myLeague() : null;
+  const relSub = r => {
+    const fr = r.s && r.s.rel;
+    if (r.v != null) {
+      if (Clan.lift !== 'total') return r.me && L.fz.ex[Clan.lift] ? exOf(L.fz.ex[Clan.lift]).name : gname;
+      const gs = FZ_GROUPS.filter(([g]) => fr[g] > 0).sort((a, b) => fr[b[0]] - fr[a[0]]);
+      return gs.map(([g, l]) => `${l} ${Math.round(clamp(fr[g], 0, CL.maxFz))}`).join(' · ');
+    }
+    if (r.me) return S.settings.relShare ? (L.bw ? `Sin series con peso de ${gname ? gname.toLowerCase() : 'ningún grupo'} en ${CL.relWeeks} semanas` : 'Apunta tu peso en Medidas') : 'Activa «Compartir» para salir';
+    return fr && !fzNew(fr) ? 'Tiene la app sin actualizar' : 'No comparte su fuerza';
+  };
   let pos = 0;
   return rows.map(r => {
     const x = pv.get(r.uid), has = r.v != null, st = effStreak(r.s);
     if (has) pos++;
     let sub = kind === 'pts' ? `🔥 ${plural(x.days, 'día', 'días')} · ✨ ${x.prs} · 📈 +${fmtN(x.impr)} %`
       : kind === 'mip' ? `${plural(x.n, 'entreno', 'entrenos')} · ✨ ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}`
-      : kind === 'rel' ? (has ? lift : r.me ? (S.settings.relShare ? `Sin ${Clan.lift === 'total' ? 'banca, sentadilla ni peso muerto' : lift.toLowerCase()} con barra en ${CL.relWeeks} semanas` : 'Activa «Compartir» para salir') : 'No comparte su fuerza relativa')
+      : kind === 'rel' ? relSub(r)
       : st ? `Racha de ${plural(st, 'semana seguida', 'semanas seguidas')}` : 'Sin racha ahora mismo';
     if (kind !== 'rel' && x.partial) sub = 'App sin actualizar: solo sus 8 últimas semanas';
-    const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : kind === 'rel' ? fmtN(r.v, 2) : fmtN(r.v, 0);
+    const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : fmtN(r.v, 0);
     const medal = has && r.v > 0 ? ['🥇', '🥈', '🥉'][pos - 1] : null;
     const tag = opts.badge && r.c ? ` <span class="rl-tag" aria-label="${esc(r.c.name)}">${esc(r.c.emoji)}</span>` : '';
-    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${r.uid}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${sub}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has ? `<small>${unit}</small>` : ''}</span></button>`;
+    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${r.uid}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${sub}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has && unit ? `<small>${unit}</small>` : ''}</span></button>`;
   }).join('');
 }
 function clanAwardsHTML(c){
@@ -4163,7 +4248,7 @@ function clanAwardsHTML(c){
   const A4 = [
     ['mvp', '🏆', 'MVP', best(w => clanPts(w) + clamp(w.days, 0, 7) / 100 + clamp(w.n, 0, 99) / 1e4), v => `${Math.floor(v)} pts`],
     ['mip', '📈', 'Más mejorado', best(w => clamp(w.impr, 0, CL.maxImpr)), v => `+${fmtN(v)} %`],
-    ['fuerte', '💪', 'Más fuerte', best(w => clamp(w.rel, 0, 3 * CL.maxRel)), v => `${fmtN(v, 2)}× su peso`],
+    ['fuerte', '💪', 'Más fuerte', best(w => clamp(w.fz, 0, CL.maxFz)), v => `Nivel ${fmtN(v, 0)}`],
     ['const', '🔥', 'Más constante', best((w, m) => clamp(w.days, 0, 7) + clamp(m.s.streak, 0, 520) / 1000), v => plural(Math.floor(v), 'día', 'días')]
   ];
   // tus premios cuentan como logro si en el clan entrenasteis al menos dos
@@ -4210,11 +4295,11 @@ function viewClan(){
       <div class="cl-mix" role="img" aria-label="${parts.map(([l, v]) => `${l} ${v}`).join(', ')}">${parts.map(([, v, , col]) => v ? `<i style="width:${v / CL_MAXPTS * 100}%;background:${col}"></i>` : '').join('')}</div>
       <div class="cl-leg">${parts.map(([l, v, mx, col]) => `<span><em><i style="background:${col}"></i>${l}</em><b class="num">${v}<small>/${mx}</small></b></span>`).join('')}</div></div></div>`;
   const per = Clan.per, cap = kind === 'rel' ? '' : `<div class="small muted cl-cap">${perName(per, K)} · ${per === 'w' ? clanLeft().toLowerCase() : per === 'm' ? `semanas que empiezan en ${K.mes}` : `suma de los meses de ${K.yr}`}</div>`;
-  h += `<div class="card stack" id="clRank"><div class="row between"><h3>Clasificación</h3>${kind === 'rel' ? '<span class="small muted">1RM estimado ÷ tu peso</span>' : perSeg(per)}</div>
+  h += `<div class="card stack" id="clRank"><div class="row between"><h3>Clasificación</h3>${kind === 'rel' ? '<span class="small muted">100 = intermedio</span>' : perSeg(per)}</div>
     <div class="seg sm" role="group" aria-label="Clasificación">${[['pts', 'Puntos'], ['mip', 'Mejora'], ['rel', 'Fuerza'], ['con', 'Constancia']].map(([k, l]) => `<button data-act="cl-rank" data-k="${k}" aria-pressed="${kind === k}">${l}</button>`).join('')}</div>`;
   if (kind === 'rel') {
     h += `<div class="chips">${REL_TABS.map(([k, l]) => `<button class="chip" data-act="cl-lift" data-k="${k}" aria-pressed="${Clan.lift === k}">${l}</button>`).join('')}</div>
-      <label class="row cl-share"><input type="checkbox" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza relativa</b><br><span class="small muted">Solo se publica el resultado (por ejemplo 1,35×), nunca tu peso. ${L.bw ? 'Se calcula con tu último peso de Medidas.' : 'Para activarlo apunta tu peso en Perfil › Medidas.'}</span></span></label>
+      <label class="row cl-share"><input type="checkbox" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza</b><br><span class="small muted">Tu mejor serie de las últimas ${CL.relWeeks} semanas en cada grupo, comparada con lo normal para tu peso: 100 es nivel intermedio. El total es la media de los 6 grupos. Solo se publica el nivel, nunca tu peso. ${L.bw ? 'Se calcula con tu último peso de Medidas.' : 'Para activarlo apunta tu peso en Perfil › Medidas.'}</span></span></label>
       ${L.bw ? '' : '<button class="btn sm" data-act="cl-weight">Apuntar mi peso</button>'}`;
   }
   h += `${cap}<div class="cl-list">${clanRankRows(Clan.members(c), kind, per)}</div>
@@ -4481,8 +4566,8 @@ function clanCmpHTML(uid){
   const pr = (Social.users.get(uid) || {}).profile, name = b ? b.name : pr ? pr.name : 'Alguien', first = esc(name.split(' ')[0]);
   const x = clanPer(a, per, K), y = clanPer(b, per, K), sa = effStreak(a), sb = effStreak(b);
   const rows = [['Puntos', x.pts, y.pts, v => fmtN(v, 0)], ['Días', x.days, y.days, v => fmtN(v, 0)], ['Entrenos', x.n, y.n, v => fmtN(v, 0)], ['Chiquipuntos', x.prs, y.prs, v => fmtN(v, 0)], ['Mejora', x.impr, y.impr, v => '+' + fmtN(v) + ' %'], ['Racha', sa, sb, v => v + ' sem.']];
-  const ra = a && a.rel ? +a.rel.total : 0, rb = b && b.rel ? +b.rel.total : 0;
-  if (ra > 0 && rb > 0) rows.push(['Fuerza rel.', clamp(ra, 0, 15), clamp(rb, 0, 15), v => fmtN(v, 2) + '×']);
+  const fa = a && a.rel, fb = b && b.rel;
+  if (fzNew(fa) && fzNew(fb)) { rows.push(['Fuerza', fzTotal(fa), fzTotal(fb), v => fmtN(v, 0)]); FZ_GROUPS.forEach(([g, l]) => { const p = Math.round(clamp(fa[g], 0, CL.maxFz)), q = Math.round(clamp(fb[g], 0, CL.maxFz)); if (p || q) rows.push([l, p, q, v => v ? fmtN(v, 0) : '–']); }); }
   const d = x.pts - y.pts;
   const verdict = !b ? `${first} todavía no compite en la liga.` : d > 0 ? `💪 Le sacas <b>${plural(d, 'punto', 'puntos')}</b> ${perThis(per)}` : d < 0 ? `😤 Te saca <b>${plural(-d, 'punto', 'puntos')}</b> ${perThis(per)}. ¡A por ${first}!` : `🤝 Empate ${perThis(per)}: el próximo entreno decide`;
   return `<div id="clCmp" class="stack" data-id="${uid}">
@@ -4642,7 +4727,7 @@ Object.assign(A, {
     try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: `Únete a mi clan ${c.emoji} ${c.name} en Hierro y competimos cada semana 💪`, url}); else { await navigator.clipboard.writeText(url); toast('Enlace del clan copiado'); } } catch (e) {}
   }
 });
-document.addEventListener('change', ev => { if (ev.target.id === 'clRel') { S.settings.relShare = ev.target.checked; Store.mark(); clanRender(); toast(ev.target.checked ? 'Compartes tu fuerza relativa (nunca tu peso)' : 'Ya no compartes tu fuerza relativa'); } });
+document.addEventListener('change', ev => { if (ev.target.id === 'clRel') { S.settings.relShare = ev.target.checked; Store.mark(); clanRender(); toast(ev.target.checked ? 'Compartes tu nivel de fuerza (nunca tu peso)' : 'Ya no compartes tu fuerza'); } });
 // Al borrar la cuenta: salir del clan (o pasarlo a otro / borrarlo si eres el jefe)
 async function clanOnDelete(){
   const me = Social.myUid(), cid = S.settings.clan; if (!me || !cid) return;
@@ -4656,7 +4741,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.3';
+const APP_VERSION = '4.5.4';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
