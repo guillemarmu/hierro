@@ -865,6 +865,7 @@ function platesFor(kg){
    tipo: wr = peso×reps · bw = peso corporal (+kg opcional) · dur = tiempo · cardio = km + min
    ========================================================= */
 const MUSCLES = {pecho:'Pecho',espalda:'Espalda',hombros:'Hombros',biceps:'Bíceps',triceps:'Tríceps',antebrazo:'Antebrazo',cuadriceps:'Cuádriceps',isquios:'Isquios',gluteos:'Glúteos',gemelos:'Gemelos',abdominales:'Abdominales',lumbares:'Lumbares',trapecio:'Trapecio',aductores:'Aductores',abductores:'Abductores',cardio:'Cardio',completo:'Cuerpo completo'};
+const LEGS = ['cuadriceps', 'isquios', 'gluteos', 'gemelos', 'aductores', 'abductores']; // el filtro «Pierna» del selector los junta
 const EQUIP = {barra:'Barra',mancuernas:'Mancuernas',maquina:'Máquina',polea:'Polea',corporal:'Peso corporal',smith:'Smith',kettlebell:'Kettlebell',banda:'Banda',otro:'Otro'};
 const TYPES = {wr:'Peso y repeticiones',bw:'Peso corporal (+ lastre)',dur:'Tiempo',cardio:'Distancia y tiempo'};
 const LIB_SRC = `
@@ -1309,7 +1310,8 @@ const Sync = {
   schedule(ms = 1500){ if (!this.on()) return; clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = null; this.run(); }, ms); },
   // Si tras sincronizar queda algo sin subir y no hay ninguna subida programada (un cambio que no pasó por Store.mark,
   // como el perfil o el clan cargados después, o un fallo suelto del social o del clan), se reintenta solo con espera creciente.
-  tries: 0,
+  tries: 0, errs: {},
+  err(part, e){ if (e) this.errs[part] = {msg: String((e && e.message) || e).slice(0, 160), status: e && e.status || 0, at: Date.now()}; else delete this.errs[part]; },
   nudge(pend){
     if (!pend) { this.tries = 0; return; }
     if (!this.on() || this.busy || this.timer || this.state !== 'ok') return;
@@ -1342,8 +1344,10 @@ const Sync = {
     for (let i = 0; i < sitems.length; i += 200) {
       const chunk = sitems.slice(i, i + 200);
       try { await Cloud.commit(chunk.map(x => x[0])); chunk.forEach(x => x[1]()); await Store.save(); }
-      catch (e) { if (e.offline || e.session) throw e; console.warn('Social', e); break; }
+      catch (e) { if (e.offline || e.session) throw e; console.warn('Social', e); this.err('social', e); break; }
+      if (i + 200 >= sitems.length) this.err('social');
     }
+    if (!sitems.length) this.err('social');
     const cn = await Clan.push(); // liga de clanes (aparte: si falla, no frena lo demás)
     return items.length + sitems.length + cn;
   },
@@ -1399,23 +1403,45 @@ const Sync = {
       // primero se baja lo nuevo (sin pisar cambios locales pendientes) y luego se sube lo local
       if (await this.pull()) { render(); if (S.active && !ED) restoreActiveBar(); }
       await this.push();
-      this.last = Date.now(); this.state = 'ok';
+      this.last = Date.now(); this.state = 'ok'; this.err('datos');
     } catch (e) {
       if (e && e.session) { this.state = 'expired'; sessionExpired(); }
-      else { this.state = e && e.offline ? 'offline' : 'error'; this.timer = setTimeout(() => this.run(), 30000); if (!(e && e.offline)) console.warn('Sync', e); }
+      else { this.state = e && e.offline ? 'offline' : 'error'; this.timer = setTimeout(() => { this.timer = null; this.run(); }, 30000); if (!(e && e.offline)) { console.warn('Sync', e); this.err('datos', e); } }
     } finally {
       this.busy = false; await Store.save(); syncUI();
       if (this.again) { this.again = false; this.schedule(300); }
     }
   }
 };
+// Qué queda por subir, en palabras (para la ventana que se abre al tocar el estado de la sincronización)
+function syncDetail(){
+  const out = []; if (!Sync.on()) return out;
+  const d = Sync.diff(), n = (k, a, b) => out.push(plural(k, a, b));
+  if (d.w.length) n(d.w.length, 'entreno', 'entrenos');
+  if (d.del.length) n(d.del.length, 'entreno borrado', 'entrenos borrados');
+  if (d.meta) out.push('Rutinas, medidas o ajustes');
+  if (d.active) out.push('Entreno en curso');
+  const si = Social.pushItems(); let prof = 0, post = 0, photo = 0, del = 0;
+  si.forEach(([w]) => { const nm = w.delete || (w.update && w.update.name) || ''; if (w.delete) del++; else if (/\/profiles\//.test(nm)) prof++; else if (w.updateMask && w.updateMask.fieldPaths.includes('photo')) photo++; else post++; });
+  if (prof) out.push('Tu perfil público'); if (post) n(post, 'publicación', 'publicaciones'); if (photo) n(photo, 'foto', 'fotos'); if (del) n(del, 'publicación por quitar', 'publicaciones por quitar');
+  if (Clan.pushItems().length) out.push('Tu resumen del clan');
+  return out;
+}
+function syncInfo(){
+  const ST = {ok: 'Sincronizado', idle: 'Sincronizando…', busy: 'Sincronizando…', offline: 'Sin conexión', error: 'Error al subir', expired: 'Sesión caducada'};
+  const det = syncDetail(), when = t => t ? new Date(t).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit', second: '2-digit'}) : '—';
+  const PART = {datos: 'Tus datos', social: 'Social', clan: 'Clan'};
+  const errs = Object.entries(Sync.errs).map(([k, e]) => `${PART[k] || k}: ${e.status ? e.status + ' · ' : ''}${e.msg} (${when(e.at)})`);
+  return {state: ST[Sync.state] || Sync.state, det, errs, last: when(Sync.last), tries: Sync.tries, v: APP_VERSION,
+    text: [`Hierro ${APP_VERSION} · ${ST[Sync.state] || Sync.state} · última subida ${when(Sync.last)} · intentos ${Sync.tries}`, 'Pendiente: ' + (det.join(', ') || 'nada'), ...errs].join('\n')};
+}
 function syncUI(){
   const el = $('#syncState'); if (!el) return;
   const pend = Sync.state !== 'busy' ? Sync.pendingCount() : 0;
   const map = {ok: ['ok', 'Sincronizado'], idle: ['', 'Sincronizando…'], busy: ['busy', 'Sincronizando…'], offline: ['off', 'Sin conexión'], error: ['off', 'Pendiente de subir'], expired: ['off', 'Sesión caducada']};
   let [cls, txt] = map[Sync.state] || map.idle;
   if (Sync.state === 'ok' && pend) { cls = 'busy'; txt = 'Pendiente de subir'; }
-  el.className = 'sync ' + cls; el.innerHTML = `<i></i><span>${txt}</span>`; el.title = txt;
+  el.className = 'sync ' + cls; el.innerHTML = `<i></i><span>${txt}</span>`; el.title = txt; el.dataset.act = 'sync-info'; el.setAttribute('role', 'button');
   if (Sync.state === 'ok') Sync.nudge(pend);
 }
 window.addEventListener('online', () => Sync.schedule(200));
@@ -2016,14 +2042,15 @@ function viewTrain(){
 function exUseCount(){ const c = {}; S.workouts.forEach(w => w.exercises.forEach(e => c[e.exId] = (c[e.exId] || 0) + 1)); return c; }
 function exFilter(q, m){
   const nq = norm(q);
-  return allEx().filter(e => (!m || e.muscle === m) && (!nq || norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')).includes(nq)));
+  return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle))) && (!nq || norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')).includes(nq)));
 }
 function exItem(e, count, sel){
   return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)} · ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? ' · Propio' : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
 }
 function exChips(sel, act){
-  const used = new Set(allEx().map(e => e.muscle));
-  return `<div class="chips"><button class="chip" data-act="${act}" data-m="" aria-pressed="${!sel}">Todos</button>${Object.entries(MUSCLES).filter(([k]) => used.has(k)).map(([k, v]) => `<button class="chip" data-act="${act}" data-m="${k}" aria-pressed="${sel === k}">${v}</button>`).join('')}</div>`;
+  const used = new Set(allEx().map(e => e.muscle)), M = Object.entries(MUSCLES).filter(([k]) => used.has(k));
+  if (LEGS.some(k => used.has(k))) M.splice(M.findIndex(([k]) => k === 'hombros') + 1 || M.length, 0, ['pierna', 'Pierna']);
+  return `<div class="chips"><button class="chip" data-act="${act}" data-m="" aria-pressed="${!sel}">Todos</button>${M.map(([k, v]) => `<button class="chip" data-act="${act}" data-m="${k}" aria-pressed="${sel === k}">${v}</button>`).join('')}</div>`;
 }
 function recordsOf(id){
   const x = exOf(id), R = {};
@@ -2555,14 +2582,31 @@ function fixDuration(w){
 function fixDurations(){ let n = 0; for (const w of S.workouts) if (fixDuration(w)) n++; if (n) Store.mark(); return n; }
 function guessMuscle(name){
   const n = norm(name);
-  const R = [[/calf|gemel|pantorr/, 'gemelos'], [/hip thrust|glute|glut|kickback|patada de glu/, 'gluteos'], [/abduct/, 'abductores'], [/adduct|aduct/, 'aductores'],
-    [/leg curl|femoral|romanian|rumano|good morning|isquio|hamstring/, 'isquios'], [/squat|sentadill|leg press|prensa|leg extension|extension de cuad|lunge|zancad|step up/, 'cuadriceps'],
-    [/tricep|pushdown|skull|frances|dip|fondos|kickback/, 'triceps'], [/curl|bicep/, 'biceps'], [/lateral|shoulder|hombro|overhead press|military|militar|arnold|rear delt|face pull|front raise|pajaro/, 'hombros'],
-    [/bench|press banca|chest|pecho|fly|apertura|crossover|push up|flexion|pec deck/, 'pecho'], [/row|remo|pulldown|jalon|pull up|dominad|chin up|lat |pullover|deadlift|peso muerto/, 'espalda'],
-    [/shrug|encogim|trap/, 'trapecio'], [/crunch|plank|plancha|abs|ab wheel|leg raise|elevacion de piernas|twist|core/, 'abdominales'], [/back extension|hyperext|lumbar/, 'lumbares'],
-    [/run|treadmill|cinta|bike|cycl|bici|row machine|elliptic|walk|camin|stair|swim|cardio/, 'cardio'], [/wrist|muneca|forearm|antebrazo|farmer/, 'antebrazo']];
+  // de lo más concreto a lo más general (p. ej. «Curl de piernas» antes que «curl», «Jalón al pecho» antes que «pecho»)
+  const R = [[/\b(run|correr|carrera|treadmill|cinta|bike|bici|cycl|elliptic|eliptica|escaladora|stair|andar|walk|camin|swim|nadar|cuerdas de batalla|battle rope|comba|jump rope|cardio|row machine|remoergometro)/, 'cardio'],
+    [/shrug|encogim|trapec/, 'trapecio'],
+    [/crunch|abdominal|plank|plancha|ab wheel|rueda|leg raise|elevacion de (piernas|rodillas)|rodillas al pecho|knee raise|twist|giro ruso|pallof|core|sit up|hollow|oblicu/, 'abdominales'],
+    [/back extension|hiperext|hyperext|lumbar|extension de espalda/, 'lumbares'],
+    [/calf|gemel|pantorr/, 'gemelos'], [/abduc/, 'abductores'], [/adduc|aduc/, 'aductores'],
+    [/hip thrust|empuje de cadera|glute|glut|patada de glu|puente/, 'gluteos'],
+    [/leg curl|curl de pierna|curl femoral|femoral|romanian|rumano|good morning|buenos dias|isquio|hamstring|nordic/, 'isquios'],
+    [/squat|sentadill|leg press|prensa|press de pierna|press a una pierna|leg extension|extension de pierna|extension de cuadr|cuadricep|lunge|zancad|step up|step down|subida al cajon|hack|bulgar/, 'cuadriceps'],
+    [/tricep|pushdown|skull|frances|\bdips?\b|fondo|kickback/, 'triceps'], [/curl|bicep/, 'biceps'],
+    [/lateral|shoulder|hombro|overhead press|military|militar|arnold|rear delt|vuelos posteriores|pajaro|face pull|front raise|elevacion frontal|elevacion en y|remo al menton|upright row/, 'hombros'],
+    [/row|remo|pulldown|jalon|pull up|dominad|chin up|\blat\b|dorsal|pullover|deadlift|peso muerto/, 'espalda'],
+    [/bench|banca|chest|pecho|fly|apertura|cruzad|crossover|push up|flexion|pec deck|mariposa/, 'pecho'],
+    [/wrist|muneca|forearm|antebrazo|farmer/, 'antebrazo']];
   for (const [re, k] of R) if (re.test(n)) return k;
   return 'completo';
+}
+// Ejercicios propios creados al importar de Hevy en castellano antes de la 4.5.2: se vuelve a calcular su músculo una vez
+function fixImportedMuscles(){
+  const mig = S.settings.mig || {}; if (mig.mus) return 0;
+  let n = 0;
+  for (const c of S.customEx) if (c.equip === 'otro' && !(c.aliases || []).length) {
+    const g = guessMuscle(c.name); if (g !== 'completo' && g !== c.muscle) { c.muscle = g; n++; }
+  }
+  S.settings.mig = {...mig, mus: 1}; if (n) rebuildEx(); Store.mark('meta'); return n;
 }
 function exIndex(){ const idx = new Map(); allEx().forEach(e => { idx.set(norm(e.name), e.id); e.aliases.forEach(a => idx.set(norm(a), e.id)); }); return idx; }
 function importHevyCSV(text){
@@ -3563,7 +3607,17 @@ const A = {
   async 'soc-invite'(){ const url = location.href.split('#')[0]; try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: 'Apúntate a Hierro y entrenamos juntos 💪', url}); else { await navigator.clipboard.writeText(url); toast('Enlace copiado'); } } catch (e) {} },
   'w-share'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (!w) return; if (!w.shared && !Social.canPublish()) { toast(Social.ready() ? 'Tu perfil es privado' : 'Crea tu perfil en la pestaña Social'); return; } w.shared = !w.shared; Store.mark(); render(); toast(w.shared ? 'Publicado en el feed' : 'Quitado del feed'); },
   'm-close'(){ if (modalCb) { const cb = modalCb; modalCb = null; cb(null); } closeModal(); },
-  'm-answer'(el){ const cb = modalCb; modalCb = null; if (cb) cb(el.dataset.v); }
+  'm-answer'(el){ const cb = modalCb; modalCb = null; if (cb) cb(el.dataset.v); },
+  // estado de la sincronización: qué falta por subir y el último error
+  'sync-info'(){
+    const i = syncInfo();
+    modal('Sincronización', `<div class="stack" style="gap:10px"><div><b>${esc(i.state)}</b><div class="small muted">Hierro ${esc(i.v)} · última subida ${esc(i.last)}</div></div>
+      <div><div class="small muted">Pendiente de subir</div>${i.det.length ? `<ul style="margin:4px 0 0 18px">${i.det.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div>Nada</div>'}</div>
+      ${i.errs.length ? `<div><div class="small muted">Último error</div>${i.errs.map(x => `<div class="small" style="word-break:break-word">${esc(x)}</div>`).join('')}</div>` : ''}</div>`,
+      `<button class="btn" data-act="sync-copy">Copiar</button><button class="btn primary" data-act="sync-now">Reintentar ahora</button>`);
+  },
+  async 'sync-now'(){ Sync.tries = 0; Clan.denied = false; closeModal(); toast('Subiendo…'); await Sync.run(); toast(Sync.pendingCount() ? 'Aún queda algo: toca el estado para ver qué' : 'Todo subido'); },
+  async 'sync-copy'(){ try { await navigator.clipboard.writeText(syncInfo().text); toast('Copiado'); } catch (e) { toast('No se pudo copiar'); } }
 };
 function fillFromPh(e, si){
   const s = e.sets[si], ph = phFor(e, si) || {};
@@ -3882,12 +3936,12 @@ const Clan = {
   },
   async push(){
     const items = this.pushItems(); if (!items.length) return 0;
-    try { await Cloud.commit(items.map(x => x[0])); items.forEach(x => x[1]()); await Store.save(); }
+    try { await Cloud.commit(items.map(x => x[0])); items.forEach(x => x[1]()); await Store.save(); Sync.err('clan'); }
     catch (e) {
       if (e.offline || e.session) throw e;
       // reglas antiguas (sin «months»): se reintenta con el resumen de siempre
       if (e.status === 403 && !this.noMonths) { this.noMonths = true; return this.push(); }
-      if (e.status === 403) this.denied = true; console.warn('Clan', e); return 0;
+      if (e.status === 403) this.denied = true; console.warn('Clan', e); Sync.err('clan', e); return 0;
     }
     return items.length;
   },
@@ -4529,7 +4583,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.1';
+const APP_VERSION = '4.5.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -4584,10 +4638,10 @@ rebuildEx();
     if (!Cloud.session) { Store.key = 'nouser'; render(); showAuth(); return; }
     await Store.load(Cloud.session.uid);
   } else await Store.load(null);
-  fixDurations();
+  fixDurations(); if (!Cloud.enabled()) fixImportedMuscles();
   render();
   if (S.active) { restoreActiveBar(); wakeLock(true); }
-  Sync.run().then(() => { if (fixDurations()) render(); if (Social.ready()) Social.loadNotifs(); });
+  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() : 0)) render(); if (Social.ready()) Social.loadNotifs(); });
 })();
 </script>
 </body>
