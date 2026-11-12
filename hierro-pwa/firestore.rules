@@ -58,5 +58,49 @@ service cloud.firestore {
       allow create: if signed() && request.resource.data.from == me();
       allow update: if signed() && resource.data.from == me() && request.resource.data.from == me();
     }
+
+    // Clanes: los ve cualquiera con cuenta. El jefe (owner) lo edita, expulsa y lo borra;
+    // los demás solo pueden meterse o sacarse a sí mismos de la lista de miembros (máximo 30).
+    function validClan(d) {
+      return d.name is string && d.name.size() >= 3 && d.name.size() <= 24
+        && d.emoji is string && d.emoji.size() >= 1 && d.emoji.size() <= 8
+        && d.desc is string && d.desc.size() <= 120
+        && d.owner is string
+        && d.members is list && d.members.size() <= 30
+        && d.get('kicked', []) is list && d.get('kicked', []).size() <= 100;
+    }
+    match /clans/{cid} {
+      allow read: if signed();
+      allow create: if signed() && request.resource.data.owner == me() && request.resource.data.members == [me()]
+                    && request.resource.data.keys().hasOnly(['name', 'emoji', 'desc', 'owner', 'members', 'created'])
+                    && validClan(request.resource.data);
+      allow update: if signed() && validClan(request.resource.data) && (
+        // el jefe: cambia nombre, emblema y descripción, expulsa (no puede meter a nadie) y puede pasar el mando a otro miembro
+        (resource.data.owner == me()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'emoji', 'desc', 'members', 'owner', 'kicked'])
+          && request.resource.data.members.toSet().difference(resource.data.members.toSet()).size() == 0
+          && request.resource.data.owner in request.resource.data.members)
+        // cualquier otro: solo entrar o salir él mismo (y no puede volver si le expulsaron)
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+          && request.resource.data.members.toSet().difference(resource.data.members.toSet()).hasOnly([me()])
+          && resource.data.members.toSet().difference(request.resource.data.members.toSet()).hasOnly([me()])
+          && (!(me() in request.resource.data.members) || !(me() in resource.data.get('kicked', [])))));
+      allow delete: if signed() && resource.data.owner == me();
+    }
+
+    // Resumen público de la liga (puntos por semana, racha, logros y, si la persona lo activa, el cociente de fuerza relativa).
+    // Solo lo escribe su dueño y solo con estos campos: no hay sitio para el peso corporal ni para otros datos privados.
+    match /scores/{uid} {
+      allow read: if signed();
+      allow create, update: if signed() && me() == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(['v', 'uid', 'name', 'username', 'clan', 'wk', 'weeks', 'streak', 'lastWk', 'ach', 'rel', 'updated'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 60
+        && request.resource.data.clan is string && request.resource.data.clan.size() <= 40
+        && request.resource.data.updated is int
+        && request.resource.data.weeks is map && request.resource.data.weeks.size() <= 10
+        && request.resource.data.ach is list && request.resource.data.ach.size() <= 60
+        && (!('rel' in request.resource.data) || (request.resource.data.rel is map && request.resource.data.rel.size() <= 6));
+      allow delete: if signed() && me() == uid;
+    }
   }
 }
