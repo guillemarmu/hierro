@@ -1601,6 +1601,38 @@ function setText(s, type){
   if (s.kg == null && s.reps == null) return '';
   return `${fmtN(s.kg || 0)} kg × ${s.reps ?? ''}`;
 }
+/* Copiar el entreno como texto, como «Compartir › Copiar texto» de Hevy (desde 4.5.7). o = {title, start, notes, ex: [{name, type, notes, ss, sets}]}.
+   Formato: título, fecha, notas y, por ejercicio, «Serie 1: 80 kg x 8», con [Fallo]/[Drop set] y «Calentamiento: …» (no numeradas). */
+function setLine(s, type){
+  if (!s) return '';
+  if (type === 'dur') return s.sec ? fmtClock(s.sec) : '';
+  if (type === 'cardio') return [s.km ? fmtN(s.km, 2) + ' km' : '', s.min ? fmtClock(s.min * 60) : ''].filter(Boolean).join(' - ');
+  if (type === 'bw') return s.reps ? (s.kg ? `+${fmtN(s.kg, 2)} kg x ${s.reps}` : `${s.reps} reps`) : (s.kg ? `+${fmtN(s.kg, 2)} kg` : '');
+  if (s.kg == null && s.reps == null) return '';
+  return `${fmtN(s.kg || 0, 2)} kg x ${s.reps ?? 0}`;
+}
+function workoutText(o){
+  const d = new Date(o.start), day = d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'short', year: 'numeric'}).replace(/\.(?=\s|,|$)/g, '');
+  const L = [o.title || 'Entreno', `${day}, ${pad(d.getHours())}:${pad(d.getMinutes())}`];
+  if (o.notes) L.push('', String(o.notes).trim());
+  for (const e of o.ex || []) {
+    const rows = []; let n = 0;
+    for (const s of e.sets || []) {
+      const v = setLine(s, e.type); if (!v) continue; const t = s.t || 'n';
+      rows.push(`${t === 'w' ? 'Calentamiento' : 'Serie ' + (++n)}: ${v}${t === 'f' ? ' [Fallo]' : t === 'd' ? ' [Drop set]' : ''}`);
+    }
+    if (!rows.length) continue;
+    L.push('', e.name + (e.ss ? ' (superserie)' : '')); if (e.notes) L.push('Notas: ' + String(e.notes).trim()); L.push(...rows);
+  }
+  L.push('', 'Hecho con Hierro 💪 ' + location.href.split('#')[0].split('?')[0]);
+  return L.join('\n');
+}
+const workoutTextW = w => workoutText({title: w.title, start: w.start, notes: w.notes, ex: w.exercises.map(e => { const x = exOf(e.exId); return {name: x.name, type: x.type, notes: e.notes, ss: e.ss, sets: e.sets}; })});
+async function copyText(txt, ok = 'Copiado'){
+  try { await navigator.clipboard.writeText(txt); toast(ok); return true; } catch (e) {}
+  try { const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, txt.length); const r = document.execCommand('copy'); ta.remove(); if (r) { toast(ok); return true; } } catch (e) {}
+  toast('No se pudo copiar'); return false;
+}
 function routineNext(){
   if (!S.routines.length) return null;
   const t = planToday();
@@ -2078,6 +2110,7 @@ function viewWorkout(w){
   let h = `<div class="stack"><h2>${esc(w.title || 'Entreno')}</h2><div class="muted">${fmtDate(w.start)} · entreno nº ${workoutNumber(w)}</div>${w.notes ? `<div>${esc(w.notes)}</div>` : ''}</div>
   <div class="card stats"><div class="stat"><b>${fmtDur(w.end - w.start)}</b><span>Duración</span></div><div class="stat"><b>${fmtKg(wVolume(w))}</b><span>Volumen</span></div><div class="stat"><b>${(w.prs || []).length}</b><span>Chiquipuntos</span></div></div>
   <div class="grid2"><button class="btn primary" data-act="open-summary" data-id="${w.id}">Ver resumen</button><button class="btn" data-act="share-img" data-id="${w.id}">Compartir imagen</button></div>
+  <button class="btn ghost block" data-act="w-copytext" data-id="${w.id}">Copiar como texto</button>
   ${Social.ready() ? `<button class="btn ghost block" data-act="w-share" data-id="${w.id}">${w.shared ? '✓ Publicado en el feed · quitar' : 'Publicar en el feed de tus amigos'}</button>` : ''}`;
   for (const e of w.exercises) {
     const x = exOf(e.exId); let n = 0;
@@ -3354,7 +3387,8 @@ function viewPost(pid){
   if (p.likes.length) { setTimeout(() => Social.profilesOf(p.likes).then(() => {}), 0); h += `<div class="small muted">${ICON.heartFill.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Le gusta a ${p.likes.map(id => { const pr = (Social.users.get(id) || {}).profile; return id === me ? 'ti' : pr ? esc(pr.name) : 'alguien'; }).join(', ')}</div>`; }
   h += `<div class="card stack" id="comments"><h3>Comentarios</h3>${!c || c.loading && !c.loaded ? '<div class="small muted">Cargando…</div>' : c.list.length ? c.list.map(m => `<div class="comment">${avatar(m.name, 'xs')}<div><b>${esc(m.name)}</b> <small class="muted">${ago(m.ts)}</small><div>${esc(m.text)}</div></div>${m.uid === me || mine ? `<button class="iconbtn" data-act="soc-del-comment" data-id="${p.id}" data-c="${m._id}" aria-label="Borrar comentario">${ICON.x}</button>` : ''}</div>`).join('') : '<div class="small muted">Sé el primero en comentar.</div>'}
     <form id="cmtForm" class="row" data-id="${p.id}"><input id="cmtText" maxlength="500" placeholder="Escribe un comentario…" autocomplete="off"><button class="btn primary sm" type="submit">Enviar</button></form></div>`;
-  h += `<div class="grid2"><button class="btn" data-act="soc-copy" data-id="${p.id}">Empezar este entreno</button><button class="btn" data-act="soc-copy-routine" data-id="${p.id}">Guardar como rutina</button></div>`;
+  h += `<div class="grid2"><button class="btn" data-act="soc-copy" data-id="${p.id}">Empezar este entreno</button><button class="btn" data-act="soc-copy-routine" data-id="${p.id}">Guardar como rutina</button></div>
+    <button class="btn ghost block" data-act="soc-copytext" data-id="${p.id}">Copiar como texto</button>`;
   return h;
 }
 function viewUser(uid){
@@ -3740,6 +3774,8 @@ const A = {
   'soc-copy-routine'(el){ const p = Social.posts.get(el.dataset.id); if (!p) return; openEditor('routine', {id: rid(), name: p.title, notes: '', exercises: Social.exercisesFrom(p), _new: true}); },
   async 'soc-del-comment'(el){ const p = Social.posts.get(el.dataset.id); if (!p) return; try { await Social.delComment(p, el.dataset.c); socRender(); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido borrar'); } },
   async 'soc-invite'(){ const url = location.href.split('#')[0]; try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: 'Apúntate a Hierro y entrenamos juntos 💪', url}); else { await navigator.clipboard.writeText(url); toast('Enlace copiado'); } } catch (e) {} },
+  'w-copytext'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (w) copyText(workoutTextW(w), 'Entreno copiado'); },
+  'soc-copytext'(el){ const p = Social.posts.get(el.dataset.id); if (p) copyText(workoutText(p), 'Entreno copiado'); },
   'w-share'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (!w) return; if (!w.shared && !Social.canPublish()) { toast(Social.ready() ? 'Tu perfil es privado' : 'Crea tu perfil en la pestaña Social'); return; } w.shared = !w.shared; Store.mark(); render(); toast(w.shared ? 'Publicado en el feed' : 'Quitado del feed'); },
   'm-close'(){ if (modalCb) { const cb = modalCb; modalCb = null; cb(null); } closeModal(); },
   'm-answer'(el){ const cb = modalCb; modalCb = null; if (cb) cb(el.dataset.v); },
@@ -4784,7 +4820,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.6';
+const APP_VERSION = '4.5.7';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
