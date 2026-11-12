@@ -530,7 +530,7 @@ h3+.sx{border-top:0;padding-top:0}
 .comment .iconbtn svg{width:18px;height:18px}
 .person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--linea)}
 .notif{display:flex;gap:10px;align-items:center;text-align:left;width:100%;padding:8px 0;border-bottom:1px solid var(--linea)}
-.notif>span:not(.avatar){flex:1;min-width:0}
+.notif>span:not(.avatar):not(.cl-emo){flex:1;min-width:0}
 .at{display:flex;align-items:center;background:var(--field);box-shadow:inset 0 0 0 1.5px var(--field-borde);border-radius:14px;padding-left:14px}
 .at:focus-within{box-shadow:inset 0 0 0 2px var(--acc)}
 .at span{color:var(--apagado);font-weight:700}
@@ -598,6 +598,115 @@ button.stat{text-align:left;min-height:44px}
 .cl-aw.me em{color:var(--pr)}
 .cl-item{display:flex;align-items:center;gap:12px;padding:12px 14px}
 .cl-item .cl-nm{flex:1}
+.cl-item-main{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;min-height:48px}
+.cl-item-main .cl-nm{flex:1}
+.cl-cap{margin-top:-4px}
+/* Periodo (semana, mes, año) */
+.cl-per{display:inline-flex;background:var(--sup-2);border-radius:999px;padding:3px;gap:2px;flex:none}
+.cl-per button{min-height:36px;padding:0 11px;border-radius:999px;font-size:13px;font-weight:700;color:var(--apagado);white-space:nowrap}
+.cl-per button[aria-pressed="true"]{background:var(--tiza);color:var(--tiza-tinta)}
+.pq-board>.cl-per,#clCmp>.cl-per{align-self:center}
+/* Relaciones entre clanes */
+.rl-list{display:flex;flex-direction:column;gap:6px;margin:0 -6px}
+.rl-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 6px 8px 8px;border-radius:18px;min-height:60px;background:var(--sup-2)}
+.rl-row .cl-nm{flex:1}
+.rl-row.pend{background:none;border:1.5px dashed var(--band)}
+.rl-row .btn.sm{padding:6px 10px}
+.rl-chev{color:var(--tenue);display:flex}.rl-chev svg{width:18px;height:18px}
+.rl-vs{display:flex;flex:none;position:relative;width:60px;height:40px}
+.rl-vs i{font-style:normal;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;background:var(--sup-3);position:absolute;top:2px}
+.rl-vs i:first-child{left:0;background:var(--grad-d);z-index:1;box-shadow:0 0 0 2px var(--sup-solid)}
+.rl-vs i:last-child{right:0;top:4px}
+.rl-sc{display:flex;align-items:baseline;gap:4px;font-family:var(--rotulo);font-size:18px;font-weight:700;white-space:nowrap}
+.rl-sc b{color:var(--apagado)}.rl-sc b.win{color:var(--texto)}
+.rl-sc em{font-style:normal;color:var(--tenue);font-size:14px}
+.rl-empty{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:18px;background:var(--sup-2)}
+.rl-empty>span{font-size:22px;width:40px;height:40px;border-radius:13px;background:var(--sup-3);display:flex;align-items:center;justify-content:center;flex:none}
+.rl-empty b{display:block;font-family:var(--rotulo);font-size:15px}
+.rl-empty small{display:block;color:var(--apagado);font-size:13.5px;line-height:1.4;margin-top:2px}
+.rl-empty.sm{background:none;padding:4px 0}
+.rl-reqs{gap:14px}
+.rl-req{display:flex;flex-direction:column;gap:10px}
+.rl-req+.rl-req{padding-top:14px;border-top:1px solid var(--linea)}
+.rl-who{display:flex;align-items:center;gap:12px;text-align:left;min-width:0}
+.rl-quote{font-size:15px;line-height:1.4;padding:10px 14px;border-radius:16px;background:var(--sup-2);font-style:italic;overflow-wrap:anywhere}
+.rl-tag{font-size:13px;margin-left:2px}
+.rl-allies{display:flex;flex-wrap:wrap;gap:6px}
+.rl-ally{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:3px 12px 3px 4px;border-radius:999px;background:var(--sup-2);font-size:13.5px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rl-ally i{font-style:normal;width:28px;height:28px;border-radius:50%;background:var(--sup-3);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+.rl-ally.us i{background:var(--grad-d)}
+.rl-split{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.rl-half{display:flex;flex-direction:column;align-items:center;text-align:center;gap:1px;padding:12px 6px;border-radius:18px;background:var(--sup-2);min-width:0}
+.rl-half small{font-size:12.5px;font-weight:700;color:var(--apagado);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.rl-half b{font-family:var(--rotulo);font-size:30px;line-height:1.1;letter-spacing:-.03em}
+.rl-half span{font-size:12px;color:var(--apagado);font-weight:600}
+.rl-half em{font-style:normal;font-size:11.5px;color:var(--tenue);font-weight:600;margin-top:3px}
+.rl-half.win{background:var(--acc-soft);box-shadow:inset 0 0 0 1.5px var(--acc)}
+.rl-half.win b{color:var(--acc-t)}
+.pq-vs{font-family:var(--rotulo);font-weight:800;font-size:15px;letter-spacing:.02em;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--tiza);color:var(--tiza-tinta);flex:none}
+.pq-vs.sm{width:34px;height:34px;font-size:12px}
+.rl-duel{display:flex;align-items:center;justify-content:center;gap:16px;font-size:26px;padding:4px 0}
+.rl-cmph{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.rl-cmph .row{gap:6px;min-width:0}.rl-cmph b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rl-verdict,.pq-verdict{text-align:center;font-size:15px;line-height:1.4;padding:10px 12px;border-radius:16px;background:var(--sup-2)}
+.rl-verdict b,.pq-verdict b{color:var(--acc-t)}
+/* Pique cara a cara */
+.pq-board{gap:14px;background:var(--glass);box-shadow:var(--sombra-hero)}
+.pq-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px}
+.pq-team{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;min-width:0}
+.pq-team .cl-emo{margin-bottom:6px;background:var(--sup-3);box-shadow:none}
+.pq-team.win .cl-emo{background:var(--grad-d);box-shadow:0 12px 26px -10px var(--glow)}
+.pq-team b{font-family:var(--rotulo);font-size:16px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pq-pts{font-family:var(--rotulo);font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-.03em;color:var(--apagado)}
+.pq-team.win .pq-pts{color:var(--texto)}
+.pq-team small{font-size:12.5px;color:var(--apagado);font-weight:600}
+.pq-mid{display:flex;align-items:center;justify-content:center;padding-bottom:30px}
+.pq-bar{height:10px;border-radius:5px;background:var(--rosa);overflow:hidden;display:flex}
+.pq-bar i{display:block;height:100%;background:var(--grad-d);box-shadow:2px 0 0 var(--sup-solid)}
+.pq-cmp{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+.pq-cmp .a,.pq-cmp .b{font-size:14.5px;color:var(--apagado)}
+.pq-cmp .a.w,.pq-cmp .b.w{color:var(--texto)}
+.pq-cmp .hd{font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.pq-cmp>span{font-size:12.5px}
+.pq-cmp .a i{background:var(--grad-d)}.pq-cmp .b i{background:var(--rosa)}
+.pq-pairs{display:flex;flex-direction:column;gap:8px}
+.pq-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:4px;padding:8px 8px 10px;border-radius:18px;background:var(--sup-2)}
+.pq-p{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px;border-radius:12px}
+.pq-p.r{flex-direction:row-reverse;text-align:right}
+.pq-nm{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.pq-nm b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.pq-nm em{font-style:normal;font-size:12.5px;color:var(--apagado);font-weight:700}
+.pq-p.win .pq-nm em{color:var(--acc-t)}
+.pq-p.r.win .pq-nm em{color:var(--rosa)}
+.pq-p.win .avatar{box-shadow:0 0 0 2px var(--acc)}
+.pq-p.r.win .avatar{box-shadow:0 0 0 2px var(--rosa)}
+.pq-pos{font-family:var(--rotulo);font-weight:700;font-size:13px;color:var(--tenue);text-align:center;min-width:28px}
+.pq-mini{grid-column:1/-1;height:4px;border-radius:2px;background:var(--rosa);display:flex;overflow:hidden;margin-top:2px}
+.pq-mini span{display:block;height:100%;background:var(--acc)}
+.pq-mini.none{background:var(--track)}.pq-mini.none span{background:none}
+.pq-rest{line-height:1.5}
+.pq-weeks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pq-wk{display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 4px;border-radius:16px;background:var(--sup-2);text-align:center}
+.pq-wk small{font-size:11.5px;font-weight:700;color:var(--apagado);text-transform:uppercase;letter-spacing:.04em}
+.pq-wk b{font-family:var(--rotulo);font-size:15px}
+.pq-wk em{font-style:normal;font-size:13px;font-weight:700;color:var(--apagado)}
+.pq-wk.win{background:var(--ok-soft)}.pq-wk.win b{color:var(--ok-t)}
+.pq-wk.lose{background:var(--pr-soft)}.pq-wk.lose b{color:var(--pr)}
+.pq-wk.live{box-shadow:inset 0 0 0 1.5px var(--acc)}.pq-wk.live b{color:var(--acc-t)}
+.pq-wk.none b{color:var(--tenue)}
+#wallForm input{min-height:44px}
+.card .chips.pq-taunts{margin:-4px -16px 0;padding:0 16px 2px}
+.pq-taunts .chip{min-height:38px;font-size:13.5px;padding:0 13px}
+.pq-msgs{display:flex;flex-direction:column;gap:8px}
+.pq-msg{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:16px;background:var(--sup-2)}
+.pq-msg.us{background:var(--sel-tint)}
+.pq-msg .avatar{margin-top:2px}
+.pq-mb{flex:1;min-width:0}
+.pq-mh{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.pq-mh small{color:var(--tenue);font-size:12px;margin-left:auto;white-space:nowrap}
+.pq-mt{font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.pq-msg .iconbtn{width:44px;height:44px;margin:-10px -10px -10px -4px;color:var(--apagado)}
+.pq-msg .iconbtn svg{width:18px;height:18px}
 .cl-how summary{list-style:none;justify-content:space-between;margin:-10px 0}
 .cl-how summary::-webkit-details-marker{display:none}
 .cl-how summary svg{width:20px;height:20px;color:var(--apagado);transition:transform .2s}
@@ -1746,6 +1855,8 @@ function render(){
   else if (v && v.type === 'compare') { title = 'Comparar'; html = viewCompare(v.id); }
   else if (v && v.type === 'socedit') { title = 'Perfil público'; html = socialSetupHTML(true); }
   else if (v && v.type === 'myex') { title = 'Ejercicios propios'; html = viewMyEx(); }
+  else if (v && v.type === 'pique') { title = 'Pique'; html = viewPique(v.id); }
+  else if (v && v.type === 'clanv') { title = 'Clan'; html = viewClanV(v.id); }
   else html = ({home: viewHome, train: viewTrain, social: viewSocial, clan: viewClan, me: viewMe})[tab]();
   $('#top').classList.toggle('sub', !!v);
   const acts = !v && tab === 'social' && Social.ready() ? `<div class="row acts"><button class="iconbtn" data-act="soc-search" aria-label="Buscar personas">${ICON.search}</button><button class="iconbtn bell" data-act="soc-notifs" aria-label="Notificaciones">${ICON.bell}${Social.unseen ? `<em class="badge">${Social.unseen > 9 ? '9+' : Social.unseen}</em>` : ''}</button><button class="iconbtn" data-act="soc-user" data-id="${Social.myUid()}" aria-label="Mi perfil público">${avatar(Social.myName(), 'xs')}</button></div>` : '';
@@ -2967,7 +3078,7 @@ function socRender(){ if ((tab === 'social' || tab === 'clan') && !ED) { const s
 function renderTabs(){
   const n = Social.unseen;
   $('#tabs').innerHTML = [['home', 'Inicio', ICON.home], ['train', 'Entrenar', ICON.dumbbell], ['social', 'Social', ICON.users], ['clan', 'Clanes', ICON.shield], ['me', 'Perfil', ICON.user]]
-    .map(([k, l, i]) => `<button data-act="tab" data-tab="${k}" ${tab === k ? 'aria-current="page"' : ''}><b class="ti">${i}</b><span>${l}</span>${k === 'social' && n ? `<em class="badge" aria-label="${n} notificaciones nuevas">${n > 9 ? '9+' : n}</em>` : ''}</button>`).join('');
+    .map(([k, l, i]) => `<button data-act="tab" data-tab="${k}" ${tab === k ? 'aria-current="page"' : ''}><b class="ti">${i}</b><span>${l}</span>${k === 'social' && n ? `<em class="badge" aria-label="${n} notificaciones nuevas">${n > 9 ? '9+' : n}</em>` : ''}${k === 'clan' && Rel.badge() ? `<em class="badge" aria-label="Propuestas para tu clan">${Rel.badge()}</em>` : ''}</button>`).join('');
 }
 
 /* ---------- Vistas sociales ---------- */
@@ -3108,8 +3219,9 @@ function viewSearch(){
 }
 function viewNotifs(){
   if (!Social.notifLoaded) { setTimeout(() => Social.loadNotifs(), 0); return '<div class="empty">Cargando…</div>'; }
-  const T = {like: 'le ha dado me gusta a tu entreno', comment: 'ha comentado en', follow: 'ha empezado a seguirte'};
-  return Social.notifs.map(n => `<button class="notif" data-act="${n.pid && Social.posts.has(n.pid) ? 'soc-post' : n.pid ? 'soc-user' : 'soc-user'}" data-id="${n.pid && Social.posts.has(n.pid) ? n.pid : n.from}">${avatar(n.name, 'sm')}<span><b>${esc(n.name)}</b> ${T[n.type] || ''}${n.title ? ` «${esc(n.title)}»` : ''}${n.text ? `: <span class="muted">${esc(n.text)}</span>` : ''}<small>${ago(n.ts)}</small></span></button>`).join('') || '<div class="empty">No tienes notificaciones.</div>';
+  const T = {like: 'le ha dado me gusta a tu entreno', comment: 'ha comentado en', follow: 'ha empezado a seguirte',
+    'rel-alianza': 'os propone una alianza 🤝', 'rel-pique': 'os lanza un pique ⚔️', 'rel-ok-alianza': 'ha aceptado vuestra alianza 🤝', 'rel-ok-pique': 'ha aceptado el pique. ¡Que empiece la guerra! ⚔️', 'rel-no': 'ha rechazado vuestra propuesta'};
+  return Social.notifs.map(n => n.rel ? `<button class="notif" data-act="cl-goto" data-id="${esc(n.rel)}"><span class="cl-emo xs" aria-hidden="true">${esc(n.cemoji || '🛡️')}</span><span><b>${esc(n.cname || 'Un clan')}</b> ${T[n.type] || ''}${n.text ? `: <span class="muted">«${esc(n.text)}»</span>` : ''}<small>${esc(n.name)} · ${ago(n.ts)}</small></span></button>` : `<button class="notif" data-act="${n.pid && Social.posts.has(n.pid) ? 'soc-post' : n.pid ? 'soc-user' : 'soc-user'}" data-id="${n.pid && Social.posts.has(n.pid) ? n.pid : n.from}">${avatar(n.name, 'sm')}<span><b>${esc(n.name)}</b> ${T[n.type] || ''}${n.title ? ` «${esc(n.title)}»` : ''}${n.text ? `: <span class="muted">${esc(n.text)}</span>` : ''}<small>${ago(n.ts)}</small></span></button>`).join('') || '<div class="empty">No tienes notificaciones.</div>';
 }
 function viewCompare(uid){
   const u = Social.users.get(uid); if (!u || !u.loaded) { setTimeout(() => Social.loadUser(uid), 0); return '<div class="empty">Cargando…</div>'; }
@@ -3135,6 +3247,14 @@ document.addEventListener('submit', async e => {
   try { await Social.addComment(p, text); input.value = ''; socRender(); const c = $('#comments'); if (c) c.scrollIntoView({block: 'end'}); }
   catch (err) { toast(err.offline ? 'Sin conexión' : 'No se ha podido publicar el comentario'); }
   input.disabled = false;
+});
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'wallForm') return;
+  e.preventDefault();
+  const input = $('#wallText'), text = input.value.trim(); if (!text) return;
+  input.disabled = true;
+  if (await Rel.post(e.target.dataset.id, text)) { input.value = ''; clanRender(); }
+  const i2 = $('#wallText'); if (i2) i2.disabled = false;
 });
 let socQT = null;
 document.addEventListener('input', e => { if (e.target.id === 'socQ') { clearTimeout(socQT); const v = e.target.value; socQT = setTimeout(() => Social.searchUsers(v), 300); } });
@@ -3600,10 +3720,22 @@ function isoWeek(t){
   const j = new Date(d.getFullYear(), 0, 4, 12);
   return d.getFullYear() + '-W' + pad(1 + Math.round(((d - j) / 864e5 - 3 + (j.getDay() + 6) % 7) / 7));
 }
+/* Meses y años de la liga. Convención: cada semana (de lunes a domingo) cuenta entera en el mes en que cae su LUNES
+   (la del 29 dic – 4 ene es de diciembre). El mes suma sus semanas y el año suma sus meses. El «mes actual» es el de la
+   semana en curso, así lo que entrenas hoy siempre suma en el mes y el año que estás viendo. */
+const ymOf = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+// Lunes (00:00 hora local) de una semana ISO '2026-W46'
+function isoMonday(k){ const [y, w] = String(k).split('-W').map(Number); const j = weekStart(new Date(y, 0, 4, 12).getTime()); return weekStart(j + (w - 1) * 7 * 864e5 + 12 * 36e5); }
+let clanKeysC = null;
 function clanKeys(){
-  const ws = weekStart(Date.now()), st = [ws]; for (let i = 1; i < 8; i++) st.push(weekStart(st[i - 1] - 1));
-  const k = st.map(isoWeek);
-  return {cur: k[0], prev: k[1], last4: k.slice(0, 4), last4prev: k.slice(1, 5), ws, next: weekStart(ws + 8 * 864e5)};
+  const ws = weekStart(Date.now());
+  if (clanKeysC && clanKeysC.ws === ws) return clanKeysC;
+  const st = [ws]; for (let i = 1; i < 8; i++) st.push(weekStart(st[i - 1] - 1));
+  const k = st.map(isoWeek), d = new Date(ws), y = d.getFullYear(), m = d.getMonth();
+  const yms = []; for (let i = 0; i <= m; i++) yms.push(y + '-' + pad(i + 1));
+  return clanKeysC = {cur: k[0], prev: k[1], last4: k.slice(0, 4), last4prev: k.slice(1, 5), keys: k, ws, next: weekStart(ws + 8 * 864e5),
+    ym: ymOf(ws), pym: ymOf(new Date(y, m - 1, 15).getTime()), yr: y, yms, mes: MESES[m]};
 }
 // Puntos de una semana a partir de sus componentes (con topes: un resumen trucado no puede pasar del máximo)
 const clanPts = x => x ? clamp(x.days, 0, CL.maxDays) * CL.day + clamp(x.prs, 0, CL.maxPr) * CL.pr + Math.round(clamp(x.impr, 0, CL.maxImpr) * CL.perPct) : 0;
@@ -3617,12 +3749,16 @@ function myLeague(){
   const now = Date.now(), K = clanKeys(), w0 = S.workouts[0] || {};
   const key = [S.workouts.length, w0.id, w0.start, w0.end, (w0.prs || []).length, S.measures.length, S.measures.map(m => m.weight).join(), !!S.settings.relShare, S.settings.clan || '', JSON.stringify(S.settings.logros || {}), K.ws].join('|');
   const c = myLeague.c; if (c && c.key === key && now - c.t < 5000) return c.v;
-  const starts = [K.ws]; for (let i = 1; i < CL.weeks; i++) starts.push(weekStart(starts[i - 1] - 1));
+  // semanas a calcular: las 8 de la liga y todas las que empiezan en los 13 meses del historial mensual
+  const m0 = (d => new Date(d.getFullYear(), d.getMonth() - 12, 1).getTime())(new Date(K.ws));
+  const starts = [K.ws];
+  for (;;) { const p = weekStart(starts[starts.length - 1] - 1); if (p < m0 && starts.length >= CL.weeks) break; starts.push(p); }
   const ends = starts.map((s, i) => i ? starts[i - 1] : K.next);
-  const W = 7 * 864e5, from = starts[CL.weeks - 1] - (Math.max(CL.lookback, CL.relWeeks) + 1) * W;
-  const idx = new Map();
+  const W = 7 * 864e5, from = starts[starts.length - 1] - (Math.max(CL.lookback, CL.relWeeks) + 1) * W;
+  const idx = new Map(), byWk = new Map();
   for (const w of S.workouts) {
     if (w.start < from) continue;
+    if (w.start >= starts[starts.length - 1]) { const k = weekStart(w.start); let l = byWk.get(k); if (!l) byWk.set(k, l = []); l.push(w); }
     for (const e of w.exercises) { const x = exOf(e.exId); if (x.type === 'cardio') continue; const v = exBestScore(e.sets, x.type); if (v > 0) { let a = idx.get(e.exId); if (!a) idx.set(e.exId, a = []); a.push({t: w.start, v}); } }
   }
   const relOf = (t0, t1, bw) => {
@@ -3631,9 +3767,9 @@ function myLeague(){
     const tot = (r.banca || 0) + (r.sentadilla || 0) + (r.muerto || 0); if (tot) r.total = Math.round(tot * 100) / 100;
     return r;
   };
-  const weeks = {};
+  const weeks = {}, months = {}; let maxPts = 0;
   starts.forEach((ws, i) => {
-    const we = ends[i], list = S.workouts.filter(w => w.start >= ws && w.start < we);
+    const we = ends[i], list = (byWk.get(ws) || []).filter(w => w.start < we);
     if (!list.length) return;
     // un entreno cuenta para constancia y chiquipuntos si tiene al menos 3 series; los días se cuentan una vez
     const counted = list.filter(w => w.exercises.reduce((a, e) => a + e.sets.filter(isWork).length, 0) >= CL.minSets);
@@ -3647,7 +3783,11 @@ function myLeague(){
       if (cur > best && best > 0 && ses.size >= CL.minSes) impr += Math.min(CL.capEx, (cur / best - 1) * 100);
     }
     const o = {days, prs, impr: Math.round(Math.min(CL.maxImpr, impr) * 10) / 10, n: list.length};
-    o.pts = clanPts(o);
+    o.pts = clanPts(o); maxPts = Math.max(maxPts, o.pts);
+    // resumen mensual: suma de las semanas cuyo lunes cae en ese mes
+    const ym = ymOf(ws), mo = months[ym] || (months[ym] = {pts: 0, days: 0, prs: 0, impr: 0, n: 0});
+    mo.pts += o.pts; mo.days += o.days; mo.prs += o.prs; mo.impr = Math.round((mo.impr + o.impr) * 10) / 10; mo.n += o.n;
+    if (i >= CL.weeks) return; // las semanas sueltas solo se publican las 8 últimas
     if (S.settings.relShare) { const bw = bodyweightAt(we); if (bw) { const r = relOf(we - CL.relWeeks * W, we, bw); if (r.total) o.rel = r.total; } }
     weeks[isoWeek(ws)] = o;
   });
@@ -3660,19 +3800,52 @@ function myLeague(){
   let maxDays = 0; wkDays.forEach(s => { maxDays = Math.max(maxDays, s.size); });
   // la fuerza relativa de los logros es la mejor de siempre frente a tu peso actual
   const relBest = {}; if (bw) for (const [k, id] of REL_LIFTS) { const b = bestsOf(id).e1rm; if (b) relBest[k] = Math.round(b / bw * 100) / 100; }
-  const st = {n: S.workouts.length, prTot, maxRun, maxDays, maxPts: Math.max(0, ...Object.values(weeks).map(o => o.pts)), rel: relBest, clan: S.settings.clan ? 1 : 0};
+  const st = {n: S.workouts.length, prTot, maxRun, maxDays, maxPts, rel: relBest, clan: S.settings.clan ? 1 : 0};
   const got = S.settings.logros || {};
   const ach = LOGROS.filter(([id, , , , f]) => got[id] || (f && (([v, g]) => v >= g)(f(st)))).map(l => l[0]);
-  const v = {weeks, cur: weeks[K.cur] || {days: 0, prs: 0, impr: 0, n: 0, pts: 0}, K, rel, bw, ach, st, lastWk: S.workouts.length ? isoWeek(S.workouts[0].start) : ''};
+  const v = {weeks, months, cur: weeks[K.cur] || {days: 0, prs: 0, impr: 0, n: 0, pts: 0}, K, rel, bw, ach, st, lastWk: S.workouts.length ? isoWeek(S.workouts[0].start) : ''};
   myLeague.c = {key, t: now, v};
   return v;
 }
 const effStreak = s => s && (s.lastWk || '') >= clanKeys().prev ? clamp(s.streak, 0, 520) : 0;
 
+/* ---------- Periodos: semana, mes y año ----------
+   Semana: la semana ISO en curso (se recalculan los puntos con sus topes). Mes: months[mes] del resumen; los resúmenes antiguos
+   (sin «months») se apañan con sus 8 semanas, que siempre cubren el mes en curso. Año: suma de los meses del año. */
+const PERS = [['w', 'Semana'], ['m', 'Mes'], ['y', 'Año']];
+const CL_Z = {pts: 0, days: 0, prs: 0, impr: 0, n: 0};
+const addV = (o, x) => { o.pts += x.pts; o.days += x.days; o.prs += x.prs; o.impr = Math.round((o.impr + x.impr) * 10) / 10; o.n += x.n; return o; };
+const wkVals = x => x ? {pts: clanPts(x), days: clamp(x.days, 0, 7), prs: clamp(x.prs, 0, 99), impr: clamp(x.impr, 0, CL.maxImpr), n: clamp(x.n, 0, 99)} : {...CL_Z};
+function clanMonth(s, ym){
+  if (s.months && typeof s.months === 'object') { const x = s.months[ym]; return x ? {pts: clamp(x.pts, 0, 5 * CL_MAXPTS), days: clamp(x.days, 0, 35), prs: clamp(x.prs, 0, 500), impr: clamp(x.impr, 0, 5 * CL.maxImpr), n: clamp(x.n, 0, 500)} : {...CL_Z}; }
+  const o = {...CL_Z}; for (const [k, x] of Object.entries(s.weeks || {})) if (x && ymOf(isoMonday(k)) === ym) addV(o, wkVals(x));
+  return o;
+}
+// Valores de una persona (su resumen público) en un periodo: {pts, days, prs, impr, n} (+ partial si su app es antigua y no hay datos del año)
+function clanPer(s, per, K = clanKeys()){
+  if (!s) return {...CL_Z};
+  if (per === 'w') return wkVals((s.weeks || {})[K.cur]);
+  const o = {...CL_Z}; for (const ym of per === 'm' ? [K.ym] : K.yms) addV(o, clanMonth(s, ym));
+  if (per === 'y' && !s.months) o.partial = true;
+  return o;
+}
+// Activo: ha entrenado en las últimas 4 semanas o en el periodo (para la semana es lo mismo que siempre)
+function clanActive(s, per, K = clanKeys()){ const wk = (s && s.weeks) || {}; return K.last4.some(k => wk[k] && wk[k].n > 0) || (per !== 'w' && clanPer(s, per, K).n > 0); }
+const perName = (per, K = clanKeys()) => per === 'w' ? `Semana ${+K.cur.split('-W')[1]}` : per === 'm' ? K.mes[0].toUpperCase() + K.mes.slice(1) : String(K.yr);
+const perThis = per => ({w: 'esta semana', m: 'este mes', y: 'este año'})[per];
+function perSeg(per = Clan.per){ return `<div class="cl-per" role="group" aria-label="Periodo">${PERS.map(([k, l]) => `<button data-act="cl-per" data-k="${k}" aria-pressed="${per === k}">${l}</button>`).join('')}</div>`; }
+// Un clan en un periodo: miembros ordenados, media por miembro activo y medias por categoría
+function relSide(c, per, K = clanKeys()){
+  const rows = Clan.uidsOf(c).map(uid => { const s = Clan.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile; return {uid, me: uid === Social.myUid(), name: s ? s.name : pr ? pr.name : 'Alguien', s, c, v: clanPer(s, per, K), act: clanActive(s, per, K)}; })
+    .sort((x, y) => y.v.pts - x.v.pts || y.v.days - x.v.days || y.v.n - x.v.n || x.name.localeCompare(y.name, 'es'));
+  const act = rows.filter(r => r.act), n = act.length, avg = f => n ? act.reduce((a, r) => a + r.v[f], 0) / n : 0;
+  return {c, rows, act: n, avg: avg('pts'), tot: rows.reduce((a, r) => a + r.v.pts, 0), days: avg('days'), prs: avg('prs'), impr: avg('impr')};
+}
+
 const Clan = {
   uid: null, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false,
-  rank: 'pts', lift: 'total', emo: null, allLogros: false,
-  check(){ const u = Social.myUid() || null; if (this.uid !== u) Object.assign(this, {uid: u, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false}); },
+  rank: 'pts', lift: 'total', per: 'w', emo: null, allLogros: false,
+  check(){ const u = Social.myUid() || null; if (this.uid !== u) Object.assign(this, {uid: u, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false, noMonths: false}); },
   myCid(){ return S.settings.clan || ''; },
   mine(){ const c = this.clans.find(x => x._id === this.myCid()); return c && (c.members || []).includes(Social.myUid()) ? c : null; },
   // Resumen público (scores/{uid}). Sin peso corporal: solo semanas, racha, logros y, si lo activas, el cociente de fuerza relativa.
@@ -3680,6 +3853,7 @@ const Clan = {
     const L = myLeague(), p = Social.me() || {};
     const b = {v: 1, uid: Social.myUid(), name: Social.myName(), username: p.username || '', clan: this.myCid(), wk: L.K.cur, weeks: L.weeks, streak: weekStreak(), lastWk: L.lastWk,
       ach: L.ach.filter(id => S.settings.relShare || !REL_ACH.has(id))};
+    if (!this.noMonths) b.months = L.months; // meses (versión 4.5): si las reglas publicadas aún no los admiten, se dejan fuera
     if (S.settings.relShare && Object.keys(L.rel).length) b.rel = L.rel;
     return b;
   },
@@ -3695,7 +3869,12 @@ const Clan = {
   async push(){
     const items = this.pushItems(); if (!items.length) return 0;
     try { await Cloud.commit(items.map(x => x[0])); items.forEach(x => x[1]()); await Store.save(); }
-    catch (e) { if (e.offline || e.session) throw e; if (e.status === 403) this.denied = true; console.warn('Clan', e); return 0; }
+    catch (e) {
+      if (e.offline || e.session) throw e;
+      // reglas antiguas (sin «months»): se reintenta con el resumen de siempre
+      if (e.status === 403 && !this.noMonths) { this.noMonths = true; return this.push(); }
+      if (e.status === 403) this.denied = true; console.warn('Clan', e); return 0;
+    }
     return items.length;
   },
   scoreOf(uid){ if (uid === Social.myUid()) return {...this.body(), _id: uid}; const s = this.scores.get(uid) || this.extra.get(uid); return s && !s._none ? s : null; },
@@ -3735,6 +3914,7 @@ const Clan = {
       this.loaded = true; this.err = null; this.at = Date.now();
     } catch (e) { this.err = e.offline ? 'Sin conexión. Conéctate para ver la liga.' : 'No se ha podido cargar la liga.'; if (!e.offline) console.warn('clan', e); }
     this.loading = false; clanRender();
+    if (this.loaded && !this.err && this.mine()) Rel.load(true); // piques y alianzas (con los resúmenes recién cargados)
   },
   async commit(writes){
     try { await Cloud.commit(writes); return true; }
@@ -3745,15 +3925,19 @@ const Clan = {
   members(c){
     return (c.members || []).map(uid => { const s = this.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile; return {uid, me: uid === Social.myUid(), name: s ? s.name : pr ? pr.name : 'Alguien', s}; });
   },
-  // Clan contra clan: media de puntos por miembro activo (ha entrenado en las últimas 4 semanas)
-  table(){
-    const me = Social.myUid(), K = clanKeys();
-    const avg = (ms, cur, keys) => { let n = 0, sum = 0; ms.forEach(u => { const wk = ((this.scoreOf(u) || {}).weeks) || {}; if (keys.some(k => wk[k] && wk[k].n > 0)) { n++; sum += clanPts(wk[cur]); } }); return {n, v: n ? sum / n : 0}; };
+  // si alguien aparece en dos clanes, cuenta en el que dice su resumen
+  uidsOf(c){ const me = Social.myUid(); return (c.members || []).filter(u => { if (u === me) return c._id === this.myCid(); const s = this.scoreOf(u); return !s || !s.clan || s.clan === c._id; }); },
+  // Media de puntos por miembro activo en la semana keys[i] (activo: ha entrenado en esa semana o en las 3 anteriores)
+  wkAvg(uids, K, i){ let n = 0, sum = 0; const keys = K.keys.slice(i, i + 4); uids.forEach(u => { const wk = ((this.scoreOf(u) || {}).weeks) || {}; if (keys.some(k => wk[k] && wk[k].n > 0)) { n++; sum += clanPts(wk[K.keys[i]]); } }); return {n, v: n ? sum / n : 0}; },
+  // Clan contra clan: media de puntos por miembro activo en el periodo
+  table(per = 'w'){
+    const K = clanKeys();
     return this.clans.map(c => {
-      // si alguien aparece en dos clanes, cuenta en el que dice su resumen
-      const ms = (c.members || []).filter(u => { if (u === me) return c._id === this.myCid(); const s = this.scoreOf(u); return !s || !s.clan || s.clan === c._id; });
-      const a = avg(ms, K.cur, K.last4), b = avg(ms, K.prev, K.last4prev);
-      return {c, n: (c.members || []).length, act: a.n, avg: a.v, prevAvg: b.v, prevAct: b.n};
+      const ms = this.uidsOf(c), a = relSide(c, per, K);
+      let b = {n: 0, v: 0};
+      if (per === 'w') b = this.wkAvg(ms, K, 1);
+      else if (per === 'm') { let n = 0, sum = 0; ms.forEach(u => { const s = this.scoreOf(u); if (!s) return; const x = clanMonth(s, K.pym); if (x.n > 0) { n++; sum += x.pts; } }); b = {n, v: n ? sum / n : 0}; }
+      return {c, n: (c.members || []).length, act: a.act, avg: a.avg, prevAvg: b.v, prevAct: b.n};
     }).sort((x, y) => y.avg - x.avg || y.act - x.act || x.c.name.localeCompare(y.c.name, 'es'));
   }
 };
@@ -3777,7 +3961,9 @@ function clanHowHTML(){
     <p><b>✨ Chiquipuntos.</b> 3 puntos por cada ejercicio en el que bates una marca personal, hasta 30 puntos a la semana.</p>
     <p><b>📈 Mejora.</b> Tu mejor marca de la semana en cada ejercicio (1RM estimado, repeticiones o tiempo) frente a tu mejor marca de las 8 semanas anteriores. Cada 1 % de mejora son 2 puntos; como mucho un 10 % por ejercicio y 40 puntos a la semana. Solo cuentan ejercicios que hayas hecho al menos 2 veces en esas 8 semanas, así que bajar peso a propósito no sirve de nada.</p>
     <p><b>💪 Fuerza relativa (si quieres).</b> Tu 1RM estimado de las últimas 12 semanas dividido entre tu peso. Solo se publica el resultado (por ejemplo 1,35×), nunca tu peso.</p>
-    <p><b>🛡️ Clan contra clan.</b> Media de puntos por miembro activo (quien ha entrenado en las últimas 4 semanas): un clan de 3 compite igual que uno de 20.</p>
+    <p><b>📅 Semana, mes y año.</b> Cada semana cuenta entera en el mes en que cae su lunes (la del 29 de diciembre al 4 de enero es de diciembre). El mes suma sus semanas y el año suma sus meses, así que el mes que ves es el de la semana en curso.</p>
+    <p><b>🛡️ Clan contra clan.</b> Media de puntos por miembro activo (quien ha entrenado en las últimas 4 semanas o en el periodo): un clan de 3 compite igual que uno de 20.</p>
+    <p><b>⚔️ Piques y 🤝 alianzas.</b> Los propone el jefe de un clan y los acepta el jefe del otro (como mucho ${REL.max} de cada). En un pique gana la mejor media por miembro activo y en el cara a cara se emparejan por puesto: 1.º contra 1.º, 2.º contra 2.º… Una alianza junta las clasificaciones de los clanes aliados.</p>
     <p class="muted">Máximo ${CL_MAXPTS} puntos por semana. Los premios de la semana se reparten al cerrar el domingo.</p></div></details>`;
 }
 function clanLogrosHTML(L, title = 'Tus logros'){
@@ -3798,32 +3984,36 @@ function clanLeft(){
   const ms = clanKeys().next - Date.now(), d = Math.floor(ms / 864e5);
   return d >= 2 ? `Quedan ${d} días` : d === 1 ? 'Queda 1 día' : `Quedan ${Math.max(1, Math.ceil(ms / 36e5))} h`;
 }
-function clanRankRows(c, kind){
-  const K = clanKeys(), ms = Clan.members(c);
-  const wkOf = m => (m.s && m.s.weeks) || {};
+// Filas de una clasificación. ms: [{uid, me, name, s, c?}]; kind: pts | mip | rel | con; per: w | m | y (rel siempre es la última)
+function clanRankRows(ms, kind, per = Clan.per, opts = {}){
+  const K = clanKeys();
+  const pv = new Map(ms.map(m => [m.uid, clanPer(m.s, per, K)]));
   const val = m => {
-    const wk = wkOf(m);
-    if (kind === 'pts') return clanPts(wk[K.cur]);
-    if (kind === 'mip') return Math.round(K.last4.reduce((a, k) => a + clamp((wk[k] || {}).impr, 0, CL.maxImpr), 0) * 10) / 10;
+    const x = pv.get(m.uid);
+    if (kind === 'pts') return x.pts;
+    if (kind === 'mip') return Math.round(x.impr * 10) / 10;
     if (kind === 'rel') { const r = m.s && m.s.rel, v = r ? +r[Clan.lift] : 0; return v > 0 ? clamp(v, 0, Clan.lift === 'total' ? 3 * CL.maxRel : CL.maxRel) : null; }
-    return effStreak(m.s);
+    return x.days;
   };
-  const tie = m => { const x = wkOf(m)[K.cur] || {}; return clamp(x.days, 0, 7) * 100 + clamp(x.n, 0, 99); };
-  const rows = ms.map(m => ({...m, v: val(m), t: tie(m)})).sort((a, b) => (b.v ?? -1) - (a.v ?? -1) || b.t - a.t || a.name.localeCompare(b.name, 'es'));
+  const tie = m => { const x = pv.get(m.uid); return kind === 'con' ? effStreak(m.s) * 1000 + clamp(x.n, 0, 999) : clamp(x.days, 0, 400) * 1000 + clamp(x.n, 0, 999); };
+  let rows = ms.map(m => ({...m, v: val(m), t: tie(m)})).sort((a, b) => (b.v ?? -1) - (a.v ?? -1) || b.t - a.t || a.name.localeCompare(b.name, 'es'));
+  if (opts.limit) rows = rows.slice(0, opts.limit);
   const max = Math.max(1e-9, ...rows.map(r => r.v || 0));
-  const unit = {pts: 'pts', mip: '%', rel: '×', con: 'sem.'}[kind];
+  const unit = {pts: 'pts', mip: '%', rel: '×', con: 'días'}[kind];
   const lift = (REL_LIFTS.find(l => l[0] === Clan.lift) || [, , 'Banca + sentadilla + peso muerto'])[2];
   let pos = 0;
   return rows.map(r => {
-    const x = wkOf(r)[K.cur] || {}, has = r.v != null;
+    const x = pv.get(r.uid), has = r.v != null, st = effStreak(r.s);
     if (has) pos++;
-    const sub = kind === 'pts' ? `🔥 ${plural(clamp(x.days, 0, 7), 'día', 'días')} · ✨ ${clamp(x.prs, 0, 99)} · 📈 +${fmtN(clamp(x.impr, 0, CL.maxImpr))} %`
-      : kind === 'mip' ? `Esta semana +${fmtN(clamp(x.impr, 0, CL.maxImpr))} %`
+    let sub = kind === 'pts' ? `🔥 ${plural(x.days, 'día', 'días')} · ✨ ${x.prs} · 📈 +${fmtN(x.impr)} %`
+      : kind === 'mip' ? `${plural(x.n, 'entreno', 'entrenos')} · ✨ ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}`
       : kind === 'rel' ? (has ? lift : r.me ? 'Activa «Compartir» para salir' : 'No comparte su fuerza relativa')
-      : plural(clamp(x.days, 0, 7), 'día esta semana', 'días esta semana');
+      : st ? `Racha de ${plural(st, 'semana seguida', 'semanas seguidas')}` : 'Sin racha ahora mismo';
+    if (kind !== 'rel' && x.partial) sub = 'App sin actualizar: solo sus 8 últimas semanas';
     const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : kind === 'rel' ? fmtN(r.v, 2) : fmtN(r.v, 0);
     const medal = has && r.v > 0 ? ['🥇', '🥈', '🥉'][pos - 1] : null;
-    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="soc-user" data-id="${r.uid}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp(x.days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}</b><small>${sub}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has ? `<small>${unit}</small>` : ''}</span></button>`;
+    const tag = opts.badge && r.c ? ` <span class="rl-tag" aria-label="${esc(r.c.name)}">${esc(r.c.emoji)}</span>` : '';
+    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${r.uid}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${sub}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has ? `<small>${unit}</small>` : ''}</span></button>`;
   }).join('');
 }
 function clanAwardsHTML(c){
@@ -3841,18 +4031,21 @@ function clanAwardsHTML(c){
   return `<div class="card stack"><div class="row between"><h3>Premios de la semana pasada</h3><span class="small muted">Semana ${+wn}</span></div>
     ${ms.length ? `<div class="cl-awards">${A4.map(([id, e, l, b, f]) => `<div class="cl-aw${b && b.m.me ? ' me' : ''}" data-aw="${id}"><span class="e" aria-hidden="true">${e}</span><small>${l}</small>${b ? `<b>${esc(b.m.me ? 'Tú' : b.m.name)}</b><em>${f(b.v)}</em>` : `<b class="muted">Desierto</b><em class="muted">${id === 'fuerte' ? 'Nadie la comparte' : 'Sin datos'}</em>`}</div>`).join('')}</div>` : '<div class="small muted">La semana pasada nadie del clan entrenó. Esta semana podéis estrenar el palmarés.</div>'}</div>`;
 }
-function clanVsHTML(T, myId){
-  const K = clanKeys(), lastWin = T.filter(r => r.prevAct).sort((a, b) => b.prevAvg - a.prevAvg)[0];
+function clanVsHTML(T, myId, per = Clan.per){
+  const K = clanKeys(), lastWin = per === 'y' ? null : T.filter(r => r.prevAct).sort((a, b) => b.prevAvg - a.prevAvg)[0];
   const max = Math.max(1e-9, ...T.map(r => r.avg));
-  return `<div class="card stack"><div class="row between"><h3>Clan contra clan</h3><span class="small muted">pts por miembro activo</span></div>
-    <div class="cl-list">${T.slice(0, 12).map((r, i) => `<div class="cl-row${r.c._id === myId ? ' me' : ''}"><b class="cl-pos${i < 3 && r.avg > 0 ? ' md' : ''}">${i < 3 && r.avg > 0 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span class="cl-emo xs" aria-hidden="true">${esc(r.c.emoji)}</span><span class="cl-nm"><b>${esc(r.c.name)}</b><small>${plural(r.n, 'miembro', 'miembros')} · ${plural(r.act, 'activo', 'activos')}</small><i class="cl-bar"><span style="width:${Math.round(r.avg / max * 100)}%"></span></i></span><span class="cl-val num">${fmtN(r.avg, 0)}<small>pts</small></span></div>`).join('')}</div>
-    ${lastWin && lastWin.prevAvg > 0 ? `<div class="small muted">La semana ${+K.prev.split('-W')[1]} ganó ${esc(lastWin.c.emoji)} <b>${esc(lastWin.c.name)}</b> con ${fmtN(lastWin.prevAvg, 0)} pts por miembro.</div>` : ''}</div>`;
+  const tag = id => { const r = myId && Rel.cid === myId ? Rel.with(id) : null; return !r ? '' : r.status === 'pendiente' ? ' · ⏳ propuesta' : r.type === 'alianza' ? ' · 🤝 aliado' : ' · ⚔️ rival'; };
+  const pm = MESES[+K.pym.split('-')[1] - 1];
+  return `<div class="card stack" id="clVs"><div class="row between"><h3>Clan contra clan</h3>${perSeg(per)}</div>
+    <div class="small muted" style="margin-top:-6px">Puntos por miembro activo · ${perName(per, K)}</div>
+    <div class="cl-list">${T.slice(0, 12).map((r, i) => `<button class="cl-row${r.c._id === myId ? ' me' : ''}" data-act="cl-view" data-id="${r.c._id}"><b class="cl-pos${i < 3 && r.avg > 0 ? ' md' : ''}">${i < 3 && r.avg > 0 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span class="cl-emo xs" aria-hidden="true">${esc(r.c.emoji)}</span><span class="cl-nm"><b>${esc(r.c.name)}</b><small>${plural(r.n, 'miembro', 'miembros')} · ${plural(r.act, 'activo', 'activos')}${tag(r.c._id)}</small><i class="cl-bar"><span style="width:${Math.round(r.avg / max * 100)}%"></span></i></span><span class="cl-val num">${fmtN(r.avg, 0)}<small>pts</small></span></button>`).join('')}</div>
+    ${lastWin && lastWin.prevAvg > 0 ? `<div class="small muted">${per === 'w' ? `La semana ${+K.prev.split('-W')[1]}` : `En ${pm}`} ganó ${esc(lastWin.c.emoji)} <b>${esc(lastWin.c.name)}</b> con ${fmtN(lastWin.prevAvg, 0)} pts por miembro.</div>` : ''}</div>`;
 }
 function clanDiscoverHTML(T){
   const me = Social.myUid(), list = T.slice().sort((a, b) => (b.c._id === CLAN_INVITE) - (a.c._id === CLAN_INVITE));
   return `<div class="section-h"><h2>Unirse a un clan</h2>${list.length ? `<span class="small muted num">${plural(list.length, 'clan', 'clanes')}</span>` : ''}</div>
     ${list.map(r => { const c = r.c, inv = c._id === CLAN_INVITE, full = r.n >= CL.maxMembers, ban = (c.kicked || []).includes(me);
-      return `<div class="card cl-item${inv ? ' next' : ''}"><span class="cl-emo sm" aria-hidden="true">${esc(c.emoji)}</span><div class="cl-nm"><b>${esc(c.name)}</b><small>${inv ? '<span class="pr">Te han invitado</span> · ' : ''}${plural(r.n, 'miembro', 'miembros')} · ${fmtN(r.avg, 0)} pts/miembro</small>${c.desc ? `<small class="cl-desc">${esc(c.desc)}</small>` : ''}</div><button class="btn sm ${inv ? 'primary' : ''}" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Expulsado' : full ? 'Lleno' : 'Unirse'}</button></div>`; }).join('') || '<div class="empty" style="padding:16px 12px">Todavía no hay clanes. ¡Funda el primero y avisa a tus amigos!</div>'}`;
+      return `<div class="card cl-item${inv ? ' next' : ''}"><button class="cl-item-main" data-act="cl-view" data-id="${c._id}"><span class="cl-emo sm" aria-hidden="true">${esc(c.emoji)}</span><span class="cl-nm"><b>${esc(c.name)}</b><small>${inv ? '<span class="pr">Te han invitado</span> · ' : ''}${plural(r.n, 'miembro', 'miembros')} · ${fmtN(r.avg, 0)} pts/miembro</small>${c.desc ? `<small class="cl-desc">${esc(c.desc)}</small>` : ''}</span></button><button class="btn sm ${inv ? 'primary' : ''}" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Expulsado' : full ? 'Lleno' : 'Unirse'}</button></div>`; }).join('') || '<div class="empty" style="padding:16px 12px">Todavía no hay clanes. ¡Funda el primero y avisa a tus amigos!</div>'}`;
 }
 function viewClan(){
   const L = myLeague();
@@ -3865,29 +4058,299 @@ function viewClan(){
   STICKY_ACH.forEach(id => { if (L.ach.includes(id) && !(S.settings.logros || {})[id]) Clan.grant(id); });
   const T = Clan.table(), c = Clan.mine(), refresh = `<button class="btn ghost block" data-act="cl-refresh">${Clan.loading ? 'Actualizando…' : 'Actualizar'}</button>`;
   if (!c) return errH + clanIntroHTML(true) + clanDiscoverHTML(T) + clanLogrosHTML(L) + clanHowHTML() + refresh;
+  Rel.check(); if (!Rel.loaded && !Rel.loading && !Rel.err) setTimeout(() => Rel.load(), 0);
   const K = L.K, me = Social.myUid(), owner = c.owner === me, kind = Clan.rank;
   const ranked = Clan.members(c).map(m => ({m, v: clanPts(((m.s || {}).weeks || {})[K.cur])})).sort((a, b) => b.v - a.v);
   const myPos = ranked.findIndex(x => x.m.me) + 1, clanPos = T.findIndex(r => r.c._id === c._id) + 1, cw = L.cur;
   const parts = [['Constancia', clamp(cw.days, 0, CL.maxDays) * CL.day, CL.maxDays * CL.day, 'var(--acc)'], ['Chiquipuntos', clamp(cw.prs, 0, CL.maxPr) * CL.pr, CL.maxPr * CL.pr, 'var(--rosa)'], ['Mejora', Math.round(clamp(cw.impr, 0, CL.maxImpr) * CL.perPct), CL.maxImpr * CL.perPct, 'var(--violeta)']];
-  let h = errH + `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}</h2><div class="small muted">${plural(c.members.length, 'miembro', 'miembros')}${clanPos ? ` · ${clanPos}.º de ${plural(T.length, 'clan', 'clanes')}` : ''}${owner ? ' · eres el jefe' : ''}</div></div>${owner ? `<button class="iconbtn" data-act="cl-menu" aria-label="Opciones del clan">${ICON.dots}</button>` : ''}</div>
+  let h = errH + relReqHTML() + `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}</h2><div class="small muted">${plural(c.members.length, 'miembro', 'miembros')}${clanPos ? ` · ${clanPos}.º de ${plural(T.length, 'clan', 'clanes')}` : ''}${owner ? ' · eres el jefe' : ''}</div></div>${owner ? `<button class="iconbtn" data-act="cl-menu" aria-label="Opciones del clan">${ICON.dots}</button>` : ''}</div>
     ${c.desc ? `<div class="cl-desc2">${esc(c.desc)}</div>` : ''}
     <div class="cl-me"><div class="row between" style="align-items:flex-end"><div><div class="small muted">Tus puntos esta semana</div><div class="cl-big num">${cw.pts}<small> / ${CL_MAXPTS}</small></div></div><div class="cl-when"><span class="pill accent">${clanLeft()}</span><span class="small muted">Vas ${myPos}.º de ${c.members.length}</span></div></div>
       <div class="cl-mix" role="img" aria-label="${parts.map(([l, v]) => `${l} ${v}`).join(', ')}">${parts.map(([, v, , col]) => v ? `<i style="width:${v / CL_MAXPTS * 100}%;background:${col}"></i>` : '').join('')}</div>
       <div class="cl-leg">${parts.map(([l, v, mx, col]) => `<span><em><i style="background:${col}"></i>${l}</em><b class="num">${v}<small>/${mx}</small></b></span>`).join('')}</div></div></div>`;
-  const sub = {pts: `Semana ${+K.cur.split('-W')[1]}`, mip: 'Últimas 4 semanas', rel: '1RM estimado ÷ tu peso', con: 'Semanas seguidas'}[kind];
-  h += `<div class="card stack"><div class="row between"><h3>Clasificación</h3><span class="small muted">${sub}</span></div>
+  const per = Clan.per, cap = kind === 'rel' ? '' : `<div class="small muted cl-cap">${perName(per, K)} · ${per === 'w' ? clanLeft().toLowerCase() : per === 'm' ? `semanas que empiezan en ${K.mes}` : `suma de los meses de ${K.yr}`}</div>`;
+  h += `<div class="card stack" id="clRank"><div class="row between"><h3>Clasificación</h3>${kind === 'rel' ? '<span class="small muted">1RM estimado ÷ tu peso</span>' : perSeg(per)}</div>
     <div class="seg sm" role="group" aria-label="Clasificación">${[['pts', 'Puntos'], ['mip', 'Mejora'], ['rel', 'Fuerza'], ['con', 'Constancia']].map(([k, l]) => `<button data-act="cl-rank" data-k="${k}" aria-pressed="${kind === k}">${l}</button>`).join('')}</div>`;
   if (kind === 'rel') {
     h += `<div class="chips">${REL_TABS.map(([k, l]) => `<button class="chip" data-act="cl-lift" data-k="${k}" aria-pressed="${Clan.lift === k}">${l}</button>`).join('')}</div>
       <label class="row cl-share"><input type="checkbox" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza relativa</b><br><span class="small muted">Solo se publica el resultado (por ejemplo 1,35×), nunca tu peso. ${L.bw ? 'Se calcula con tu último peso de Medidas.' : 'Para activarlo apunta tu peso en Perfil › Medidas.'}</span></span></label>
       ${L.bw ? '' : '<button class="btn sm" data-act="cl-weight">Apuntar mi peso</button>'}`;
   }
-  h += `<div class="cl-list">${clanRankRows(c, kind)}</div>
-    ${kind === 'mip' ? '<div class="small muted">Suma de lo que has mejorado frente a tus propias marcas. Aquí gana quien más progresa, no quien más levanta.</div>' : kind === 'con' ? '<div class="small muted">Semanas seguidas entrenando al menos un día.</div>' : ''}</div>`;
-  h += clanAwardsHTML(c) + clanVsHTML(T, c._id) + clanLogrosHTML(L) + clanHowHTML();
+  h += `${cap}<div class="cl-list">${clanRankRows(Clan.members(c), kind, per)}</div>
+    ${kind === 'mip' ? '<div class="small muted">Suma de lo que has mejorado frente a tus propias marcas. Aquí gana quien más progresa, no quien más levanta.</div>' : kind === 'con' ? '<div class="small muted">Días entrenados. Si hay empate, gana la racha de semanas seguidas.</div>' : kind === 'pts' ? '<div class="small muted">Toca a alguien para compararte.</div>' : ''}</div>`;
+  h += relPiquesHTML(K) + relAllianceHTML(K) + clanAwardsHTML(c) + clanVsHTML(per === 'w' ? T : Clan.table(per), c._id, per) + clanLogrosHTML(L) + clanHowHTML();
   h += `<div class="grid2"><button class="btn" data-act="cl-invite">Invitar al clan</button><button class="btn" data-act="cl-refresh">${Clan.loading ? 'Actualizando…' : 'Actualizar'}</button></div>
     <button class="btn ghost danger block" data-act="cl-leave">Abandonar el clan</button>`;
   return h;
+}
+/* =========================================================
+   Relaciones entre clanes: alianzas y piques
+   relations/{a_b}: a y b son los ids de los dos clanes, ordenados. Un solo documento por pareja: o aliados o rivales, nunca las dos cosas.
+     {a, b, type: 'alianza'|'pique', status: 'pendiente'|'activa', from (clan que propone), by (su jefe), created, accepted?, msg?}
+   clanrels/{cid}: {allies: [cid…], rivals: [cid…], last}: las relaciones activas de cada clan. Las reglas solo dejan activar una
+     relación si a la vez entra en las listas de los dos clanes, y cada lista tiene como mucho 5: el límite lo garantiza el servidor.
+   relations/{id}/msgs/{mid}: muro de piques {uid, name, clan, text, ts}; escriben los miembros de los dos clanes.
+   ========================================================= */
+const REL = {max: 5, msg: 120, text: 140, wall: 30};
+const REL_T = {alianza: ['🤝', 'alianza', 'allies', 'alianzas'], pique: ['⚔️', 'pique', 'rivals', 'piques']};
+const TAUNTS = ['¿Eso es todo lo que tenéis? 😏', 'Os vemos por el retrovisor 👋', 'Menos excusas y más sentadillas 🏋️', 'Calentad bien, que vamos a por todas 🔥', 'El domingo se cuentan los puntos 😎', '¿Habéis venido a entrenar o a haceros fotos? 📸'];
+ICON.chev = SV('<path d="M9.5 5.5 16 12l-6.5 6.5"/>', 2.2);
+// Escritura en la lista de relaciones activas de un clan (añadir o quitar x). «last» dice a las reglas qué clan cambia.
+const relLink = (cid, x, f, add) => ({update: {name: Cloud.name('clanrels', cid), fields: fsFields({last: x})}, updateMask: {fieldPaths: ['last']}, updateTransforms: [{fieldPath: f, [add ? 'appendMissingElements' : 'removeAllFromArray']: {values: [fsv(x)]}}]});
+const Rel = {
+  uid: null, cid: null, list: [], links: null, gone: new Set(), sf: new Set(), walls: new Map(), loaded: false, loading: false, err: null, denied: false, at: 0, allAll: false,
+  check(){ const u = Social.myUid() || null, c = Clan.myCid(); if (this.uid !== u || this.cid !== c) Object.assign(this, {uid: u, cid: c, list: [], links: null, gone: new Set(), sf: new Set(), walls: new Map(), loaded: false, loading: false, err: null, denied: false, at: 0, allAll: false}); },
+  other(r){ return r.a === this.cid ? r.b : r.a; },
+  clan(id){ return Clan.clans.find(c => c._id === id) || null; },
+  get(id){ return this.list.find(r => r._id === id) || null; },
+  // relaciones de mi clan con clanes que existen
+  live(){ return this.cid ? this.list.filter(r => (r.a === this.cid || r.b === this.cid) && !this.gone.has(this.other(r)) && this.clan(this.other(r))) : []; },
+  with(cid){ return this.live().find(r => this.other(r) === cid) || null; },
+  active(type){ return this.live().filter(r => r.status === 'activa' && r.type === type); },
+  incoming(){ return this.live().filter(r => r.status === 'pendiente' && r.from !== this.cid); },
+  outgoing(type){ return this.live().filter(r => r.status === 'pendiente' && r.from === this.cid && (!type || r.type === type)); },
+  owner(){ const c = Clan.mine(); return !!c && c.owner === Social.myUid(); },
+  badge(){ return this.owner() ? this.incoming().length : 0; },
+  async load(force){
+    this.check(); const cid = this.cid;
+    if (!cid || !Social.ready() || this.loading || !Clan.mine()) return;
+    if (!force && this.loaded && Date.now() - this.at < 120000) return;
+    this.loading = true; this.sf = new Set();
+    try {
+      const q = f => Cloud.queryRoot({from: [{collectionId: 'relations'}], where: ff(f, 'EQUAL', cid), limit: 60});
+      const [ra, rb, lk] = await Promise.all([q('a'), q('b'), Cloud.getDoc('clanrels', cid)]);
+      if (this.cid !== cid) { this.loading = false; return; }
+      this.list = [...(ra || []), ...(rb || [])].filter(r => r.document).map(r => docData(r.document));
+      this.links = lk ? docData(lk) : null;
+      // clanes que no vinieron en la lista general (o que ya no existen)
+      const ids = [...this.list.map(r => this.other(r)), ...(this.links ? [...(this.links.allies || []), ...(this.links.rivals || [])] : [])];
+      const miss = [...new Set(ids)].filter(id => !this.clan(id) && !this.gone.has(id));
+      if (miss.length) {
+        const res = await Cloud.fs('POST', Cloud.root() + ':batchGet', {documents: miss.map(id => Cloud.name('clans', id))});
+        (res || []).forEach(r => { if (r.found) Clan.clans.push(docData(r.found)); else if (r.missing) this.gone.add(r.missing.split('/').pop()); });
+      }
+      await this.scoresOf(this.live().filter(r => r.status === 'activa').map(r => this.clan(this.other(r))));
+      Object.assign(this, {loaded: true, err: null, denied: false, at: Date.now()});
+      this.heal();
+    } catch (e) {
+      // 403: las reglas publicadas aún no conocen las relaciones; se esconden sin molestar
+      if (e.status === 403) Object.assign(this, {denied: true, loaded: true, err: null, at: Date.now()});
+      else { this.err = e.offline ? 'Sin conexión: no se pueden ver los piques ni las alianzas.' : 'No se han podido cargar los piques y alianzas.'; if (!e.offline) console.warn('rel', e); }
+    }
+    this.loading = false; clanRender(); renderTabs();
+  },
+  // Resúmenes de los miembros de otros clanes (una petición por cada 100)
+  async scoresOf(clans){
+    const me = Social.myUid(), need = [...new Set(clans.filter(Boolean).flatMap(c => c.members || []))].filter(u => u !== me && !Clan.scores.has(u));
+    for (let i = 0; i < need.length; i += 100) {
+      const part = need.slice(i, i + 100);
+      const res = await Cloud.fs('POST', Cloud.root() + ':batchGet', {documents: part.map(u => Cloud.name('scores', u))});
+      (res || []).forEach(r => { if (r.found) { const d = docData(r.found); Clan.scores.set(d._id, d); } });
+      const still = part.filter(u => !Clan.scores.has(u)); if (still.length) await Social.profilesOf(still);
+    }
+  },
+  async ensure(c){ if (!c || this.sf.has(c._id)) return; this.sf.add(c._id); try { await this.scoresOf([c]); } catch (e) {} clanRender(); },
+  // El jefe arregla lo que haya quedado colgando (clanes borrados, listas desfasadas). Sin prisa y sin avisar.
+  async heal(){
+    if (!this.owner() || this.healing || this.denied) return; this.healing = true;
+    try {
+      for (const r of this.list) if (this.gone.has(this.other(r))) await Cloud.commit([{delete: Cloud.name('relations', r._id)}]).catch(() => {});
+      const L = this.links || {};
+      for (const t of ['alianza', 'pique']) { const f = REL_T[t][2]; for (const x of L[f] || []) if (!this.list.some(r => this.other(r) === x && r.type === t && r.status === 'activa' && !this.gone.has(x))) await Cloud.commit([relLink(this.cid, x, f, false)]).catch(() => {}); }
+    } finally { this.healing = false; }
+  },
+  async count(cid, type){ const d = await Cloud.getDoc('clanrels', cid); return d ? (docData(d)[REL_T[type][2]] || []).length : 0; },
+  fail(e, what){ toast(e.offline ? 'Necesitas conexión' : e.status === 403 ? 'No tienes permiso para hacer eso' : `No se ha podido ${what}`); },
+  async propose(type, cid, msg){
+    const mc = Clan.mine(), oc = this.clan(cid); if (!mc || !oc || !this.owner() || cid === mc._id) return false;
+    if (this.with(cid)) { toast('Ya tenéis una relación con ese clan'); return false; }
+    if (this.active(type).length >= REL.max) { toast(`Ya tenéis ${REL.max} ${REL_T[type][3]}: termina una antes`); return false; }
+    try { if (await this.count(cid, type) >= REL.max) { toast(`${oc.emoji} ${oc.name} ya tiene ${REL.max} ${REL_T[type][3]}`); return false; } } catch (e) { this.fail(e, 'enviar'); return false; }
+    const [a, b] = [mc._id, cid].sort(), id = a + '_' + b, me = Social.myUid();
+    const body = {a, b, type, status: 'pendiente', from: mc._id, by: me, created: Date.now()}; if (msg) body.msg = msg.slice(0, REL.msg);
+    try { await Cloud.commit([{update: {name: Cloud.name('relations', id), fields: fsFields(body)}, currentDocument: {exists: false}}]); }
+    catch (e) { if (e.status === 409) { toast('Ya hay una propuesta entre vuestros clanes'); this.load(true); } else this.fail(e, 'enviar'); return false; }
+    this.list = this.list.filter(r => r._id !== id).concat({_id: id, ...body});
+    Social.notify(oc.owner, 'rel-' + type, `${me}_rel_${id}`, {rel: id, cname: mc.name, cemoji: mc.emoji, text: body.msg || ''});
+    return true;
+  },
+  async accept(r){
+    const mc = Clan.mine(), oc = this.clan(r.from), t = r.type, f = REL_T[t][2];
+    if (!mc || !oc || !this.owner() || r.from === mc._id || r.status !== 'pendiente') return false;
+    if (this.active(t).length >= REL.max) { toast(`Ya tenéis ${REL.max} ${REL_T[t][3]}: termina una antes de aceptar`); return false; }
+    try { if (await this.count(oc._id, t) >= REL.max) { toast(`${oc.emoji} ${oc.name} ya tiene ${REL.max} ${REL_T[t][3]}`); return false; } } catch (e) { this.fail(e, 'aceptar'); return false; }
+    try {
+      await Cloud.commit([{update: {name: Cloud.name('relations', r._id), fields: fsFields({status: 'activa', accepted: Date.now()})}, updateMask: {fieldPaths: ['status', 'accepted']}, currentDocument: {exists: true}},
+        relLink(mc._id, oc._id, f, true), relLink(oc._id, mc._id, f, true)]);
+    } catch (e) { if (e.status === 404) toast('Esa propuesta ya no existe'); else this.fail(e, 'aceptar'); this.load(true); return false; }
+    Object.assign(r, {status: 'activa', accepted: Date.now()});
+    Social.notify(oc.owner, 'rel-ok-' + t, `${Social.myUid()}_relok_${r._id}`, {rel: r._id, cname: mc.name, cemoji: mc.emoji});
+    return true;
+  },
+  // Rechazar, cancelar o terminar: borra la relación (con su muro) y la saca de las listas de los dos clanes
+  async end(r, quiet){
+    const f = REL_T[r.type][2], mc = this.cid, oc = this.other(r), w = [];
+    if (r.type === 'pique') { try { const res = await Cloud.query(['relations', r._id], {from: [{collectionId: 'msgs'}], select: {fields: [{fieldPath: 'uid'}]}, limit: 300}); (res || []).filter(x => x.document).forEach(x => w.push({delete: x.document.name})); } catch (e) {} }
+    w.push({delete: Cloud.name('relations', r._id)});
+    if (r.status === 'activa') w.push(relLink(mc, oc, f, false), relLink(oc, mc, f, false));
+    try { await Cloud.commit(w); } catch (e) { if (!quiet) this.fail(e, 'completar'); return false; }
+    this.list = this.list.filter(x => x._id !== r._id); this.walls.delete(r._id);
+    return true;
+  },
+  // Antes de borrar el clan: se terminan sus relaciones (si falla, ya lo arreglará el otro jefe)
+  async dissolve(){ this.check(); if (!this.loaded || this.denied) return; for (const r of this.live()) await this.end(r, true); },
+  wall(id){ let w = this.walls.get(id); if (!w) this.walls.set(id, w = {list: [], loading: false, loaded: false, err: null}); return w; },
+  async loadWall(id){
+    const w = this.wall(id); if (w.loading) return; w.loading = true;
+    try { const res = await Cloud.query(['relations', id], {from: [{collectionId: 'msgs'}], orderBy: [{field: {fieldPath: 'ts'}, direction: 'DESCENDING'}], limit: REL.wall}); w.list = (res || []).filter(x => x.document).map(x => docData(x.document)); w.loaded = true; w.err = null; }
+    catch (e) { w.err = e.offline ? 'Sin conexión.' : 'No se ha podido cargar el muro.'; w.loaded = true; }
+    w.loading = false; clanRender();
+  },
+  async post(id, text){
+    text = String(text || '').trim().replace(/\s+/g, ' ').slice(0, REL.text); if (!text) return false;
+    const mid = rid(), body = {uid: Social.myUid(), name: Social.myName(), clan: this.cid, text, ts: Date.now()};
+    try { await Cloud.commit([{update: {name: Cloud.name('relations', id, 'msgs', mid), fields: fsFields(body)}, currentDocument: {exists: false}}]); }
+    catch (e) { this.fail(e, 'publicar'); return false; }
+    const w = this.wall(id); w.list = [{_id: mid, ...body}, ...w.list].slice(0, REL.wall);
+    return true;
+  },
+  async delMsg(id, mid){
+    try { await Cloud.commit([{delete: Cloud.name('relations', id, 'msgs', mid)}]); } catch (e) { this.fail(e, 'borrar'); return false; }
+    const w = this.wall(id); w.list = w.list.filter(m => m._id !== mid); return true;
+  }
+};
+
+/* ---------- Vistas de relaciones ---------- */
+const relWhat = t => t === 'alianza' ? 'Os propone una alianza 🤝' : 'Os lanza un pique ⚔️';
+// Propuestas que han llegado a tu clan: el jefe acepta o rechaza; el resto lo ve
+function relReqHTML(){
+  const inc = Rel.incoming(); if (!inc.length) return '';
+  const own = Rel.owner();
+  return `<div class="card stack next rl-reqs" id="clReqs"><div class="row between"><h3>${inc.length === 1 ? 'Os han hecho una propuesta' : `Tenéis ${inc.length} propuestas`}</h3><span class="pill accent">Nueva${inc.length === 1 ? '' : 's'}</span></div>
+    ${inc.map(r => { const o = Rel.clan(r.from);
+      return `<div class="rl-req"><button class="rl-who" data-act="cl-view" data-id="${o._id}"><span class="cl-emo sm" aria-hidden="true">${esc(o.emoji)}</span><span class="cl-nm"><b>${esc(o.name)}</b><small>${relWhat(r.type)} · ${ago(r.created)}</small></span></button>
+        ${r.msg ? `<div class="rl-quote">«${esc(r.msg)}»</div>` : ''}
+        <div class="small muted">${r.type === 'alianza' ? 'Si aceptáis, tendréis una clasificación conjunta.' : 'Si aceptáis, os mediréis cara a cara cada semana, mes y año.'}</div>
+        ${own ? `<div class="grid2"><button class="btn primary sm" data-act="cl-rel-ok" data-id="${r._id}">Aceptar</button><button class="btn sm" data-act="cl-rel-no" data-id="${r._id}">Rechazar</button></div>` : '<div class="small muted">Lo decide tu jefe de clan.</div>'}</div>`; }).join('')}</div>`;
+}
+function relPendRows(type){
+  const own = Rel.owner();
+  return Rel.outgoing(type).map(r => { const o = Rel.clan(Rel.other(r)); return `<div class="rl-row pend"><span class="cl-emo xs" aria-hidden="true">${esc(o.emoji)}</span><span class="cl-nm"><b>${esc(o.name)}</b><small>⏳ Esperando su respuesta</small></span>${own ? `<button class="btn sm ghost" data-act="cl-rel-cancel" data-id="${r._id}">Cancelar</button>` : ''}</div>`; }).join('');
+}
+const relCanAdd = type => Rel.owner() && Rel.active(type).length < REL.max && Clan.clans.some(c => c._id !== Rel.cid && !Rel.with(c._id) && !Rel.gone.has(c._id));
+function relPiquesHTML(K){
+  if (Rel.denied || !Rel.loaded) return Rel.err ? `<div class="card row between"><span class="small">${esc(Rel.err)}</span><button class="btn sm" data-act="cl-refresh">Reintentar</button></div>` : '';
+  const mine = Clan.mine(), act = Rel.active('pique'), per = Clan.per, own = Rel.owner(), A = relSide(mine, per, K);
+  const rows = act.map(r => {
+    const o = Rel.clan(Rel.other(r)), B = relSide(o, per, K), d = Math.round((A.avg - B.avg) * 10) / 10;
+    const st = !A.act && !B.act ? 'Aún no ha entrenado nadie' : d > 0 ? '🔥 Vais ganando' : d < 0 ? '😤 Vais perdiendo' : '🤝 Empate';
+    return `<button class="rl-row" data-act="cl-pique" data-id="${r._id}"><span class="rl-vs" aria-hidden="true"><i>${esc(mine.emoji)}</i><i>${esc(o.emoji)}</i></span><span class="cl-nm"><b>Contra ${esc(o.name)}</b><small>${st}</small></span><span class="rl-sc num"><b class="${d > 0 ? 'win' : ''}">${fmtN(A.avg, 0)}</b><em>–</em><b class="${d < 0 ? 'win' : ''}">${fmtN(B.avg, 0)}</b></span><span class="rl-chev" aria-hidden="true">${ICON.chev}</span></button>`;
+  }).join('');
+  const pend = relPendRows('pique');
+  return `<div class="card stack" id="clPiques"><div class="row between"><h3>⚔️ Piques</h3>${act.length ? `<span class="small muted">${perName(per, K)} · media por activo</span>` : ''}</div>
+    ${rows || pend ? `<div class="rl-list">${rows}${pend}</div>` : `<div class="rl-empty"><span aria-hidden="true">⚔️</span><div><b>Aún no tenéis rivales</b><small>${own ? 'Lanza un pique a otro clan y os mediréis cara a cara cada semana, mes y año.' : 'Tu jefe de clan puede lanzar un pique a otro clan.'}</small></div></div>`}
+    ${relCanAdd('pique') ? `<button class="btn block" data-act="cl-rel-pick" data-k="pique">⚔️ Lanzar un pique</button>` : ''}</div>`;
+}
+function relAllianceHTML(K){
+  if (Rel.denied || !Rel.loaded) return '';
+  const mine = Clan.mine(), act = Rel.active('alianza'), per = Clan.per, own = Rel.owner(), pend = relPendRows('alianza');
+  const add = relCanAdd('alianza') ? `<button class="btn block" data-act="cl-rel-pick" data-k="alianza">🤝 Proponer una alianza</button>` : '';
+  if (!act.length) return `<div class="card stack" id="clAlianza"><h3>🤝 Alianza</h3>${pend ? `<div class="rl-list">${pend}</div>` : `<div class="rl-empty"><span aria-hidden="true">🤝</span><div><b>Sin aliados todavía</b><small>Una alianza junta vuestra clasificación con la de otro clan para picaros entre todos.${own ? '' : ' La propone tu jefe de clan.'}</small></div></div>`}${add}</div>`;
+  const allies = act.map(r => Rel.clan(Rel.other(r))), us = relSide(mine, per, K), them = allies.map(c => relSide(c, per, K));
+  const tAct = them.reduce((a, x) => a + x.act, 0), tTot = them.reduce((a, x) => a + x.tot, 0), tAvg = tAct ? them.reduce((a, x) => a + x.avg * x.act, 0) / tAct : 0;
+  const all = [...us.rows, ...them.flatMap(x => x.rows)], lim = Rel.allAll ? 0 : 8, d = Math.round((us.avg - tAvg) * 10) / 10;
+  const cell = (lbl, avg, tot, n, win) => `<div class="rl-half${win ? ' win' : ''}"><small>${lbl}</small><b class="num">${fmtN(avg, 1)}</b><span>pts por activo</span><em class="num">${fmtN(tot, 0)} pts · ${plural(n, 'activo', 'activos')}</em></div>`;
+  return `<div class="card stack" id="clAlianza"><div class="row between"><h3>🤝 Alianza</h3>${perSeg(per)}</div>
+    <div class="rl-allies">${[mine, ...allies].map(c => `<button class="rl-ally${c === mine ? ' us' : ''}" data-act="cl-view" data-id="${c._id}"><i aria-hidden="true">${esc(c.emoji)}</i>${esc(c.name)}</button>`).join('')}</div>
+    <div class="rl-split">${cell(`${mine.emoji} Nosotros`, us.avg, us.tot, us.act, d > 0)}<span class="pq-vs sm">VS</span>${cell(allies.length === 1 ? `${allies[0].emoji} ${allies[0].name}` : 'Aliados', tAvg, tTot, tAct, d < 0)}</div>
+    <div class="row between"><b class="small">Ranking de la alianza</b><span class="small muted">${perName(per, K)}</span></div>
+    <div class="cl-list">${clanRankRows(all, 'pts', per, {badge: true, limit: lim})}</div>
+    ${all.length > 8 ? `<button class="btn ghost block" data-act="cl-alli-all">${Rel.allAll ? 'Ver menos' : `Ver a los ${all.length}`}</button>` : ''}
+    ${pend ? `<div class="rl-list">${pend}</div>` : ''}${add}</div>`;
+}
+// Pantalla del pique: marcador, categorías, cara a cara, historial y muro
+function viewPique(id){
+  Rel.check(); const r = Rel.get(id);
+  if (!r) { if (!Rel.loaded) { if (!Rel.loading && Clan.loaded) setTimeout(() => Rel.load(), 0); return '<div class="empty">Cargando el pique…</div>'; } return '<div class="empty">Este pique ya no existe. Quizá lo ha terminado uno de los jefes.</div>'; }
+  const mine = Clan.mine(), o = Rel.clan(Rel.other(r));
+  if (!mine || !o) return '<div class="empty">Uno de los dos clanes ya no existe.</div>';
+  Rel.ensure(o);
+  const K = clanKeys(), per = Clan.per, A = relSide(mine, per, K), B = relSide(o, per, K), own = Rel.owner(), me = Social.myUid();
+  const d = Math.round((A.avg - B.avg) * 10) / 10, sh = A.avg + B.avg > 0 ? Math.round(A.avg / (A.avg + B.avg) * 100) : 50;
+  const verdict = !A.act && !B.act ? `Nadie ha entrenado ${perThis(per)}. ¡El primero que sume se pone por delante!` : d > 0 ? `🔥 Vais ganando por <b>${fmtN(d)} pts</b> ${perThis(per)}` : d < 0 ? `😤 ${esc(o.name)} os saca <b>${fmtN(-d)} pts</b> ${perThis(per)}` : `🤝 Empate ${perThis(per)}: el próximo entreno decide`;
+  const team = (c, S1, win) => `<div class="pq-team${win ? ' win' : ''}"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><b>${esc(c.name)}</b><span class="pq-pts num">${fmtN(S1.avg, 1)}</span><small>${plural(S1.act, 'activo', 'activos')} de ${S1.rows.length}</small></div>`;
+  let h = r.status !== 'activa' ? `<div class="card small muted">⏳ ${esc(o.name)} todavía no ha aceptado el pique.</div>` : '';
+  h += `<div class="card pq-board stack"><div class="pq-teams">${team(mine, A, d > 0)}<div class="pq-mid"><span class="pq-vs">VS</span></div>${team(o, B, d < 0)}</div>
+    <div class="pq-bar" role="img" aria-label="${fmtN(A.avg, 1)} contra ${fmtN(B.avg, 1)}"><i style="width:${sh}%"></i></div>
+    <div class="pq-verdict">${verdict}</div>
+    ${perSeg(per)}<div class="small muted" style="text-align:center">Media por miembro activo · ${per === 'w' ? clanLeft().toLowerCase() : perName(per, K)}</div></div>`;
+  // por categorías (media por miembro activo)
+  const cats = [['🔥 Días', A.days, B.days, v => fmtN(v)], ['✨ Chiquipuntos', A.prs, B.prs, v => fmtN(v)], ['📈 Mejora', A.impr, B.impr, v => '+' + fmtN(v) + ' %'], ['Puntos', A.avg, B.avg, v => fmtN(v)]];
+  h += `<div class="card stack"><div class="row between"><h3>Por categorías</h3><span class="small muted">media por activo</span></div><div class="cmp pq-cmp"><div class="a hd">${esc(mine.emoji)} ${esc(mine.name)}</div><span></span><div class="b hd">${esc(o.name)} ${esc(o.emoji)}</div>${cats.map(([l, x, y, f]) => { const mx = Math.max(x, y, 1e-9); return `<div class="a${x > y ? ' w' : ''}">${f(x)}<i style="width:${Math.round(56 * x / mx)}px"></i></div><span>${l}</span><div class="b${y > x ? ' w' : ''}"><i style="width:${Math.round(56 * y / mx)}px"></i>${f(y)}</div>`; }).join('')}</div></div>`;
+  // cara a cara: 1.º contra 1.º…
+  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}" data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${m.uid}">${avatar(m.name, 'xs')}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
+  const pairs = [...Array(n)].map((_, i) => { const x = A.rows[i], y = B.rows[i], t = x.v.pts + y.v.pts, p = t ? Math.round(x.v.pts / t * 100) : 50;
+    return `<div class="pq-pair">${side(x, 'l', x.v.pts > y.v.pts)}<span class="pq-pos num">${i + 1}.º</span>${side(y, 'r', y.v.pts > x.v.pts)}<i class="pq-mini${t ? '' : ' none'}"><span style="width:${p}%"></span></i></div>`; }).join('');
+  const rest = [...A.rows.slice(n), ...B.rows.slice(n)];
+  h += `<div class="card stack" id="pqPairs"><div class="row between"><h3>Cara a cara</h3><span class="small muted">${perName(per, K)}</span></div>
+    <div class="small muted" style="margin-top:-6px">Por puestos: 1.º contra 1.º, 2.º contra 2.º… Toca a alguien para compararte.</div>
+    ${pairs ? `<div class="pq-pairs">${pairs}</div>` : '<div class="small muted">Todavía no hay nadie en uno de los dos clanes.</div>'}
+    ${rest.length ? `<div class="small muted pq-rest">Sin pareja: ${rest.map(m => `<b>${esc(m.name)}</b> ${esc(m.c.emoji)} ${fmtN(m.v.pts, 0)} pts`).join(' · ')}</div>` : ''}</div>`;
+  // historial semanal (con lo que guardan los resúmenes: 8 semanas)
+  const ua = Clan.uidsOf(mine), ub = Clan.uidsOf(o), hist = [0, 1, 2, 3, 4, 5].map(i => { const a = Clan.wkAvg(ua, K, i), b = Clan.wkAvg(ub, K, i), x = Math.round(a.v * 10) / 10, y = Math.round(b.v * 10) / 10;
+    return {k: K.keys[i], a: x, b: y, res: i === 0 ? 'live' : !a.n && !b.n ? 'none' : x > y ? 'win' : x < y ? 'lose' : 'tie'}; });
+  const cnt = k => hist.filter(x => x.res === k).length, RL = {live: 'En juego', none: 'Sin datos', win: 'Ganada', lose: 'Perdida', tie: 'Empate'};
+  h += `<div class="card stack" id="pqHist"><div class="row between"><h3>Semana a semana</h3><span class="small muted">${cnt('win')} G · ${cnt('lose')} P · ${cnt('tie')} E</span></div>
+    <div class="pq-weeks">${hist.map(x => `<div class="pq-wk ${x.res}" data-wk="${x.k}"><small>Sem. ${+x.k.split('-W')[1]}</small><b>${RL[x.res]}</b><em class="num">${x.res === 'none' ? '–' : `${fmtN(x.a, 0)}–${fmtN(x.b, 0)}`}</em></div>`).join('')}</div></div>`;
+  // muro de piques
+  const w = Rel.wall(r._id); if (!w.loaded && !w.loading) setTimeout(() => Rel.loadWall(r._id), 0);
+  const can = r.status === 'activa' && (mine.members || []).includes(me);
+  h += `<div class="card stack" id="pqWall"><div class="row between"><h3>Muro de piques</h3><span class="small muted">lo ven los dos clanes</span></div>
+    ${can ? `<form id="wallForm" class="row" data-id="${r._id}"><input id="wallText" maxlength="${REL.text}" placeholder="Pica al otro clan…" autocomplete="off" enterkeyhint="send"><button class="btn primary sm" type="submit">Enviar</button></form>
+      <div class="chips pq-taunts" aria-label="Piques rápidos">${TAUNTS.map((t, i) => `<button class="chip" data-act="cl-taunt" data-id="${r._id}" data-i="${i}">${esc(t)}</button>`).join('')}</div>` : ''}
+    ${w.err ? `<div class="small muted">${esc(w.err)}</div>` : !w.loaded ? '<div class="small muted">Cargando…</div>' : w.list.length ? `<div class="pq-msgs">${w.list.map(m => { const c = m.clan === o._id ? o : mine, del = m.uid === me || own;
+      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(m.name, 'xs')}<div class="pq-mb"><div class="pq-mh"><b>${esc(m.name)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
+  if (own) h += `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">${r.status === 'activa' ? 'Terminar el pique' : 'Cancelar el pique'}</button>`;
+  return h;
+}
+// Vista pública de otro clan: su clasificación y lo que tenéis entre vosotros
+function viewClanV(id){
+  const c = Rel.clan(id);
+  if (!c) { if (!Clan.loaded && !Clan.loading) setTimeout(() => Clan.load(), 0); return Clan.loaded ? '<div class="empty">Este clan ya no existe.</div>' : '<div class="empty">Cargando…</div>'; }
+  Rel.check(); Rel.ensure(c);
+  const mine = Clan.mine(), own = Rel.owner(), r = mine ? Rel.with(id) : null, K = clanKeys(), per = Clan.per, S1 = relSide(c, per, K), me = Social.myUid();
+  const pill = !r ? '' : r.status === 'pendiente' ? '<span class="pill">⏳ Propuesta pendiente</span>' : r.type === 'alianza' ? '<span class="pill accent">🤝 Aliados</span>' : '<span class="pill gold">⚔️ Rivales</span>';
+  let act = '';
+  if (mine && mine._id === id) act = `<button class="btn block" data-act="cl-view" data-id="${id}">Ir a mi clan</button>`;
+  else if (!mine) { const full = (c.members || []).length >= CL.maxMembers, ban = (c.kicked || []).includes(me); act = `<button class="btn primary block" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Te expulsaron de este clan' : full ? 'Este clan está lleno' : 'Unirme a este clan'}</button>`; }
+  else if (r && r.status === 'pendiente' && r.from === mine._id) act = `<div class="small muted">Les habéis propuesto ${r.type === 'alianza' ? 'una alianza' : 'un pique'}. Esperando su respuesta…</div>${own ? `<button class="btn block" data-act="cl-rel-cancel" data-id="${r._id}">Cancelar la propuesta</button>` : ''}`;
+  else if (r && r.status === 'pendiente') act = `<div class="small">${relWhat(r.type)}${r.msg ? `: <span class="muted">«${esc(r.msg)}»</span>` : ''}</div>${own ? `<div class="grid2"><button class="btn primary" data-act="cl-rel-ok" data-id="${r._id}">Aceptar</button><button class="btn" data-act="cl-rel-no" data-id="${r._id}">Rechazar</button></div>` : '<div class="small muted">Lo decide tu jefe de clan.</div>'}`;
+  else if (r && r.type === 'pique') act = `<button class="btn primary block" data-act="cl-pique" data-id="${r._id}">⚔️ Ver el pique</button>`;
+  else if (r) act = own ? `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">Romper la alianza</button>` : '';
+  else if (own && !Rel.denied) act = `<div class="stack" style="gap:8px"><button class="btn primary block" data-act="cl-rel-form" data-k="pique" data-id="${c._id}">⚔️ Lanzar un pique</button><button class="btn block" data-act="cl-rel-form" data-k="alianza" data-id="${c._id}">🤝 Proponer una alianza</button></div>`;
+  else if (!Rel.denied) act = '<div class="small muted">Solo el jefe de tu clan puede proponer alianzas o lanzar piques.</div>';
+  return `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}</h2><div class="small muted">${plural((c.members || []).length, 'miembro', 'miembros')} · ${fmtN(S1.avg, 0)} pts por activo ${perThis(per)}</div></div></div>
+      ${c.desc ? `<div class="cl-desc2">${esc(c.desc)}</div>` : ''}${pill ? `<div class="row">${pill}</div>` : ''}${act}</div>
+    <div class="card stack"><div class="row between"><h3>Clasificación</h3>${perSeg(per)}</div><div class="small muted cl-cap">${perName(per, K)}</div>
+      <div class="cl-list">${clanRankRows(S1.rows, 'pts', per) || '<div class="small muted" style="padding:0 8px">Este clan aún no tiene a nadie compitiendo.</div>'}</div></div>`;
+}
+// Tú contra otra persona en el periodo elegido (hoja rápida desde cualquier clasificación)
+function clanCmpHTML(uid){
+  const K = clanKeys(), per = Clan.per, a = Clan.scoreOf(Social.myUid()), b = Clan.scoreOf(uid);
+  const pr = (Social.users.get(uid) || {}).profile, name = b ? b.name : pr ? pr.name : 'Alguien', first = esc(name.split(' ')[0]);
+  const x = clanPer(a, per, K), y = clanPer(b, per, K), sa = effStreak(a), sb = effStreak(b);
+  const rows = [['Puntos', x.pts, y.pts, v => fmtN(v, 0)], ['Días', x.days, y.days, v => fmtN(v, 0)], ['Entrenos', x.n, y.n, v => fmtN(v, 0)], ['Chiquipuntos', x.prs, y.prs, v => fmtN(v, 0)], ['Mejora', x.impr, y.impr, v => '+' + fmtN(v) + ' %'], ['Racha', sa, sb, v => v + ' sem.']];
+  const ra = a && a.rel ? +a.rel.total : 0, rb = b && b.rel ? +b.rel.total : 0;
+  if (ra > 0 && rb > 0) rows.push(['Fuerza rel.', clamp(ra, 0, 15), clamp(rb, 0, 15), v => fmtN(v, 2) + '×']);
+  const d = x.pts - y.pts;
+  const verdict = !b ? `${first} todavía no compite en la liga.` : d > 0 ? `💪 Le sacas <b>${plural(d, 'punto', 'puntos')}</b> ${perThis(per)}` : d < 0 ? `😤 Te saca <b>${plural(-d, 'punto', 'puntos')}</b> ${perThis(per)}. ¡A por ${first}!` : `🤝 Empate ${perThis(per)}: el próximo entreno decide`;
+  return `<div id="clCmp" class="stack" data-id="${uid}">
+    <div class="rl-cmph"><div class="row">${avatar(Social.myName(), 'sm')}<b>Tú</b></div><span class="pq-vs sm">VS</span><div class="row" style="justify-content:flex-end"><b>${first}</b>${avatar(name, 'sm')}</div></div>
+    ${perSeg(per)}
+    <div class="cmp pq-cmp">${rows.map(([l, p, q, f]) => { const mx = Math.max(p, q, 1e-9); return `<div class="a${p > q ? ' w' : ''}">${f(p)}<i style="width:${Math.round(56 * p / mx)}px"></i></div><span>${l}</span><div class="b${q > p ? ' w' : ''}"><i style="width:${Math.round(56 * q / mx)}px"></i>${f(q)}</div>`; }).join('')}</div>
+    ${y.partial ? '<div class="small muted">Su app no está actualizada: del año solo cuentan sus 8 últimas semanas.</div>' : ''}
+    <div class="rl-verdict">${verdict}</div>
+    <div class="grid2"><button class="btn" data-act="cl-prof" data-id="${uid}">Ver perfil</button><button class="btn" data-act="cl-cmp-full" data-id="${uid}">Comparar entrenos</button></div></div>`;
 }
 // Logros en el perfil público
 function clanProfileHTML(uid){
@@ -3951,6 +4414,7 @@ Object.assign(A, {
     const ok = await ask('Abandonar el clan', owner ? (rest.length ? `Eres el jefe de «${esc(c.name)}». Si te vas, el clan pasa a ${esc((Clan.members(c).find(m => m.uid === rest[0]) || {}).name || 'otro miembro')}.` : `Eres el único miembro: el clan «${esc(c.name)}» se borrará.`) : `Dejarás de competir con «${esc(c.name)}». Puedes volver a unirte cuando quieras.`, [['0', 'Cancelar'], ['1', 'Abandonar', 'danger']]);
     closeModal(); if (ok !== '1') return;
     const ref = Cloud.name('clans', c._id);
+    if (owner && !rest.length) await Rel.dissolve();
     const w = owner ? (rest.length ? {update: {name: ref, fields: fsFields({owner: rest[0], members: rest})}, updateMask: {fieldPaths: ['owner', 'members']}, currentDocument: {exists: true}} : {delete: ref})
       : {transform: {document: ref, fieldTransforms: [{fieldPath: 'members', removeAllFromArray: {values: [fsv(me)]}}]}, currentDocument: {exists: true}};
     if (await Clan.commit([w])) await Clan.done('', 'Has dejado el clan');
@@ -3973,10 +4437,64 @@ Object.assign(A, {
   },
   async 'cl-del'(){
     closeModal(); const c = Clan.mine(); if (!c) return;
-    const ok = await ask('Eliminar el clan', `Se borrará «${esc(c.name)}» para todos sus miembros. Los entrenos y logros de cada uno no se tocan.`, [['0', 'Cancelar'], ['1', 'Eliminar', 'danger']]);
+    const ok = await ask('Eliminar el clan', `Se borrará «${esc(c.name)}» para todos sus miembros, con sus piques y alianzas. Los entrenos y logros de cada uno no se tocan.`, [['0', 'Cancelar'], ['1', 'Eliminar', 'danger']]);
     closeModal(); if (ok !== '1') return;
+    await Rel.dissolve();
     if (await Clan.commit([{delete: Cloud.name('clans', c._id)}])) await Clan.done('', 'Clan eliminado');
   },
+  'cl-per'(el){ Clan.per = el.dataset.k; const m = $('#clCmp'); if (m) m.outerHTML = clanCmpHTML(m.dataset.id); clanRender(); },
+  'cl-view'(el){ const id = el.dataset.id; closeModal(); if (id === Clan.myCid() && Clan.mine()) { navStack.clan = []; tab = 'clan'; render(); $('#view').scrollTop = 0; return; } go({type: 'clanv', id}); },
+  'cl-pique'(el){ go({type: 'pique', id: el.dataset.id}); },
+  'cl-cmp'(el){ modal('Cara a cara', clanCmpHTML(el.dataset.id)); },
+  'cl-prof'(el){ closeModal(); go({type: 'user', id: el.dataset.id}); },
+  'cl-cmp-full'(el){ closeModal(); go({type: 'compare', id: el.dataset.id}); },
+  'cl-alli-all'(){ Rel.allAll = !Rel.allAll; clanRender(); },
+  'cl-goto'(el){
+    tab = 'clan'; navStack.clan = []; const r = Rel.get(el.dataset.id);
+    if (r && r.status === 'activa' && r.type === 'pique') navStack.clan.push({type: 'pique', id: r._id});
+    render(); $('#view').scrollTop = 0; Rel.load(true);
+  },
+  'cl-rel-pick'(el){
+    const t = el.dataset.k, mine = Clan.mine(); if (!mine) return;
+    const list = Clan.clans.filter(c => c._id !== mine._id && !Rel.with(c._id) && !Rel.gone.has(c._id)).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    modal(t === 'pique' ? 'Lanzar un pique' : 'Proponer una alianza', list.length ? `<div class="small muted">${t === 'pique' ? 'Elige el clan al que queréis picar. Si su jefe acepta, os mediréis cara a cara.' : 'Elige el clan con el que queréis aliaros. Si su jefe acepta, juntaréis vuestras clasificaciones.'}</div>
+      <div class="rl-list">${list.map(c => `<button class="rl-row" data-act="cl-rel-form" data-k="${t}" data-id="${c._id}"><span class="cl-emo xs" aria-hidden="true">${esc(c.emoji)}</span><span class="cl-nm"><b>${esc(c.name)}</b><small>${plural((c.members || []).length, 'miembro', 'miembros')}</small></span><span class="rl-chev" aria-hidden="true">${ICON.chev}</span></button>`).join('')}</div>`
+      : '<div class="small muted">Ahora mismo no hay más clanes con los que relacionarse. ¡Anima a tus amigos a fundar uno!</div>');
+  },
+  'cl-rel-form'(el){
+    const t = el.dataset.k, c = Rel.clan(el.dataset.id), mine = Clan.mine(); if (!c || !mine) return;
+    modal(t === 'pique' ? 'Lanzar un pique' : 'Proponer una alianza', `<div class="rl-duel"><span class="cl-emo sm" aria-hidden="true">${esc(mine.emoji)}</span><b aria-hidden="true">${REL_T[t][0]}</b><span class="cl-emo sm" aria-hidden="true">${esc(c.emoji)}</span></div>
+      <div class="small muted" style="text-align:center">${t === 'pique' ? `Si ${esc(c.name)} acepta, compararéis vuestras medias cada semana, mes y año, cara a cara y con muro de piques.` : `Si ${esc(c.name)} acepta, tendréis una clasificación conjunta y veréis vuestros totales juntos.`}</div>
+      <label class="f">Mensaje para su jefe (opcional)<input id="relMsg" maxlength="${REL.msg}" placeholder="${t === 'pique' ? 'p. ej. Esta semana os pasamos por encima 😏' : 'p. ej. ¿Unimos fuerzas este mes?'}" autocomplete="off"></label>`,
+      `<button class="btn" data-act="m-close">Cancelar</button><button class="btn primary" data-act="cl-rel-send" data-k="${t}" data-id="${c._id}">${t === 'pique' ? 'Lanzar el pique' : 'Proponer'}</button>`);
+  },
+  async 'cl-rel-send'(el){
+    const t = el.dataset.k, c = Rel.clan(el.dataset.id), msg = ($('#relMsg') || {}).value || ''; if (!c) return;
+    el.disabled = true;
+    if (await Rel.propose(t, c._id, msg.trim())) { closeModal(); toast(t === 'pique' ? `Pique lanzado a ${c.emoji} ${c.name}` : `Alianza propuesta a ${c.emoji} ${c.name}`); clanRender(); }
+    else el.disabled = false;
+  },
+  async 'cl-rel-ok'(el){
+    const r = Rel.get(el.dataset.id); if (!r) return; el.disabled = true;
+    if (await Rel.accept(r)) { const o = Rel.clan(r.from); toast(r.type === 'pique' ? `¡Pique aceptado! A por ${o ? o.name : 'ellos'} ⚔️` : `Ya sois aliados de ${o ? o.emoji + ' ' + o.name : 'ese clan'} 🤝`); await Rel.load(true); }
+    else { el.disabled = false; clanRender(); }
+  },
+  async 'cl-rel-no'(el){
+    const r = Rel.get(el.dataset.id); if (!r) return;
+    const o = Rel.clan(r.from), ok = await ask('Rechazar', `¿Rechazar ${r.type === 'pique' ? 'el pique' : 'la alianza'} de ${o ? esc(o.emoji + ' ' + o.name) : 'ese clan'}?`, [['0', 'Cancelar'], ['1', 'Rechazar', 'danger']]);
+    closeModal(); if (ok !== '1') return;
+    if (await Rel.end(r)) { const mc = Clan.mine(); if (o && mc) Social.notify(o.owner, 'rel-no', `${Social.myUid()}_relno_${r._id}`, {rel: r._id, cname: mc.name, cemoji: mc.emoji}); toast('Propuesta rechazada'); clanRender(); }
+  },
+  async 'cl-rel-cancel'(el){ const r = Rel.get(el.dataset.id); if (r && await Rel.end(r)) { toast('Propuesta retirada'); clanRender(); } },
+  async 'cl-rel-end'(el){
+    const r = Rel.get(el.dataset.id); if (!r) return;
+    const o = Rel.clan(Rel.other(r)), nm = o ? esc(o.emoji + ' ' + o.name) : 'ese clan';
+    const ok = await ask(r.type === 'pique' ? 'Terminar el pique' : 'Romper la alianza', r.type === 'pique' ? `Se acaba el pique con ${nm} y se borra su muro. Siempre podéis volver a picaros.` : `Dejaréis de ser aliados de ${nm}.`, [['0', 'Cancelar'], ['1', r.type === 'pique' ? 'Terminar' : 'Romper', 'danger']]);
+    closeModal(); if (ok !== '1') return;
+    if (await Rel.end(r)) { toast(r.type === 'pique' ? 'Pique terminado' : 'Alianza rota'); const v = cur(); if (v && (v.type === 'pique' || v.type === 'clanv')) navStack.clan.pop(); clanRender(); }
+  },
+  async 'cl-taunt'(el){ const t = TAUNTS[+el.dataset.i]; if (!t) return; el.disabled = true; if (await Rel.post(el.dataset.id, t)) clanRender(); el.disabled = false; },
+  async 'cl-wall-del'(el){ if (await Rel.delMsg(el.dataset.id, el.dataset.m)) clanRender(); },
   async 'cl-invite'(){
     const c = Clan.mine(); if (!c) return;
     const url = location.href.split('#')[0] + '#clan=' + c._id;
@@ -3989,6 +4507,7 @@ async function clanOnDelete(){
   const me = Social.myUid(), cid = S.settings.clan; if (!me || !cid) return;
   const d = await Cloud.getDoc('clans', cid); if (!d) return;
   const c = docData(d), rest = (c.members || []).filter(u => u !== me), ref = Cloud.name('clans', cid);
+  if (c.owner === me && !rest.length) await Rel.dissolve().catch(() => {});
   if (c.owner === me) await Cloud.commit([rest.length ? {update: {name: ref, fields: fsFields({owner: rest[0], members: rest})}, updateMask: {fieldPaths: ['owner', 'members']}} : {delete: ref}]);
   else if ((c.members || []).includes(me)) await Cloud.commit([{transform: {document: ref, fieldTransforms: [{fieldPath: 'members', removeAllFromArray: {values: [fsv(me)]}}]}}]);
 }
@@ -3996,7 +4515,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.4.1';
+const APP_VERSION = '4.5.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
