@@ -2413,6 +2413,9 @@ function parseCSV(text){
 const MONMAP = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,ene:0,abr:3,ago:7,dic:11,set:8};
 function parseHevyDate(s){
   s = String(s || '').trim(); if (!s) return null;
+  // formato de 12 horas («6:30 PM», «6:30 p. m.»): se pasa a 24 h antes de leer la fecha
+  const ap = s.match(/(\d{1,2})(:\d{2}(?::\d{2})?)\s*([ap])\.?\s*m\.?\s*$/i);
+  if (ap) { let h = +ap[1] % 12; if (/p/i.test(ap[3])) h += 12; s = s.slice(0, ap.index) + h + ap[2]; }
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (m) return new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime();
   m = s.match(/^(\d{1,2})\s+(?:de\s+)?([A-Za-zÀ-ÿ\.]+)\s+(?:de\s+)?(\d{4}),?\s+(\d{1,2}):(\d{2})/);
@@ -2421,6 +2424,14 @@ function parseHevyDate(s){
   if (m) return new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]).getTime();
   const t = Date.parse(s); return isNaN(t) ? null : t;
 }
+// Duración razonable: si en Hevy se quedó el entreno abierto (horas) o se cerró al momento (1 min), se estima por las series
+function estDuration(w){ const n = w.exercises.reduce((a, e) => a + e.sets.length, 0); return Math.min(150, Math.max(20, Math.round(n * 3))) * 60000; }
+function fixDuration(w){
+  const d = w.end - w.start, n = w.exercises.reduce((a, e) => a + e.sets.length, 0);
+  if (d > 6 * 36e5 || (d < 5 * 60000 && n >= 4)) { w.end = w.start + estDuration(w); return true; }
+  return false;
+}
+function fixDurations(){ let n = 0; for (const w of S.workouts) if (fixDuration(w)) n++; if (n) Store.mark(); return n; }
 function guessMuscle(name){
   const n = norm(name);
   const R = [[/calf|gemel|pantorr/, 'gemelos'], [/hip thrust|glute|glut|kickback|patada de glu/, 'gluteos'], [/abduct/, 'abductores'], [/adduct|aduct/, 'aductores'],
@@ -2481,6 +2492,7 @@ function importHevyCSV(text){
     }
     if (!exercises.length) continue;
     const w = {id: rid(), title: g.title || 'Entreno', start: g.start, end: Math.max(g.end, g.start + 60000), notes: g.notes || '', routineId: null, exercises, prs: []};
+    fixDuration(w);
     newW.push(w); added++;
   }
   // chiquipuntos en orden cronológico
@@ -3984,7 +3996,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.4.0';
+const APP_VERSION = '4.4.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -4039,9 +4051,10 @@ rebuildEx();
     if (!Cloud.session) { Store.key = 'nouser'; render(); showAuth(); return; }
     await Store.load(Cloud.session.uid);
   } else await Store.load(null);
+  fixDurations();
   render();
   if (S.active) { restoreActiveBar(); wakeLock(true); }
-  Sync.run().then(() => { if (Social.ready()) Social.loadNotifs(); });
+  Sync.run().then(() => { if (fixDurations()) render(); if (Social.ready()) Social.loadNotifs(); });
 })();
 </script>
 </body>
