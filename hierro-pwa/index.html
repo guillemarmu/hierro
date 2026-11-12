@@ -989,6 +989,47 @@ const LIB = LIB_SRC.trim().split('\n').map(l => {
    Estado + guardado en este dispositivo (IndexedDB, con localStorage de reserva)
    ========================================================= */
 const S = {workouts: [], routines: [], customEx: [], measures: [], settings: {rest: 90, sound: true}, active: null};
+// Nombres de Hevy en castellano → su nombre en inglés (que ya está como alias en el catálogo). Así la importación
+// de Hevy en castellano usa los ejercicios de Hierro en lugar de crear uno propio por cada ejercicio.
+const HEVY_ES = `Press de Banca (Barra)|Bench Press (Barbell);Press de Banca (Mancuerna)|Bench Press (Dumbbell);Press de Banca Inclinado (Barra)|Incline Bench Press (Barbell)
+Press de Banca Inclinado (Mancuerna)|Incline Bench Press (Dumbbell);Press de Banca en Declive (Barra)|Decline Bench Press (Barbell);Press de Banca Declinado (Barra)|Decline Bench Press (Barbell)
+Press de Banca (Máquina Smith)|Bench Press (Smith Machine);Press de Banca Inclinado (Máquina Smith)|Incline Bench Press (Smith Machine);Press de Pecho (Máquina)|Chest Press (Machine)
+Press de Pecho Inclinado (Máquina)|Incline Chest Press (Machine);Aperturas (Mancuerna)|Chest Fly (Dumbbell);Aperturas (Máquina)|Chest Fly (Machine);Mariposa (Pec Deck)|Butterfly (Pec Deck)
+Cables Cruzados|Cable Fly Crossovers;Cruces de Cable|Cable Fly Crossovers;Cables Cruzados Bajos|Low Cable Fly Crossovers;Fondos de Pecho|Chest Dip;Fondos de Tríceps|Triceps Dip;Flexiones|Push Up;Flexión|Push Up
+Pullover (Mancuerna)|Pullover (Dumbbell);Dominadas|Pull Up;Dominada|Pull Up;Dominada Supina|Chin Up;Dominadas Supinas|Chin Up;Dominada (Asistida)|Assisted Pull Up;Dominada Supina (Asistida)|Assisted Pull Up
+Jalón al Pecho (Cable)|Lat Pulldown (Cable);Jalón al Pecho (Máquina)|Lat Pulldown (Machine);Jalón al Pecho - Agarre Cerrado (Cable)|Lat Pulldown - Close Grip (Cable);Jalón al Pecho a un Brazo|Single Arm Lat Pulldown
+Remo Inclinado (Barra)|Bent Over Row (Barbell);Remo con Barra|Bent Over Row (Barbell);Remo con Mancuerna|Dumbbell Row;Remo a un Brazo (Mancuerna)|Dumbbell Row
+Remo Sentado con Cable - Agarre en V|Seated Cable Row - V Grip (Cable);Remo Sentado con Cable|Seated Cable Row - V Grip (Cable);Remo Sentado con Cable - Agarre Recto|Seated Cable Row - Bar Grip;Remo Sentado con Cable - Agarre Ancho|Seated Cable Row - Bar Wide Grip
+Remo Sentado (Máquina)|Seated Row (Machine);Remo Iso-Lateral (Máquina)|Iso-Lateral Row (Machine);Remo en T|T Bar Row;Remo con Barra en T|T Bar Row;Remo Pendlay (Barra)|Pendlay Row (Barbell)
+Remo Inclinado con Apoyo en el Pecho (Mancuerna)|Chest Supported Incline Row (Dumbbell);Jalón de dorsales con brazos rectos (polea)|Straight Arm Lat Pulldown (Cable);Jalón con Brazos Rectos (Cable)|Straight Arm Lat Pulldown (Cable)
+Peso Muerto (Barra)|Deadlift (Barbell);Peso Muerto (Barra Hexagonal)|Deadlift (Trap bar);Hiperextensión|Hyperextension;Extensión de Espalda (Hiperextensión)|Back Extension (Hyperextension)
+Encogimiento de Hombros (Mancuerna)|Shrug (Dumbbell);Encogimiento de Hombros (Barra)|Shrug (Barbell);Press Militar (Barra)|Overhead Press (Barbell);Press de Hombros (Barra)|Overhead Press (Barbell);Press Militar de Pie (Barra)|Standing Military Press (Barbell)
+Press de Hombros (Mancuerna)|Shoulder Press (Dumbbell);Press de Hombros Sentado (Mancuerna)|Seated Overhead Press (Dumbbell);Press de Hombros (Máquina)|Shoulder Press (Machine);Press de Hombros Sentado (Máquina)|Shoulder Press (Machine);Press Arnold (Mancuerna)|Arnold Press (Dumbbell)
+Elevación Lateral (Mancuerna)|Lateral Raise (Dumbbell);Elevación Lateral a un Brazo (Mancuerna)|Single Arm Lateral Raise (Dumbbell);Elevación Lateral (Cable)|Lateral Raise (Cable);Elevación Lateral a un Brazo (Cable)|Single Arm Lateral Raise (Cable)
+Elevación Lateral (Máquina)|Lateral Raise (Machine);Elevación Frontal (Mancuerna)|Front Raise (Dumbbell);Vuelos Posteriores (Mancuerna)|Rear Delt Reverse Fly (Dumbbell);Vuelos Posteriores (Máquina)|Rear Delt Reverse Fly (Machine)
+Face Pull (Cable)|Face Pull (Cable);Remo al Mentón (Barra)|Upright Row (Barbell);Curl de Bíceps (Barra)|Bicep Curl (Barbell);Curl con Barra EZ|EZ Bar Biceps Curl;Curl de Bíceps (Mancuerna)|Bicep Curl (Dumbbell)
+Curl Martillo (Mancuerna)|Hammer Curl (Dumbbell);Curl de Bíceps Inclinado (Mancuerna)|Seated Incline Curl (Dumbbell);Curl Inclinado Sentado (Mancuerna)|Seated Incline Curl (Dumbbell);Curl predicador (máquina)|Preacher Curl (Machine)
+Curl predicador (barra)|Preacher Curl (Barbell);Curl predicador (mancuerna)|Preacher Curl (Dumbbell);Curl de Bíceps (Cable)|Bicep Curl (Cable);Curls de Concentración|Concentration Curl;Curl de Concentración|Concentration Curl
+Jalón de tríceps con cuerda|Triceps Rope Pushdown;Jalón de Tríceps en Polea|Triceps Pushdown;Jalón de Tríceps|Triceps Pushdown;Rompecráneos (Barra)|Skullcrusher (Barbell);Rompecráneos (Mancuerna)|Skullcrusher (Dumbbell)
+Extensión de tríceps por encima de la cabeza (cable)|Overhead Triceps Extension (Cable);Extensión de Tríceps (Mancuerna)|Triceps Extension (Dumbbell);Press de Banca - Agarre Cerrado (Barra)|Bench Press - Close Grip (Barbell)
+Máquina para Fondos Sentado|Seated Dip Machine;Fondo de Tríceps (Asistido)|Triceps Dip (Assisted);Patada de Tríceps (Mancuerna)|Triceps Kickback (Dumbbell);Curl de Muñeca (Barra)|Wrist Curl (Barbell);Curl Inverso (Barra)|Reverse Curl (Barbell)
+Paseo del Granjero|Farmers Walk;Sentadilla (Barra)|Squat (Barbell);Sentadilla Completa|Full Squat;Sentadilla Frontal (Barra)|Front Squat;Sentadilla Frontal|Front Squat;Sentadilla (Máquina Smith)|Squat (Smith Machine)
+Sentadilla Hack (Máquina)|Hack Squat (Machine);Sentadilla Hack|Hack Squat;Sentadilla Péndulo (Máquina)|Pendulum Squat (Machine);Sentadilla Goblet|Goblet Squat;Sentadilla Búlgara|Bulgarian Split Squat
+Prensa de Piernas (Máquina)|Leg Press (Machine);Press de Piernas|Leg Press (Machine);Prensa de Piernas Horizontal (Máquina)|Leg Press Horizontal (Machine);Extensión de Pierna (Máquina)|Leg Extension (Machine);Extensión de Pierna|Leg Extension (Machine)
+Zancada (Mancuerna)|Lunge (Dumbbell);Zancadas Caminando (Mancuerna)|Walking Lunge (Dumbbell);Subida al Cajón|Step Up;Step Up|Step Up;Peso Muerto Rumano (Barra)|Romanian Deadlift (Barbell);Peso Muerto Rumano (Mancuerna)|Romanian Deadlift (Dumbbell)
+Curl de Piernas Acostado (Máquina)|Lying Leg Curl (Machine);Curl de Pierna Acostado (Máquina)|Lying Leg Curl (Machine);Curl de Pierna Sentado (Máquina)|Seated Leg Curl (Machine);Curl de Pierna Sentado|Seated Leg Curl (Machine);Buenos Días (Barra)|Good Morning (Barbell)
+Empuje de Caderas (Barra)|Hip Thrust (Barbell);Hip Thrust (Barra)|Hip Thrust (Barbell);Empuje de Caderas (Máquina)|Hip Thrust (Machine);Hip Thrust (Máquina)|Hip Thrust (Machine);Puente de Glúteos|Glute Bridge;Patada de Glúteo (Cable)|Glute Kickback (Cable)
+Abducción de Cadera (Máquina)|Hip Abduction (Machine);Aducción de Cadera (Máquina)|Hip Adduction (Machine);Elevación de Gemelos de Pie (Máquina)|Standing Calf Raise (Machine);Elevación de Gemelos de Pie|Standing Calf Raise
+Elevación de Gemelos Sentado|Seated Calf Raise;Elevación de Gemelos Sentado (Máquina)|Seated Calf Raise;Prensa de Gemelos (Máquina)|Calf Press (Machine);Abdominal Corto|Crunch;Abdominal Corto con Cable|Cable Crunch;Abdominal Corto (Máquina)|Crunch (Machine)
+Elevación de Piernas Colgado|Hanging Leg Raise;Elevación de Piernas Tumbado|Lying Leg Raise;Plancha|Plank;Plancha Lateral|Side Plank;Rueda Abdominal|Ab Wheel;Giro Ruso|Russian Twist;Giros Rusos|Russian Twist
+Swing con Kettlebell|Kettlebell Swing;Cinta de Correr|Treadmill;Correr|Running;Ciclismo|Cycling;Bicicleta Estática|Stationary Bike;Elíptica|Elliptical Trainer;Máquina de Remo|Rowing Machine;Máquina Escaladora|Stair Machine;Caminar|Walking;Saltar a la Comba|Jump Rope`;
+const HEVY_ES_MAP = new Map(HEVY_ES.split(/[;\n]/).map(x => x.split('|')).filter(x => x.length === 2).map(([es, en]) => [norm(es), norm(en)]));
+// Equipo deducido del nombre (lo que va entre paréntesis en Hevy)
+function guessEquip(name){
+  const n = norm(name);
+  for (const [re, k] of [[/smith/, 'smith'], [/kettlebell|pesa rusa/, 'kettlebell'], [/mancuerna|dumbbell/, 'mancuernas'], [/barra|barbell|trap bar/, 'barra'], [/cable|polea/, 'polea'], [/maquina|machine|pec deck/, 'maquina'], [/banda|band/, 'banda'], [/asistid|assisted|peso corporal|bodyweight/, 'corporal']]) if (re.test(n)) return k;
+  return 'otro';
+}
 let exMap = new Map();
 function rebuildEx(){ exMap = new Map(); [...LIB, ...S.customEx].forEach(e => exMap.set(e.id, e)); }
 const exOf = id => exMap.get(id) || {id, name: 'Ejercicio borrado', muscle: 'completo', equip: 'otro', type: 'wr', aliases: []};
@@ -2045,7 +2086,7 @@ function exFilter(q, m){
   return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle))) && (!nq || norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')).includes(nq)));
 }
 function exItem(e, count, sel){
-  return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)} · ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? ' · Propio' : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
+  return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)} · ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? (e.src === 'hevy' ? ' · De Hevy' : ' · Propio') : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
 }
 function exChips(sel, act){
   const used = new Set(allEx().map(e => e.muscle)), M = Object.entries(MUSCLES).filter(([k]) => used.has(k));
@@ -2608,7 +2649,31 @@ function fixImportedMuscles(){
   }
   S.settings.mig = {...mig, mus: 1}; if (n) rebuildEx(); Store.mark('meta'); return n;
 }
-function exIndex(){ const idx = new Map(); allEx().forEach(e => { idx.set(norm(e.name), e.id); e.aliases.forEach(a => idx.set(norm(a), e.id)); }); return idx; }
+// Ejercicios propios que en realidad son del catálogo (importados de Hevy en castellano antes de la 4.5.3): se cambian por el
+// del catálogo en entrenos, rutinas y entreno en curso, y se borra el propio. Los que no tienen equivalente se marcan «De Hevy».
+function mergeImportedEx(){
+  const mig = S.settings.mig || {}; if (mig.hevy) return 0;
+  const idx = new Map(); LIB.forEach(e => { idx.set(norm(e.name), e.id); e.aliases.forEach(a => idx.set(norm(a), e.id)); });
+  for (const [es, en] of HEVY_ES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
+  const map = new Map();
+  for (const c of S.customEx) {
+    if (c.equip !== 'otro' || (c.aliases || []).length) continue; // los creados a mano (con equipo elegido) no se tocan
+    const to = idx.get(norm(c.name));
+    if (to && exMap.get(to) && exMap.get(to).type === c.type) map.set(c.id, to);
+    else { c.src = 'hevy'; const q = guessEquip(c.name); if (q !== 'otro') c.equip = q; }
+  }
+  const fix = list => (list || []).forEach(e => { if (map.has(e.exId)) e.exId = map.get(e.exId); });
+  for (const w of S.workouts) { fix(w.exercises); fix(w.prs); }
+  for (const r of S.routines) fix(r.exercises);
+  if (S.active) fix(S.active.exercises);
+  S.customEx = S.customEx.filter(c => !map.has(c.id));
+  S.settings.mig = {...mig, hevy: 1}; rebuildEx(); Store.mark('meta'); return map.size;
+}
+function exIndex(){
+  const idx = new Map(); allEx().forEach(e => { idx.set(norm(e.name), e.id); e.aliases.forEach(a => idx.set(norm(a), e.id)); });
+  for (const [es, en] of HEVY_ES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
+  return idx;
+}
 function importHevyCSV(text){
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('El archivo está vacío.');
@@ -2641,7 +2706,7 @@ function importHevyCSV(text){
       let km = cKm >= 0 ? num(get(r, cKm)) : null; if (km == null && cMi >= 0) { const mi = num(get(r, cMi)); km = mi != null ? mi * 1.609344 : null; }
       if (!exId) {
         const type = km ? 'cardio' : (dur && !reps) ? 'dur' : (kgRaw == null && reps) ? 'bw' : 'wr';
-        const x = {id: 'c-' + rid(), name: title, muscle: guessMuscle(title), equip: 'otro', type, aliases: [], custom: true};
+        const x = {id: 'c-' + rid(), name: title, muscle: guessMuscle(title), equip: guessEquip(title), type, aliases: [], custom: true, src: 'hevy'};
         S.customEx.push(x); exMap.set(x.id, x); idx.set(norm(title), x.id); created.push(x.name); exId = x.id;
       }
       const ss = get(r, 'superset_id') || null;
@@ -2952,9 +3017,11 @@ const Social = {
       ex: w.exercises.map(e => { const x = exOf(e.exId); return {id: x.id, name: x.name, muscle: x.muscle, type: x.type, equip: x.equip, sets: e.sets}; })};
   },
   profileBody(){
-    const p = this.me(), a30 = agg(inRange(Date.now() - 30 * 864e5, Date.now() + 1));
+    const p = this.me(), w30 = inRange(Date.now() - 30 * 864e5, Date.now() + 1), a30 = agg(w30);
+    // resumen de los últimos 30 días para «Comparar» (cuenta todos tus entrenos, no solo los publicados; sin pesos corporales ni detalle)
+    const m30 = Object.fromEntries(Object.entries(muscleSets(w30)).map(([k, v]) => [k, Math.round(v)]));
     return {uid: this.myUid(), username: p.username, name: this.myName(), bio: p.bio || '', private: !!p.private,
-      stats: JSON.stringify({n7: inRange(Date.now() - 7 * 864e5, Date.now() + 1).length, workouts: S.workouts.length, vol: Math.round(S.workouts.reduce((a, w) => a + wVolume(w), 0)), streak: weekStreak(), n30: a30.n, since: S.workouts.length ? S.workouts[S.workouts.length - 1].start : 0})};
+      stats: JSON.stringify({n7: inRange(Date.now() - 7 * 864e5, Date.now() + 1).length, workouts: S.workouts.length, vol: Math.round(S.workouts.reduce((a, w) => a + wVolume(w), 0)), streak: weekStreak(), n30: a30.n, ms30: Math.round(a30.ms / 60000) * 60000, vol30: Math.round(a30.vol), sets30: a30.sets, mus30: m30, since: S.workouts.length ? S.workouts[S.workouts.length - 1].start : 0})};
   },
   // Escrituras sociales que salen de la sincronización normal (perfil y entrenos publicados)
   pushItems(){
@@ -3280,15 +3347,21 @@ function viewNotifs(){
 function viewCompare(uid){
   const u = Social.users.get(uid); if (!u || !u.loaded) { setTimeout(() => Social.loadUser(uid), 0); return '<div class="empty">Cargando…</div>'; }
   const p = u.profile, since = Date.now() - 30 * 864e5;
-  const mine = inRange(since, Date.now() + 1), theirs = u.posts.filter(x => x.start >= since);
-  const a = agg(mine), b = {n: theirs.length, ms: theirs.reduce((s, x) => s + (x.end - x.start), 0), vol: theirs.reduce((s, x) => s + (x.vol || 0), 0), sets: theirs.reduce((s, x) => s + (x.sets || 0), 0)};
-  const gm = groupSets(muscleSets(mine)), mt = {}; theirs.forEach(x => Object.entries(x.muscles || {}).forEach(([k, v]) => mt[k] = (mt[k] || 0) + v)); const gt = groupSets(mt);
+  const mine = inRange(since, Date.now() + 1), theirs = u.posts.filter(x => x.start >= since), st = p.stats || {};
+  // Su resumen de 30 días (todos sus entrenos) si su app ya lo publica; si no, solo sus entrenos publicados
+  const full = st.ms30 != null;
+  const a = agg(mine), b = full ? {n: clamp(st.n30, 0, 500), ms: clamp(st.ms30, 0, 3e9), vol: clamp(st.vol30, 0, 1e8), sets: clamp(st.sets30, 0, 1e5)}
+    : {n: Math.max(theirs.length, st.n30 || 0), ms: theirs.reduce((s, x) => s + (x.end - x.start), 0), vol: theirs.reduce((s, x) => s + (x.vol || 0), 0), sets: theirs.reduce((s, x) => s + (x.sets || 0), 0)};
+  const gm = groupSets(muscleSets(mine)), mt = {};
+  if (full) Object.entries(st.mus30 || {}).forEach(([k, v]) => { if (MUSCLES[k]) mt[k] = clamp(v, 0, 2000); });
+  else theirs.forEach(x => Object.entries(x.muscles || {}).forEach(([k, v]) => mt[k] = (mt[k] || 0) + v));
+  const gt = groupSets(mt), partial = !full && b.n > theirs.length;
   const row = (l, x, y, f) => `<tr><td>${l}</td><td class="num" style="text-align:right"><b${x >= y ? ' class="pr"' : ''}>${f(x)}</b></td><td class="num" style="text-align:right"><b${y > x ? ' class="pr"' : ''}>${f(y)}</b></td></tr>`;
   const bestMine = {}; S.workouts.forEach(w => w.exercises.forEach(e => { const t = exOf(e.exId).type; const sc = exScore(e.sets, t); if (sc > (bestMine[e.exId] || 0)) bestMine[e.exId] = sc; }));
   const bestThem = {}; u.posts.forEach(x => x.ex.forEach(e => { const sc = exScore(e.sets, e.type); if (sc > ((bestThem[e.id] || {}).v || 0)) bestThem[e.id] = {v: sc, name: e.name, type: e.type}; }));
   const common = Object.keys(bestThem).filter(id => bestMine[id]);
   return `<div class="row between"><div class="row">${avatar(Social.myName(), 'sm')}<b>Tú</b></div><span class="muted">vs</span><div class="row"><b>${esc(p.name)}</b>${avatar(p.name, 'sm')}</div></div>
-    <div class="card"><h3>Últimos 30 días</h3><table class="sets"><tr><th></th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(p.name.split(' ')[0])}</th></tr>${row('Entrenos', a.n, b.n, v => v)}${row('Tiempo', a.ms, b.ms, v => fmtDur(v))}${row('Volumen', a.vol, b.vol, v => fmtKg(v))}${row('Series', a.sets, b.sets, v => v)}</table>${p.private ? '<div class="small muted">Su perfil es privado: solo se comparan los datos públicos.</div>' : ''}</div>
+    <div class="card"><h3>Últimos 30 días</h3><table class="sets"><tr><th></th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(p.name.split(' ')[0])}</th></tr>${row('Entrenos', a.n, b.n, v => v)}${row('Tiempo', a.ms, b.ms, v => fmtDur(v))}${row('Volumen', a.vol, b.vol, v => fmtKg(v))}${row('Series', a.sets, b.sets, v => v)}</table>${partial ? `<div class="small muted">Tiene ${plural(b.n, 'entreno', 'entrenos')} en estos 30 días, pero su app aún no comparte el resumen: tiempo, volumen y series solo cuentan ${theirs.length ? 'lo que ha publicado' : 'lo publicado (nada)'}. Se completará cuando actualice Hierro.</div>` : ''}</div>
     <div class="card stack"><h3>Reparto muscular</h3><div class="small muted">Relleno: tú · discontinuo: ${esc(p.name.split(' ')[0])}</div>${radar(gm, gt)}</div>
     <div class="card stack"><h3>Ejercicios en común</h3>${common.length ? `<table class="sets"><tr><th>Ejercicio</th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(p.name.split(' ')[0])}</th></tr>${common.map(id => { const t = bestThem[id].type; const f = v => fmtN(v) + scoreUnit(t); return `<tr><td>${esc(bestThem[id].name)}</td><td class="num" style="text-align:right"><b${bestMine[id] >= bestThem[id].v ? ' class="pr"' : ''}>${f(bestMine[id])}</b></td><td class="num" style="text-align:right"><b${bestThem[id].v > bestMine[id] ? ' class="pr"' : ''}>${f(bestThem[id].v)}</b></td></tr>`; }).join('')}</table><div class="small muted">Para peso y repeticiones se compara el 1RM estimado de la mejor serie.</div>` : '<div class="small muted">Todavía no tenéis ejercicios en común en sus entrenos publicados.</div>'}</div>`;
 }
@@ -4434,7 +4507,7 @@ function clanProfileHTML(uid){
 // Ejercicios propios (antes vivían en la pestaña Ejercicios)
 function viewMyEx(){
   const c = exUseCount(), list = S.customEx.slice().sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  return `<div class="small muted">Los ejercicios que has creado tú. Toca uno para ver tu progreso, editarlo o borrarlo.</div>
+  return `<div class="small muted">Los que has creado tú y los que vinieron de Hevy sin equivalente en Hierro (marcados «De Hevy»). Toca uno para ver tu progreso, editarlo o borrarlo.</div>
     <button class="btn block" data-act="new-custom-ex">+ Crear ejercicio</button>
     <div class="exlist">${list.map(e => exItem(e, c[e.id])).join('') || '<div class="empty">Aún no has creado ningún ejercicio. También puedes crearlos al añadir ejercicios a una rutina o a un entreno.</div>'}</div>`;
 }
@@ -4583,7 +4656,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.2';
+const APP_VERSION = '4.5.3';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -4638,10 +4711,10 @@ rebuildEx();
     if (!Cloud.session) { Store.key = 'nouser'; render(); showAuth(); return; }
     await Store.load(Cloud.session.uid);
   } else await Store.load(null);
-  fixDurations(); if (!Cloud.enabled()) fixImportedMuscles();
+  fixDurations(); if (!Cloud.enabled()) { fixImportedMuscles(); mergeImportedEx(); }
   render();
   if (S.active) { restoreActiveBar(); wakeLock(true); }
-  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() : 0)) render(); if (Social.ready()) Social.loadNotifs(); });
+  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() + mergeImportedEx() : 0)) render(); if (Social.ready()) Social.loadNotifs(); });
 })();
 </script>
 </body>
