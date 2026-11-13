@@ -139,7 +139,7 @@ html.ios-pwa #rest{bottom:auto;top:calc(var(--apph,100vh) - 14px - var(--sab));t
 #top.sub .sync span,#top.compact .sync span{display:none}
 @keyframes late{50%{opacity:.35}}
 /* el contenido se desvanece al pasar bajo la cabecera */
-#view,.mo-ghost{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 16px 28px;display:flex;flex-direction:column;gap:14px;-webkit-mask-image:linear-gradient(transparent 0,#000 12px);mask-image:linear-gradient(transparent 0,#000 12px)}
+#view,.mo-ghost{flex:1;overscroll-behavior-y:contain;overflow-y:auto;overflow-x:hidden;padding:12px 16px 28px;display:flex;flex-direction:column;gap:14px;-webkit-mask-image:linear-gradient(transparent 0,#000 12px);mask-image:linear-gradient(transparent 0,#000 12px)}
 #view>*,.mo-ghost>*{flex:none}
 #tabs{display:grid;grid-template-columns:repeat(5,1fr);margin:2px 14px calc(10px + var(--sab));padding:6px;border-radius:28px;background:var(--glass-bar);border:1px solid var(--glass-borde);box-shadow:var(--sombra-bar);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);position:relative;z-index:3}
 #tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:56px;font-size:10.5px;font-weight:700;color:var(--apagado);position:relative}
@@ -434,6 +434,15 @@ label.chk{display:flex;align-items:flex-start;gap:10px;font-weight:700;min-heigh
 .seg button[aria-pressed="true"]{background:var(--sup-3);color:var(--texto)}
 :root[data-theme="light"] .seg button[aria-pressed="true"]{background:#fff;color:var(--acc);box-shadow:0 2px 8px rgba(40,60,140,.18)}
 .seg.sm button{font-size:13px}
+/* Segmentos con píldora deslizante (segSync): el fondo del activo pasa del botón a <i.sg-pill>; sin píldora (clase .sg ausente) rige el estilo de arriba */
+.seg,.cl-per{position:relative;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.sg-pill{position:absolute;left:0;top:0;width:0;height:0;border-radius:12px;background:var(--sup-3);pointer-events:none;will-change:transform;z-index:0;transition:transform var(--mo-dur) var(--mo-ease-spring),width var(--mo-dur) var(--mo-ease-spring),height var(--mo-dur) var(--mo-ease-spring)}
+:root[data-theme="light"] .seg>.sg-pill{background:#fff;box-shadow:0 2px 8px rgba(40,60,140,.18)}
+.cl-per>.sg-pill{background:var(--tiza);border-radius:999px}
+.seg.sg>button,.cl-per.sg>button{position:relative;z-index:1}
+.seg.sg>button[aria-pressed="true"],:root[data-theme="light"] .seg.sg>button[aria-pressed="true"],.cl-per.sg>button[aria-pressed="true"]{background:none;box-shadow:none}
+.sg-nt>.sg-pill,.sg-drag>.sg-pill{transition:none}
+@media (prefers-reduced-motion:reduce){.sg-pill{transition:none}}
 .pr{color:var(--pr);font-weight:700}
 .shake{animation:sh .3s}
 @keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
@@ -802,6 +811,15 @@ html.ios-pwa .mghost{bottom:auto;height:var(--apph,100vh)}
 .mo-in .fill,.mo-in .cl-bar span,.mo-in .cl-mix i,.mo-in .pg span{transform-origin:left center;animation:mo-grow .65s var(--mo-ease) .12s both;will-change:transform}
 .mo-in .chart rect{transform-box:fill-box;transform-origin:50% 100%;animation:mo-growy .6s var(--mo-ease) .12s both;will-change:transform}
 @media (prefers-reduced-motion:reduce){.mghost{display:none}}
+/* Tirar para actualizar */
+#ptr{position:fixed;left:0;right:0;top:0;height:0;z-index:2;pointer-events:none;display:flex;justify-content:center;opacity:0}
+#ptr .pb{width:38px;height:38px;margin-top:-19px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--sup-solid);border:1px solid var(--linea);box-shadow:var(--sombra-flot);color:var(--acc);will-change:transform,opacity}
+#ptr svg{width:22px;height:22px;display:block}
+#ptr .rg{fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+#ptr .ar{fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:opacity .15s}
+#ptr.go .pb{color:var(--acc)}
+#ptr:not(.go) .pb{color:var(--apagado)}
+#ptr.busy .ar{opacity:0}
 @media (prefers-reduced-motion:reduce){:root{--mo-dur:1ms;--mo-dur-fast:1ms}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -822,6 +840,7 @@ html.ios-pwa .mghost{bottom:auto;height:var(--apph,100vh)}
 <div id="summary" class="layer" role="dialog" aria-modal="true" aria-label="Resumen del entreno"></div>
 <div id="auth" class="layer" role="dialog" aria-modal="true" aria-label="Entrar en Hierro"></div>
 <div id="modal" class="layer" role="dialog" aria-modal="true"></div>
+<div id="ptr" aria-hidden="true"><div class="pb"><svg viewBox="0 0 24 24"><circle class="rg" cx="12" cy="12" r="9"/><path class="ar" d="M12 7.5v8M8.5 12.5 12 16l3.5-3.5"/></svg></div></div>
 <div id="toast" role="status"></div>
 <input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
 <input type="file" id="fileJson" accept=".json,application/json" hidden>
@@ -3577,7 +3596,6 @@ function viewSocial(){
   if (Social.me().private) h += `<div class="card small muted">Tu perfil es privado: tus entrenos no se publican. Puedes cambiarlo en tu perfil público.</div>`;
   h += list.map(postCard).join('') || (Social.mode === 'mine' ? '<div class="empty">Aún no has publicado entrenos. Al terminar uno, marca «Publicar en el feed».</div>' : Social.mode === 'discover' ? '<div class="empty">Todavía no ha publicado nadie más. ¡Invita a tus amigos a Hierro!</div>' : (Social.following.size ? '<div class="empty">Las personas que sigues aún no han publicado entrenos.</div>' : ''));
   if (Social.more && Social.feed.length) h += `<button class="btn block" data-act="soc-more">${Social.loading ? 'Cargando…' : 'Ver más'}</button>`;
-  h += `<button class="btn ghost block" data-act="soc-refresh">Actualizar</button>`;
   return h;
 }
 function viewPost(pid){
@@ -4090,6 +4108,85 @@ function moFeedback(el){
   const heart = n.matches('.post-actions button'), t = heart ? n.querySelector('svg') : n;
   if (t) try { t.animate(heart ? [{transform: 'scale(.6)'}, {transform: 'scale(1.35)', offset: .55}, {transform: 'scale(1)'}] : [{scale: .9}, {scale: 1.06, offset: .5}, {scale: 1}], {duration: heart ? 380 : 300, easing: 'cubic-bezier(.22,1,.36,1)'}); } catch (e) {}
 }
+/* Segmentos (.seg y .cl-per): píldora deslizante + arrastre para elegir opción, igual que la barra inferior.
+   render() recrea el DOM, así que el control se identifica por clave (contenedor + acción), la píldora se recrea en segSync (MutationObserver)
+   y se hace FLIP: nace en la opción anterior (SEG.last[clave]) sin transición y se desliza a la nueva. Solo se anima si hubo un toque/tecla/arrastre reciente (SEG.arm),
+   para que al entrar en otra pantalla la píldora no viaje desde una posición vieja. */
+const SEG = {last: {}, arm: null, drag: null, q: '.seg,.cl-per'};
+const segKey = c => { const b = c.querySelector(':scope > button'); return b ? ((c.closest('#modal,#auth,#view') || {}).id || '') + ':' + (b.dataset.act || (b.hasAttribute('data-coach-level') ? 'coach' : '')) : ''; };
+const segBtns = c => [...c.querySelectorAll(':scope > button')];
+const segFind = key => [...document.querySelectorAll(SEG.q)].find(c => segKey(c) === key);
+const segZone = (c, x) => { let i = 0; segBtns(c).forEach((b, j) => { if (x >= b.getBoundingClientRect().left) i = j; }); return i; }; // opción bajo el dedo
+function segPut(c, p, b, instant){ // coloca la píldora sobre el botón b (transform + tamaño); instant = sin transición
+  if (instant) c.classList.add('sg-nt');
+  p.style.width = b.offsetWidth + 'px'; p.style.height = b.offsetHeight + 'px'; p.style.transform = `translate(${b.offsetLeft}px,${b.offsetTop}px)`;
+  if (instant) { void p.offsetWidth; c.classList.remove('sg-nt'); }
+}
+function segFollow(c, x){ // durante el arrastre la píldora sigue al dedo, limitada a los bordes
+  const p = c.querySelector(':scope > .sg-pill'), bs = segBtns(c); if (!p || !bs.length) return;
+  const z = bs[segZone(c, x)], w = z.offsetWidth, last = bs[bs.length - 1];
+  const px = Math.max(bs[0].offsetLeft, Math.min(last.offsetLeft + last.offsetWidth - w, x - c.getBoundingClientRect().left - c.clientLeft - w / 2));
+  p.style.width = w + 'px'; p.style.height = z.offsetHeight + 'px'; p.style.transform = `translate(${px}px,${z.offsetTop}px)`;
+}
+function segPlace(c, instant, force){
+  const bs = segBtns(c); if (!bs.length || !bs[0].offsetWidth) return; // oculto o sin medir: se queda con el estilo normal
+  const key = segKey(c), i = bs.findIndex(b => b.getAttribute('aria-pressed') === 'true'), from = SEG.last[key];
+  let p = c.querySelector(':scope > .sg-pill'); const fresh = !p;
+  if (fresh) { p = document.createElement('i'); p.className = 'sg-pill'; p.setAttribute('aria-hidden', 'true'); c.prepend(p); c.classList.add('sg'); if (SEG.ro) { c._w = c.offsetWidth; SEG.ro.observe(c); } }
+  const D = SEG.drag;
+  if (D && D.on && D.key === key) { c.classList.add('sg-drag'); segFollow(c, D.x); SEG.last[key] = i; return; } // arrastre en curso: manda el dedo
+  c.classList.remove('sg-drag');
+  if (i < 0) { p.style.opacity = '0'; return; } p.style.opacity = '';
+  if (!fresh && !instant && !force && p._i === i) return; // nada cambió (p. ej. mutación ajena): no cortar una animación en curso
+  const animate = !instant && !!SEG.arm && SEG.arm.key === key && Date.now() - SEG.arm.t < 800 && !moReduce();
+  if (fresh) segPut(c, p, bs[animate && from != null && bs[from] ? from : i], true); // FLIP: nace donde estaba la opción anterior
+  segPut(c, p, bs[i], !animate); p._i = i; SEG.last[key] = i;
+}
+function segSync(){ document.querySelectorAll(SEG.q).forEach(c => { if (!c.closest('.mghost,.mo-ghost')) segPlace(c); }); }
+SEG.ro = window.ResizeObserver ? new ResizeObserver(es => es.forEach(e => { const c = e.target, w = c.offsetWidth; if (c._w !== w) { c._w = w; segPlace(c, true); } })) : null; // solo si cambió el ancho (la 1.ª notificación al observar no debe cortar la animación)
+if (window.MutationObserver) { // render(), clanRender(), modal() y la pantalla de acceso reescriben el DOM: se resincroniza en el mismo microtask (antes de pintar)
+  const mo = new MutationObserver(() => { segSync(); requestAnimationFrame(segSync); });
+  ['#view', '#modal', '#auth'].forEach(s => { const n = $(s); if (n) mo.observe(n, {childList: true, subtree: true}); });
+}
+segSync();
+// Armar la animación en cualquier cambio por toque, teclado o arrastre (también el click sintético de btn.click())
+document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('.seg>button,.cl-per>button'); if (b) SEG.arm = {key: segKey(b.parentElement), t: Date.now()}; }, true);
+// Arrastre: se elige con btn.click() (mismo camino que un toque: A[act] + moFeedback, o Coach.level). Funciona porque swallowUntil solo se activa AL SOLTAR, no durante el arrastre.
+document.addEventListener('pointerdown', e => {
+  if ((e.pointerType === 'mouse' && e.button) || SEG.drag) return;
+  const c = e.target.closest && e.target.closest(SEG.q); if (!c || c.closest('.mghost,.mo-ghost')) return;
+  SEG.drag = {id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, key: segKey(c), on: false};
+});
+document.addEventListener('pointermove', e => {
+  const d = SEG.drag; if (!d || d.id !== e.pointerId) return;
+  if (!d.on) {
+    const dx = Math.abs(e.clientX - d.x0), dy = Math.abs(e.clientY - d.y0);
+    if (dy > 6 && dy > dx) { SEG.drag = null; return; } // gesto vertical: lo gestiona el scroll de la página
+    if (dx < 6) return;
+    d.on = true; swallowUntil = 0; try { navigator.vibrate && navigator.vibrate(6); } catch (_) {}
+  }
+  e.preventDefault(); d.x = e.clientX;
+  const c = segFind(d.key); if (!c) return;
+  c.classList.add('sg-drag'); segFollow(c, d.x);
+  const bs = segBtns(c), z = segZone(c, d.x);
+  if (bs[z].getAttribute('aria-pressed') !== 'true') bs[z].click(); // render() recrea el control; segPlace ya sigue al dedo por D.x
+});
+const segEnd = e => {
+  const d = SEG.drag; if (!d || d.id !== e.pointerId) return; SEG.drag = null;
+  if (!d.on) return; // toque simple: el click normal hace todo
+  let c = segFind(d.key);
+  if (c && e.type === 'pointerup') { const bs = segBtns(c), z = segZone(c, e.clientX); if (bs[z].getAttribute('aria-pressed') !== 'true') bs[z].click(); c = segFind(d.key); }
+  swallowUntil = Date.now() + 350; // el click sintético posterior al soltar no debe repetirse (después del click propio de arriba)
+  if (c) { SEG.arm = {key: d.key, t: Date.now()}; c.classList.remove('sg-drag'); segPlace(c, false, true); } // asienta la píldora en la opción elegida
+};
+document.addEventListener('pointerup', segEnd); document.addEventListener('pointercancel', segEnd);
+document.addEventListener('keydown', e => { // flechas dcha/izq en un botón del segmento: pasa a la opción contigua conservando el foco
+  const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!d) return;
+  const b = e.target.closest && e.target.closest('.seg>button,.cl-per>button'); if (!b) return;
+  const c = b.parentElement, bs = segBtns(c), i = bs.indexOf(b) + d; if (i < 0 || i >= bs.length) return;
+  e.preventDefault(); const key = segKey(c); bs[i].click();
+  const c2 = segFind(key), nb = c2 && segBtns(c2)[i]; if (nb) nb.focus();
+});
 document.addEventListener('input', ev => {
   const el = ev.target;
   if (el.id === 'pkSearch') { PICK.q = el.value; drawPicker(); return; }
@@ -4584,8 +4681,8 @@ function viewClan(){
   const errH = Clan.err ? `<div class="card row between"><span class="small">${esc(Clan.err)}</span><button class="btn sm" data-act="cl-refresh">Reintentar</button></div>` : '';
   if (!Clan.loaded) return errH + (Clan.err ? '' : '<div class="empty">Cargando la liga…</div>') + clanLogrosHTML(L);
   STICKY_ACH.forEach(id => { if (L.ach.includes(id) && !(S.settings.logros || {})[id]) Clan.grant(id); });
-  const T = Clan.table(), c = Clan.mine(), refresh = `<button class="btn ghost block" data-act="cl-refresh">${Clan.loading ? 'Actualizando…' : 'Actualizar'}</button>`;
-  if (!c) return errH + clanIntroHTML(true) + clanDiscoverHTML(T) + clanLogrosHTML(L) + clanHowHTML() + refresh;
+  const T = Clan.table(), c = Clan.mine();
+  if (!c) return errH + clanIntroHTML(true) + clanDiscoverHTML(T) + clanLogrosHTML(L) + clanHowHTML();
   Rel.check(); if (!Rel.loaded && !Rel.loading && !Rel.err) setTimeout(() => Rel.load(), 0);
   const K = L.K, me = Social.myUid(), owner = c.owner === me, kind = Clan.rank;
   const ranked = Clan.members(c).map(m => ({m, v: clanPts(((m.s || {}).weeks || {})[K.cur])})).sort((a, b) => b.v - a.v);
@@ -4607,7 +4704,7 @@ function viewClan(){
   h += `${cap}<div class="cl-list">${clanRankRows(Clan.members(c), kind, per)}</div>
     ${kind === 'mip' ? '<div class="small muted">Suma de lo que has mejorado frente a tus propias marcas. Aquí gana quien más progresa, no quien más levanta.</div>' : kind === 'con' ? '<div class="small muted">Días entrenados. Si hay empate, gana la racha de semanas seguidas.</div>' : kind === 'pts' ? '<div class="small muted">Toca a alguien para compararte.</div>' : ''}</div>`;
   h += relPiquesHTML(K) + relAllianceHTML(K) + clanAwardsHTML(c) + clanVsHTML(per === 'w' ? T : Clan.table(per), c._id, per) + clanLogrosHTML(L) + clanHowHTML();
-  h += `<div class="grid2"><button class="btn" data-act="cl-invite">Invitar al clan</button><button class="btn" data-act="cl-refresh">${Clan.loading ? 'Actualizando…' : 'Actualizar'}</button></div>
+  h += `<button class="btn block" data-act="cl-invite">Invitar al clan</button>
     <button class="btn ghost danger block" data-act="cl-leave">Abandonar el clan</button>`;
   return h;
 }
@@ -5042,7 +5139,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.8';
+const APP_VERSION = '4.5.9';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -5075,6 +5172,105 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
   });
 }
+
+/* =========================================================
+   Tirar para actualizar (#view, en lo alto): arrastrar hacia abajo y soltar
+   ========================================================= */
+function pullRefresh(){
+  const wait = async (ok, ms) => { const t0 = Date.now(); while (!ok() && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 120)); };
+  const root = !cur();
+  const job = (async () => {
+    if (root && tab === 'clan' && Cloud.enabled() && Cloud.session && Social.ready()) {
+      Clan.err = null;
+      const ps = [Clan.load(true)];
+      if (typeof Rel !== 'undefined' && Rel.load) ps.push(Rel.load(true));
+      await Promise.all(ps);
+      await wait(() => !Clan.loading && !(typeof Rel !== 'undefined' && Rel.loading), 7000);
+      clanRender();
+      if (Clan.err) toast(Clan.err);
+    } else if (root && tab === 'social' && Social.ready()) {
+      Social.err = null;
+      await Social.loadFeed();
+      await wait(() => !Social.loading, 7000);
+      socRender();
+      if (Social.err) toast(Social.err);
+    } else {
+      if (Sync.on()) await Sync.run();
+      render();
+    }
+  })().catch(e => { console.warn('pull', e); });
+  return Promise.race([job, new Promise(r => setTimeout(r, 8000))]);
+}
+const PTR = {THR: 60, REF: 56, st: null, busy: false};
+function ptrOff(d){ return d <= 2 * PTR.THR ? d * .5 : PTR.THR + 56 * (1 - Math.exp(-(d - 2 * PTR.THR) / 110)); }
+function ptrBlocked(){
+  return PTR.busy || ED || document.documentElement.hasAttribute('data-mo') || $('#modal.open') || $('#summary.open') || $('#auth.open') || $('#editor.open') || $('#reord');
+}
+function ptrPaint(off, mode){ // mode: 'pull' | 'busy'
+  const el = $('#ptr'), pb = el.firstElementChild, red = moReduce(), v = $('#view');
+  const p = Math.min(off / PTR.THR, 1), go = off >= PTR.THR;
+  el.style.top = $('#top').getBoundingClientRect().bottom + 'px';
+  const y = red ? 30 : Math.max(off / 2, 0);
+  el.style.opacity = red ? (mode === 'busy' ? 1 : p) : Math.min(1, off / 28);
+  pb.style.transform = `translate3d(0,${y}px,0) scale(${.6 + .4 * p})`;
+  el.classList.toggle('go', go); el.classList.toggle('busy', mode === 'busy');
+  if (mode !== 'busy') { const rg = el.querySelector('.rg'), L = 56.55; rg.style.strokeDasharray = L; rg.style.strokeDashoffset = L * (1 - p); el.querySelector('svg').style.transform = `rotate(${go ? 180 : p * 120 - 90}deg)`; }
+}
+async function ptrRun(){
+  const v = $('#view'), el = $('#ptr'), red = moReduce(), svg = el.querySelector('svg'), rg = el.querySelector('.rg');
+  PTR.busy = true;
+  if (!red) { v.style.transition = 'transform .3s var(--mo-ease)'; v.style.transform = `translate3d(0,${PTR.REF}px,0)`; }
+  rg.style.strokeDasharray = '36 21'; rg.style.strokeDashoffset = 0; svg.style.transform = '';
+  ptrPaint(PTR.REF, 'busy');
+  const spin = svg.animate([{transform: 'rotate(0)'}, {transform: 'rotate(360deg)'}], {duration: 800, iterations: Infinity});
+  try { await Promise.all([pullRefresh(), new Promise(r => setTimeout(r, 500))]); } catch (e) {}
+  spin.cancel();
+  el.style.transition = 'opacity .25s'; el.style.opacity = 0;
+  const done = () => { v.style.transition = ''; v.style.transform = ''; el.style.transition = ''; el.classList.remove('busy', 'go'); PTR.busy = false; };
+  if (red) return done();
+  v.style.transition = 'transform .35s var(--mo-ease)'; v.style.transform = 'translate3d(0,0,0)';
+  setTimeout(done, 380);
+}
+(function(){
+  const v = $('#view');
+  v.addEventListener('touchstart', ev => {
+    PTR.st = null;
+    if (ev.touches.length !== 1 || ptrBlocked() || v.scrollTop > 0) return;
+    if (ev.target.closest('input,textarea,select,#tabs,.chips,.seg,.cl-per,.lc')) return;
+    PTR.st = {x: ev.touches[0].clientX, y: ev.touches[0].clientY, mode: 0, y0: 0, off: 0};
+  }, {passive: true});
+  v.addEventListener('touchmove', ev => {
+    const s = PTR.st; if (!s || s.mode < 0) return;
+    if (ev.touches.length !== 1 || ptrBlocked()) { ptrCancel(); return; }
+    const t = ev.touches[0], dy = t.clientY - s.y, dx = t.clientX - s.x;
+    if (s.mode === 0) {
+      if (v.scrollTop > 0 || dy < -6 || Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { s.mode = -1; return; }
+      if (dy < 8) return;
+      if (Math.abs(dx) > dy * .8) { s.mode = -1; return; }
+      s.mode = 1; s.y0 = s.y + 4; v.style.transition = 'none';
+    }
+    if (ev.cancelable) ev.preventDefault();
+    const d = Math.max(0, t.clientY - s.y0), off = ptrOff(d), was = s.off >= PTR.THR;
+    s.off = off;
+    if (!moReduce()) v.style.transform = `translate3d(0,${off}px,0)`;
+    ptrPaint(off, 'pull');
+    if (!was && off >= PTR.THR) { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} }
+  }, {passive: false});
+  function ptrCancel(){
+    const s = PTR.st; PTR.st = null; if (!s || s.mode !== 1) return;
+    swallowUntil = Date.now() + 350;
+    const el = $('#ptr'); el.style.transition = 'opacity .2s'; el.style.opacity = 0;
+    const done = () => { v.style.transition = ''; v.style.transform = ''; el.style.transition = ''; el.classList.remove('go'); };
+    if (moReduce()) return done();
+    v.style.transition = 'transform .4s var(--mo-ease-spring)'; v.style.transform = 'translate3d(0,0,0)';
+    setTimeout(done, 420);
+  }
+  v.addEventListener('touchend', ev => {
+    const s = PTR.st; if (!s || s.mode !== 1) { PTR.st = null; return; }
+    if (s.off >= PTR.THR && !PTR.busy) { PTR.st = null; swallowUntil = Date.now() + 350; ptrRun(); } else ptrCancel();
+  }, {passive: true});
+  v.addEventListener('touchcancel', () => ptrCancel(), {passive: true});
+})();
 
 /* =========================================================
    Arranque
