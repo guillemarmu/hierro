@@ -1292,7 +1292,7 @@ const Store = {
   snapshot(){ return {workouts: S.workouts, routines: S.routines, customEx: S.customEx, measures: S.measures, settings: S.settings, active: S.active}; },
   reset(){
     S.workouts = []; S.routines = []; S.customEx = []; S.measures = []; S.settings = {rest: 90, sound: true}; S.active = null;
-    this.synced = {w: {}, meta: null, active: null, p: {}, prof: null}; this.lastPull = null; rebuildEx();
+    this.synced = {w: {}, meta: null, active: null, p: {}, prof: null}; this.lastPull = null; this.loaded = false; rebuildEx();
   },
   apply(d){
     if (!d) return;
@@ -1312,17 +1312,35 @@ const Store = {
     if (d) { this.apply(d.state || d); if (d.synced) this.synced = Object.assign({w: {}, meta: null, active: null, p: {}, prof: null}, d.synced); this.lastPull = d.lastPull || null; }
     else if (!uid) { try { const raw = localStorage.getItem(LS); if (raw) this.apply(JSON.parse(raw)); } catch (e) {} }
     try { this.persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false; } catch (e) {}
+    this.loaded = true;
   },
-  mark(){ clearTimeout(this.timer); this.timer = setTimeout(() => this.save(), 250); Sync.schedule(); },
+  mark(){ ActBak.put(); clearTimeout(this.timer); this.timer = setTimeout(() => this.save(), 250); Sync.schedule(); },
   markMonthOf(){ this.mark(); },
   async save(){
     clearTimeout(this.timer); this.timer = null;
+    if (!S.active && this.loaded) ActBak.clear();
     const ok = await KV.set(this.key, clone({state: this.snapshot(), synced: this.synced, lastPull: this.lastPull}));
     if (!ok) toast('No se ha podido guardar: el móvil no tiene espacio. Descarga una copia desde Perfil.');
     if (ok) Coach.sync(); // pone al día los mensajes de motivación (ver Coach)
     if (ok && !this.persisted && S.workouts.length) { try { if (navigator.storage && navigator.storage.persist) this.persisted = await navigator.storage.persist(); } catch (e) {} }
   },
   flushNow(){ if (this.timer) this.save(); }
+};
+/* Copia de seguridad del entreno en curso (desde 4.5.10): en cada cambio se guarda también en localStorage, que es síncrono.
+   Si el móvil recarga o cierra la app antes de que termine el guardado normal (IndexedDB, asíncrono), al abrir se recupera de aquí. */
+const ActBak = {
+  k(){ return 'hierro.act.' + (Store.key || 'state'); },
+  put(){ if (!Store.loaded) return; try { if (S.active) localStorage.setItem(this.k(), JSON.stringify({t: Date.now(), a: S.active})); else localStorage.removeItem(this.k()); } catch (e) {} },
+  get(){ try { const v = JSON.parse(localStorage.getItem(this.k()) || 'null'); return v && v.a && v.a.id ? v : null; } catch (e) { return null; } },
+  clear(){ try { localStorage.removeItem(this.k()); } catch (e) {} },
+  // al abrir: si falta el entreno en curso (o está más atrasado que la copia) y no se terminó, se recupera
+  restore(){
+    const b = this.get(); if (!b) return false;
+    if (S.workouts.some(w => w.id === b.a.id) || Date.now() - b.t > 2 * 864e5) { this.clear(); return false; }
+    if (S.active && S.active.id !== b.a.id) return false;
+    if (S.active && hashOf(S.active) === hashOf(b.a)) return false;
+    S.active = b.a; Store.mark(); return true;
+  }
 };
 
 /* ---------- Cuentas y nube (Firebase Authentication + Cloud Firestore, por REST) ---------- */
@@ -1506,7 +1524,7 @@ const Sync = {
     if (a && a.fields && a.fields.json && !(ED && ED.mode === 'active')) {
       const remote = parse(a), lh = hashOf(S.active || null);
       if (remote !== undefined && (Store.synced.active == null || lh === Store.synced.active)) {
-        if (hashOf(remote || null) !== lh) { S.active = remote || null; changed = true; }
+        if (hashOf(remote || null) !== lh) { S.active = remote || null; changed = true; ActBak.put(); }
         Store.synced.active = hashOf(S.active || null);
       }
     }
@@ -3541,9 +3559,16 @@ async function compressPhoto(file){
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
-function pickPhoto(){
+/* En Android 14+ Chrome abre el selector de fotos del sistema, que no ofrece la cámara: allí se pregunta antes (desde 4.5.10).
+   En iPhone el propio menú ya ofrece «Hacer foto» y «Fototeca». */
+async function pickPhoto(){
+  let cam = false;
+  if (IS_ANDROID) {
+    const r = await ask('Añadir foto', 'Haz una foto ahora o elige una de tu galería.', [['cam', 'Hacer foto', 'primary'], ['gal', 'Elegir de la galería'], ['0', 'Cancelar']]); closeModal();
+    if (r !== 'cam' && r !== 'gal') return null; cam = r === 'cam';
+  }
   return new Promise(res => {
-    const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.style.display = 'none'; document.body.appendChild(i);
+    const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; if (cam) i.setAttribute('capture', 'environment'); i.style.display = 'none'; document.body.appendChild(i);
     i.addEventListener('change', async () => { const f = i.files[0]; i.remove(); if (!f) return res(null); try { res(await compressPhoto(f)); } catch (e) { toast('No se ha podido leer la foto'); res(null); } });
     i.click();
   });
@@ -3917,7 +3942,7 @@ const A = {
   async install(){ if (!deferredPrompt) return; deferredPrompt.prompt(); try { await deferredPrompt.userChoice; } catch (e) {} deferredPrompt = null; render(); },
   'set-theme'(el){ Theme.set(el.dataset.v); },
   'hide-install'(){ S.settings.hideInstall = true; Store.mark(); render(); },
-  async 'do-update'(){ await Store.save(); if (UPDATE) UPDATE.postMessage('skip'); else location.reload(); },
+  async 'do-update'(){ await safeReload(() => { if (UPDATE) UPDATE.postMessage('skip'); else location.reload(); }); },
   'rt-create'(){
     const names = [...document.querySelectorAll('[data-rt]')].filter(c => c.checked).map(c => c.dataset.rt);
     names.forEach(n => { const w = S.workouts.find(x => x.title === n); if (w) S.routines.push(routineFromWorkout(w, n)); });
@@ -5139,7 +5164,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.9';
+const APP_VERSION = '4.5.10';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -5159,6 +5184,14 @@ function installCard(force){
   else how = `<div class="small">Ábrela en el navegador de tu móvil para instalarla. En el ordenador, Chrome y Edge muestran un botón de instalar en la barra de direcciones.</div>`;
   return `<div class="card stack"><div class="row between"><h3>Instálala en tu móvil</h3>${force ? '' : '<button class="btn ghost sm" data-act="hide-install">Ahora no</button>'}</div><div class="small muted">Se abre a pantalla completa, con su icono, y funciona sin conexión en el gimnasio.</div>${how}</div>`;
 }
+// Antes de recargar por una versión nueva: guarda en el móvil, sube el entreno en curso (máx. 2,5 s) y recuerda si estaba abierto
+async function safeReload(go){
+  ActBak.put();
+  try { if (S.active && ED && ED.mode === 'active') sessionStorage.setItem('hierro.reopen', '1'); } catch (e) {}
+  try { await Store.save(); } catch (e) {}
+  if (S.active && Sync.on && Sync.on()) { try { await Promise.race([Sync.run(), new Promise(r => setTimeout(r, 2500))]); } catch (e) {} }
+  go();
+}
 function updateCard(){ return UPDATE ? `<div class="card next row between"><div><b>Hay una versión nueva</b><div class="small muted">Tus datos se mantienen.</div></div><button class="btn primary sm" data-act="do-update">Actualizar</button></div>` : ''; }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
@@ -5169,7 +5202,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
     }).catch(() => {});
     let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; safeReload(() => location.reload()); });
   });
 }
 
@@ -5277,7 +5310,7 @@ async function ptrRun(){
    ========================================================= */
 async function signOutLocal(){
   clearTimeout(Store.timer); Store.timer = null; clearTimeout(Sync.timer);
-  await KV.del(Store.key); await KV.del('session');
+  ActBak.clear(); await KV.del(Store.key); await KV.del('session');
   Cloud.session = null; Sync.state = 'idle';
   if (ED) { $('#editor').classList.remove('open'); $('#editor').innerHTML = ''; ED = null; }
   A['sum-close'](); REST = null; drawRest(); wakeLock(false);
@@ -5293,9 +5326,12 @@ rebuildEx();
     if (!Cloud.session) { Store.key = 'nouser'; render(); showAuth(); return; }
     await Store.load(Cloud.session.uid);
   } else await Store.load(null);
+  if (ActBak.restore()) toast('Entreno en curso recuperado');
   fixDurations(); if (!Cloud.enabled()) { fixImportedMuscles(); mergeImportedEx(); }
   render();
   if (S.active) { restoreActiveBar(); wakeLock(true); }
+  // si se actualizó con el entreno abierto, se vuelve a abrir donde estaba
+  try { if (sessionStorage.getItem('hierro.reopen') === '1') { sessionStorage.removeItem('hierro.reopen'); if (S.active && !ED) openEditor('active'); } } catch (e) {}
   Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() + mergeImportedEx() : 0)) render(); if (Social.ready()) Social.loadNotifs(); });
 })();
 </script>
