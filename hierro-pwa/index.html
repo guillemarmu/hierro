@@ -3323,8 +3323,13 @@ const Social = {
   },
   async claim(username, bio, priv){
     const uid = this.myUid(), old = this.me() && this.me().username, writes = [];
-    if (username !== old) writes.push({update: {name: Cloud.name('usernames', username), fields: fsFields({uid})}, currentDocument: {exists: false}});
-    if (old && old !== username) writes.push({delete: Cloud.name('usernames', old)});
+    // Se mira en la nube a quién pertenece cada @ (desde 4.5.12): si el nuevo ya es mío (p. ej. lo cambié en otro móvil) no se vuelve a crear,
+    // y el viejo solo se borra si existe y es mío (borrar algo que no existe lo rechazan las reglas y bloqueaba el guardado)
+    const owner = async u => { try { const d = await Cloud.getDoc('usernames', u); return d ? ((d.fields || {}).uid || {}).stringValue || '' : null; } catch (e) { if (e.offline) throw new Error('Necesitas conexión para crear tu perfil.'); return undefined; } };
+    const who = username !== old ? await owner(username) : uid;
+    if (who && who !== uid) throw new Error('Ese nombre de usuario ya está cogido. Prueba otro.');
+    if (who !== uid) writes.push({update: {name: Cloud.name('usernames', username), fields: fsFields({uid})}, currentDocument: {exists: false}});
+    if (old && old !== username && (await owner(old)) === uid) writes.push({delete: Cloud.name('usernames', old)});
     if (writes.length) {
       try { await Cloud.commit(writes); }
       catch (e) {
@@ -3595,8 +3600,9 @@ function postCard(p){
 function socialSetupHTML(edit){
   const p = Social.me() || {}, sug = norm(Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : '').replace(/ /g, '').slice(0, 20);
   return `<div class="card stack">${edit ? '' : `<h2>Entrena con tus amigos</h2><div class="muted">Crea tu perfil para seguir a tus amigos, ver sus entrenos, darles me gusta y comentar. Tus medidas y datos privados no se comparten nunca.</div>`}
+    ${edit && Cloud.session ? `<label class="f">Nombre (el que se ve en el clan y el feed)<input id="soName" value="${esc(Cloud.session.name || '')}" maxlength="40" autocomplete="nickname"></label>` : ''}
     <label class="f">Nombre de usuario<div class="at"><span>@</span><input id="soUser" value="${esc(p.username || sug)}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20"></div></label>
-    <div class="small muted">3–20 caracteres: minúsculas, números, punto o guion bajo. Tus amigos te buscarán por él.${edit ? ' El nombre que se ve en el clan y el feed no es el @: se cambia en Perfil → Cambiar nombre.' : ''}</div>
+    <div class="small muted">3–20 caracteres: minúsculas, números, punto o guion bajo. Tus amigos te buscarán por él.${edit ? ' Cambiar el @ no cambia el nombre de arriba.' : ''}</div>
     <label class="f">Sobre ti (opcional)<input id="soBio" value="${esc(p.bio || '')}" maxlength="120" placeholder="p. ej. Torso/Pierna 4 días · objetivo: 100 kg en banca"></label>
     <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="soPriv" style="width:auto;margin-top:3px" ${p.private ? 'checked' : ''}><span>Perfil privado<br><span class="small muted" style="font-weight:500">No publica tus entrenos; sigues pudiendo ver y seguir a otros.</span></span></label>
     <div id="soMsg" class="small err"></div>
@@ -4012,7 +4018,10 @@ const A = {
     const u = cleanUser($('#soUser').value), bio = $('#soBio').value.trim(), pv = $('#soPriv').checked, msg = t => { $('#soMsg').textContent = t; };
     if (!USERNAME_RE.test(u)) return msg('El usuario debe tener 3–20 caracteres: minúsculas, números, punto o guion bajo.');
     el.disabled = true; el.textContent = 'Guardando…';
-    try { const editing = cur() && cur().type === 'socedit'; await Social.claim(u, bio, pv); Social.loaded = false; Social.users.delete(Social.myUid()); if (editing) back(); else render(); toast('Perfil guardado'); }
+    try {
+      const editing = cur() && cur().type === 'socedit', nm = $('#soName') ? $('#soName').value.trim() : '';
+      if (nm && Cloud.session && nm !== Cloud.session.name) { await Cloud.setName(nm); Store.synced.score = null; } // nombre visible: perfil, clan y feed
+      await Social.claim(u, bio, pv); Social.loaded = false; Social.users.delete(Social.myUid()); if (editing) back(); else render(); toast('Perfil guardado'); }
     catch (e) { msg(e.message || 'No se ha podido guardar.'); el.disabled = false; el.textContent = 'Guardar'; }
   },
   'soc-copy'(el){ const p = Social.posts.get(el.dataset.id); if (!p) return; startWorkout({title: p.title, exercises: Social.exercisesFrom(p)}); },
@@ -5158,7 +5167,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.5.11';
+const APP_VERSION = '4.5.12';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
