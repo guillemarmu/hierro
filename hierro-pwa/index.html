@@ -587,37 +587,146 @@ h3+.sx{border-top:0;padding-top:0}
 .who{gap:8px;text-align:left;min-width:0;min-height:50px}
 .who span:not(.avatar){display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .who small,.person small,.notif small{color:var(--apagado);font-size:13.5px;font-weight:400;display:block}
-.post{display:flex;flex-direction:column;gap:10px}
-.post>.row{margin:-4px 0 -2px -3px}
-.post-body{display:flex;flex-direction:column;gap:12px;text-align:left;width:100%}
-.post-body h3{font-family:var(--rotulo);font-weight:700;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
-.post-body p{font-size:15px;margin-top:-8px}
-.post-body .side{display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex:none}
 .post-photo{border-radius:18px;overflow:hidden;background:var(--sup-2);aspect-ratio:4/5;max-height:460px;width:100%;display:block;padding:0}
 .post-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .post.open .post-photo{aspect-ratio:auto;max-height:none;min-height:120px}.post.open .post-photo img{height:auto}
 .fnphoto{display:flex;gap:10px;align-items:center}.fnphoto img{width:72px;height:90px;object-fit:cover;border-radius:12px;flex:none}
-.post-actions{display:flex;gap:6px;border-top:1px solid var(--linea);margin:2px -6px -8px;padding-top:4px}
-.post-actions button{display:flex;align-items:center;gap:7px;min-height:46px;min-width:46px;padding:0 10px;border-radius:12px;color:var(--apagado);font-weight:700;font-size:14.5px}
+@keyframes avivar{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+/* Social 4.8 · tarjeta del feed (P2) */
+.post{display:flex;flex-direction:column;gap:5px;padding:10px 14px 8px;min-width:0}
+.post-head{display:flex;align-items:center;gap:6px;margin:-3px -8px -3px -4px}
+.post-head .avatar.sm{margin:3px}
+.post-head .who{flex:1;min-width:0;display:flex;align-items:center;gap:6px;text-align:left}
+.post-head .who>span:not(.avatar){display:flex;flex-direction:column;min-width:0;line-height:1.25;flex:1}
+.post-head .who b{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.post-head .who small{font-size:12.5px;color:var(--apagado);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.post-head .iconbtn,.post-date .iconbtn{width:44px;height:44px;color:var(--apagado)}
+.post-head .iconbtn svg,.post-date .iconbtn svg{width:22px;height:22px}
+.post-date{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-8px -8px -6px 0;font-size:12.5px;color:var(--apagado)}
+.post-body{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%;min-width:0}
+.post-body h3{font-family:var(--rotulo);font-weight:700;font-size:17px;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.post-mus{font-size:12.5px;line-height:1.2;color:var(--apagado);margin-top:-3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.post-body p{font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.post-stats{display:grid;grid-template-columns:1.3fr 1fr .8fr;gap:8px}
+.post-stats>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.post-stats b{font-family:var(--rotulo);font-size:clamp(15px,4.4vw,17px);line-height:1.2;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.post-stats span{font-size:12px;line-height:1.2;color:var(--apagado)}
+.post-prs{background:var(--pr-soft);border-radius:12px;padding:5px 10px;display:flex;flex-direction:column;gap:1px;font-size:13.5px;min-width:0}
+.post-prs div{display:flex;gap:6px;min-width:0;white-space:nowrap}
+.post-prs i{font-style:normal;color:var(--pr);flex:none}
+.post-prs b{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+.post-prs span{flex:none;color:var(--pr);font-weight:700}
+.post-prs em{font-style:normal;font-weight:500;opacity:.8}
+.post-prs .more{color:var(--apagado);font-size:12.5px}
+.post .ex-lines{gap:2px;font-size:14px}
+.post .ex-lines>span{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;min-height:20px;line-height:20px}
+.post .ex-lines>span b{min-width:28px;color:var(--apagado)}
+.post .ex-lines .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:normal}
+.post .ex-lines em{margin:0;padding:0;white-space:nowrap}
+.post .ex-lines .all{display:block;font-size:13px;line-height:16px;color:var(--apagado)}
+.post-social{display:flex;flex-direction:column;gap:3px;font-size:13px;text-align:left;width:100%;color:var(--apagado);min-width:0}
+.post-social b{color:var(--texto);font-weight:700}
+.post-social .cm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;color:var(--texto)}
+.post-social .cm b{margin-right:0}
+.post .post-photo{border-radius:14px;overflow:hidden;aspect-ratio:16/9;max-height:none;width:100%;display:block;padding:0;position:relative}
+.post .post-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.post .post-photo:not(:has(img))::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.08) 50%,transparent 70%);background-size:220% 100%;animation:brillo 1.4s linear infinite}
+.post.open .post-photo{aspect-ratio:auto;max-height:none;min-height:120px}.post.open .post-photo img{height:auto}
+.post-actions{display:flex;gap:6px;border-top:1px solid var(--linea);margin:0 -8px -6px;padding-top:0}
+.post-actions button{display:flex;align-items:center;gap:7px;min-height:44px;min-width:46px;padding:0 10px;border-radius:12px;color:var(--apagado);font-weight:700;font-size:14.5px}
 .post-actions button:active{background:var(--sup-2)}
 .post-actions svg{width:23px;height:23px}
 .post-actions .liked{color:var(--pr)}
+.post:not(:has(.post-photo))::before{display:none}
+.post.skel{height:220px;position:relative;overflow:hidden}
+.post.skel::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%);background-size:220% 100%;animation:brillo 1.4s linear infinite}
+@keyframes brillo{from{background-position:120% 0}to{background-position:-120% 0}}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.post.skel::after,.post .post-photo:not(:has(img))::after{animation:none}.iconbtn.spin svg{animation:none}}
+@media (prefers-reduced-motion:no-preference){.iconbtn.spin svg{animation:giro .9s linear infinite}}
+.soc-top{display:flex;align-items:center;gap:6px}
+.soc-top .chips{flex:1;margin:0;padding:0;min-width:0}
+.soc-top .iconbtn{background:var(--sup-2)}
+.soc-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px}
+.soc-end{text-align:center;color:var(--apagado);font-size:13.5px;padding:6px 0 2px}
+.soc-sug{display:flex;flex-direction:column;gap:6px}
+.soc-sug>b{font-size:13px;color:var(--apagado);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.sug{display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:0 16px 2px;scrollbar-width:none}
+.sug::-webkit-scrollbar{display:none}
+.sug>div{flex:none;width:108px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px;background:var(--sup);border:1px solid var(--glass-borde);border-radius:var(--r-l)}
+.sug .who{display:flex;flex-direction:column;min-height:0;gap:2px;align-items:center;width:100%}
+.sug .avatar{width:48px;height:48px;font-size:19px;margin:4px}
+.sug .who b{font-size:13.5px;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sug .btn{width:100%;min-height:36px;padding:4px 8px}
 @keyframes avivar{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 .post-actions .end{margin-left:auto}
-.comment{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--sup-2);border-radius:16px}
+.comment{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--sup-2);border-radius:16px;scroll-margin-bottom:96px}
 .comment>div{flex:1;min-width:0;overflow-wrap:anywhere}
-.comment .iconbtn{width:44px;height:44px;margin:-10px -10px -10px 0;color:var(--apagado)}
-.comment .iconbtn svg{width:18px;height:18px}
+.comment .avatar{width:32px;height:32px;font-size:14px;flex:none}
+.cm-b{display:flex;flex-direction:column;gap:2px}
+.cm-h{display:flex;align-items:baseline;gap:5px;font-size:13px;min-width:0}
+.cm-h b{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm-h .muted{flex:none;white-space:nowrap}
+.cm-del{margin-left:auto;flex:none;color:var(--apagado);font-size:13px;padding:8px 0 8px 12px;margin-top:-8px;margin-bottom:-8px}
+.cm-t{font-size:15px;white-space:pre-wrap;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:6;overflow:hidden}
+.cm-t.open{display:block;-webkit-line-clamp:unset}
+.cm-more{align-self:flex-start;color:var(--acc-t);font-size:13px;font-weight:700;padding:6px 0}
+.cm-more[hidden]{display:none}
+.det-top .who{padding:0}
+.det-top .who b,.det-top .who small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.det-title{font-family:var(--rotulo);font-size:20px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.det-notes{font-size:15px;overflow-wrap:anywhere;white-space:pre-wrap}
+.det-photo{border-radius:16px;overflow:hidden;background:var(--sup-2);min-height:120px;display:flex;align-items:center;justify-content:center}
+.det-photo.on{background:none;min-height:0}
+.det-photo img{display:block;max-width:100%;max-height:70vh;width:auto;height:auto;object-fit:contain;margin:0 auto}
+.det-stats{display:grid;grid-template-columns:1.5fr 1.15fr .8fr .8fr;gap:8px}
+.det-stats .stat b{font-size:clamp(14px,4vw,18px);font-weight:800}
+.det-stats .stat span{font-size:12px;color:var(--apagado)}
+@media (max-width:380px){.det-stats{grid-template-columns:1fr 1fr;gap:10px}.det-stats .stat b{font-size:18px}}
+.det-acts .btn{white-space:nowrap;font-size:14px;padding:8px 6px}
+.det-likes{display:flex;align-items:center;gap:4px;font-size:14px;min-height:46px}
+.det-flame{display:flex;align-items:center;gap:7px;min-height:46px;min-width:46px;padding:0 10px;margin-left:-10px;border-radius:12px;color:var(--apagado);font-weight:700;font-size:14.5px}
+.det-flame svg{width:23px;height:23px}.det-flame.liked{color:var(--pr)}
+.det-likeline{color:var(--apagado);min-width:0}.det-likeline b{color:var(--texto)}
+.det-skel .sk{height:16px;border-radius:8px;background:var(--sup-2);animation:detsk 1.2s ease-in-out infinite alternate}
+.det-skel .sk.h{height:140px;border-radius:16px}.det-skel .w40{width:40%}.det-skel .w70{width:70%}.det-skel .w90{width:90%}
+@keyframes detsk{from{opacity:.5}to{opacity:1}}
+@keyframes sacude{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.shake{animation:sacude .3s}
+#comments{scroll-margin-top:12px}
+.cmt-bar{position:sticky;bottom:-30px;z-index:5;display:flex;gap:8px;align-items:center;padding:8px;border-radius:20px;background:var(--sup-solid);border:1px solid var(--glass-borde);box-shadow:var(--sombra-bar)}
+.cmt-bar input{flex:1;min-width:0}
+.cmt-bar .btn:disabled{opacity:.5}
 .person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--linea)}
-.notif{display:flex;gap:10px;align-items:center;text-align:left;width:100%;padding:8px 0;border-bottom:1px solid var(--linea)}
-.notif>span:not(.avatar):not(.cl-emo){flex:1;min-width:0}
+.person .who{flex:1;min-width:0}
+.person .who b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.person .who small{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.person .who small .pill{display:inline-flex;flex-direction:row;flex:none;min-height:20px;padding:0 8px;font-size:11.5px}
+.person .pbtn{width:104px;flex:none;padding-left:6px;padding-right:6px}
+.person .pbtn.wide{width:132px}
+#socRes .person .avatar,#view .nrow .avatar{--ring-gap:var(--fondo)}
+.sect-t{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--apagado);margin:10px 2px 0}
+.nrow{border-bottom:1px solid var(--linea)}
+.notif{display:flex;gap:10px;align-items:center;text-align:left;width:100%;min-height:64px;padding:8px 0}
+.notif>.nb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.notif .nt{font-size:14.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.notif .nt-time{font-size:12px;color:var(--apagado)}
+.notif .ndot{width:8px;height:8px;border-radius:50%;background:var(--rosa);flex:none}
+.notif .nchev{color:var(--tenue);display:flex;flex:none}.notif .nchev svg{width:16px;height:16px}
+.notif .cl-emo{width:40px;height:40px;margin:5px;border-radius:13px;font-size:20px}
+.nfol{margin:0 0 10px 60px}
 .at{display:flex;align-items:center;background:var(--field);box-shadow:inset 0 0 0 1.5px var(--field-borde);border-radius:14px;padding-left:14px}
 .at:focus-within{box-shadow:inset 0 0 0 2px var(--acc)}
 .at span{color:var(--apagado);font-weight:700}
 .at input{background:none!important;padding-left:4px;box-shadow:none!important}
 button.stat{text-align:left;min-height:44px}
 .uhead{display:flex;align-items:center;gap:14px;padding:4px 2px 0}
-.uhead h2{overflow-wrap:anywhere}
+.uhead h2{overflow-wrap:anywhere;font-size:20px;font-weight:800;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.uhead .ub{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.uhead .avatar{width:72px;height:72px;font-size:28px}
+.uhead .ur{overflow-wrap:anywhere}
+.uhead .ur .pill{min-height:20px;padding:0 8px;font-size:11.5px;vertical-align:1px}
+.ubio{font-size:14.5px;line-height:1.35;color:var(--apagado);margin-top:2px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:8px 10px;align-items:center;font-size:13.5px}
 .cmp .a,.cmp .b{display:flex;align-items:center;gap:8px;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;white-space:nowrap}
 .cmp .a{justify-content:flex-end}
@@ -1623,18 +1732,25 @@ const Sync = {
     // perfil público y entrenos publicados (si falla, no bloquea tus datos privados)
     // Si el lote falla, se reintenta elemento a elemento: así algo malo no frena lo demás. Borrar una publicación que ya no existe
     // (la quitaste desde otro dispositivo) lo rechazan las reglas con 403: si de verdad ya no está, se da por hecho.
-    const sitems = Social.pushItems(); let sfail = null;
-    for (let i = 0; i < sitems.length; i += 200) {
-      const chunk = sitems.slice(i, i + 200);
+    const rejKey = x => x[0].update ? x[0].update.name + '|' + hashOf(x[0].update.fields) : '';
+    const sitems = Social.pushItems().filter(x => !(x[0].update && Social.rej.has(rejKey(x)))); let sfail = null; // lo que las reglas ya rechazaron no se reenvía hasta que cambie
+    const isProf = x => !!(x[0].update && /\/profiles\//.test(x[0].update.name)), others = sitems.filter(x => !isProf(x));
+    const chunks = [...sitems.filter(isProf).map(x => [x])]; for (let i = 0; i < others.length; i += 200) chunks.push(others.slice(i, i + 200)); // el perfil va aparte: un post rechazado no arrastra su commit
+    for (const chunk of chunks) {
       try { await Cloud.commit(chunk.map(x => x[0])); chunk.forEach(x => x[1]()); }
       catch (e) {
         if (e.offline || e.session) throw e;
+        if (chunk.length === 1) { // un solo elemento: no se repite el mismo commit (una denegación por sincronización)
+          const x = chunk[0];
+          if (x[0].delete && e.status === 403 && (await Cloud.fs('GET', x[0].delete).catch(() => 'err')) === null) x[1](); else { sfail = e; if (e.status === 403 && x[0].update) Social.rej.add(rejKey(x)); }
+          await Store.save(); continue;
+        }
         for (const x of chunk) {
           try { await Cloud.commit([x[0]]); x[1](); }
           catch (e2) {
             if (e2.offline || e2.session) throw e2;
             if (x[0].delete && e2.status === 403 && (await Cloud.fs('GET', x[0].delete).catch(() => 'err')) === null) { x[1](); continue; }
-            sfail = e2;
+            sfail = e2; if (e2.status === 403 && x[0].update) Social.rej.add(rejKey(x));
           }
         }
       }
@@ -2297,8 +2413,8 @@ function render(){
   else if (v && v.type === 'plan') { title = 'Mi plan'; html = viewPlan(); }
   else if (v && v.type === 'month') { title = 'Informe mensual'; html = viewMonth(v.ym); }
   else if (v && v.type === 'post') { title = 'Entreno'; html = viewPost(v.id); }
-  else if (v && v.type === 'user') { title = v.id === Social.myUid() ? 'Mi perfil' : 'Perfil'; html = viewUser(v.id); }
-  else if (v && v.type === 'people') { title = 'Personas'; html = viewPeople(v.id, v.k); }
+  else if (v && v.type === 'user') { title = v.id === Social.myUid() ? 'Tu perfil público' : 'Perfil'; html = viewUser(v.id); }
+  else if (v && v.type === 'people') { title = v.k === 'followers' ? 'Seguidores' : 'Siguiendo'; html = viewPeople(v.id, v.k); }
   else if (v && v.type === 'search') { title = 'Buscar'; html = viewSearch(); }
   else if (v && v.type === 'notifs') { title = 'Avisos'; html = viewNotifs(); }
   else if (v && v.type === 'compare') { title = 'Comparar'; html = viewCompare(v.id); }
@@ -2315,6 +2431,7 @@ function render(){
   $('#view').innerHTML = updateCard() + html; // el aviso de versión nueva sale en todas las pestañas y subvistas
   renderTabs();
   restoreActiveBar();
+  if (tab === 'social' && typeof Social !== 'undefined' && $('#view .post-photo')) Social.mountPhotos($('#view')); // al cambiar de pestaña o volver atrás (sin socRender) las fotos ya conocidas se pintan igual
 }
 
 /* ---------- Agregados para estadísticas ---------- */
@@ -3528,7 +3645,7 @@ async function afterLogin(isNew){
   render();
   await Sync.run();
   if (S.active) restoreActiveBar();
-  if (Social.ready()) Social.loadNotifs();
+  if (Social.ready()) Social.pollNotifs();
   toast(isNew ? `¡Bienvenido, ${Cloud.session.name || 'campeón'}!` : `Hola de nuevo${Cloud.session.name ? ', ' + Cloud.session.name.split(' ')[0] : ''}`);
   // datos guardados en este móvil antes de tener cuenta
   let legacy = await KV.get('state'); if (legacy && legacy.state) legacy = legacy.state;
@@ -3577,7 +3694,7 @@ const jsv = v => {
 };
 const fsFields = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)]));
 const docData = d => ({_id: d.name.split('/').pop(), _name: d.name, ...Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, jsv(v)]))});
-const POST_FIELDS = {fields: ['uid', 'start', 'body', 'likes', 'commentCount', 'hasPhoto'].map(fieldPath => ({fieldPath}))}; // el feed no descarga las fotos
+const POST_FIELDS = {fields: ['uid', 'start', 'body', 'likes', 'commentCount', 'hasPhoto', 'lastC'].map(fieldPath => ({fieldPath}))}; // el feed no descarga las fotos
 const ff = (field, op, value) => ({fieldFilter: {field: {fieldPath: field}, op, value: fsv(value)}});
 function ago(t){
   const s = (Date.now() - t) / 1000;
@@ -3586,11 +3703,16 @@ function ago(t){
 }
 const USERNAME_RE = /^[a-z0-9_.]{3,20}$/;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+// Ayudas de Social (4.8): nombre corto, foto segura y normalizador de búsqueda
+const shortName = n => { const w = String(n == null ? '' : n).trim().split(/\s+/)[0] || ''; return w.length > 16 ? w.slice(0, 16) + '…' : w; };
+const safePhoto = u => typeof u === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u) ? u : '';
+const nrm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const cleanUser = v => String(v || '').trim().replace(/^@/, '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_.]/g, '').slice(0, 20);
 
 const Social = {
   following: new Set(), followers: [], feed: [], posts: new Map(), users: new Map(), comments: new Map(),
-  mode: 'following', loading: false, loaded: false, more: true, err: null,
+  mode: 'following', loading: false, loaded: false, more: true, err: null, errKind: '', at: 0,
+  gen: 0, fFollow: [], fDisc: [], disc: {at: 0, more: true, loaded: false, loading: false}, lo: 0, followsAt: 0, hydrated: false, fromCache: false, tryAt: 0, optim: new Map(), cacheUid: '',
   notifs: [], unseen: 0, notifLoaded: false, search: {q: '', res: [], loading: false},
   me(){ return S.settings.social || null; },
   myUid(){ return Cloud.session && Cloud.session.uid; },
@@ -3608,16 +3730,62 @@ const Social = {
     Sync.schedule(200);
   },
   unpend(wid, val){ const pp = this.pending(); if (pp[wid] === val) { delete pp[wid]; try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) {} } },
-  photoOf(p){ const u = this.photos.get(p.id); if (u) return u; if (!p.hasPhoto) return null; this.loadPhoto(p.id); return ''; },
-  async loadPhoto(pid){
-    if (this.photos.has(pid) || this.photoBusy.has(pid)) return; this.photoBusy.add(pid);
-    try {
-      const d = await Cloud.fs('GET', Cloud.name('posts', pid) + '?mask.fieldPaths=photo');
-      const u = d && d.fields && d.fields.photo ? d.fields.photo.stringValue : null; this.photos.set(pid, u);
-      if (u) document.querySelectorAll(`.post-photo[data-pid="${pid}"]`).forEach(el => { el.innerHTML = `<img src="${u}" alt="Foto del entreno">`; });
-    } catch (e) {} finally { this.photoBusy.delete(pid); }
+  photoOf(p){ const u = this.photos.get(p.id); if (u) return u; return p.hasPhoto ? '' : null; }, // nunca descarga: de eso se encarga mountPhotos (perezoso)
+  /* Descarga perezosa (IntersectionObserver, margen 300 px), 2 a la vez, caché en el móvil (socph:{pid}, LRU de 30) y sin reintento en bucle */
+  rej: new Set(), photoFail: new Set(), photoQ: [], photoRun: 0, phIO: null, phIdx: null,
+  async phIndex(){ if (!this.phIdx) { const v = await KV.get('socph:idx'); this.phIdx = Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } return this.phIdx; },
+  async phTouch(pid, val){ // pone pid el primero del LRU; con val lo guarda; descarta lo que pase de 30
+    const idx = await this.phIndex(), i = idx.indexOf(pid); if (i >= 0) idx.splice(i, 1); idx.unshift(pid);
+    if (val) await KV.set('socph:' + pid, {u: val, at: Date.now()});
+    while (idx.length > 30) KV.del('socph:' + idx.pop());
+    KV.set('socph:idx', idx);
   },
-  reset(){ Object.assign(this, {following: new Set(), followers: [], feed: [], posts: new Map(), users: new Map(), comments: new Map(), loading: false, loaded: false, more: true, err: null, notifs: [], unseen: 0, notifLoaded: false, search: {q: '', res: [], loading: false}}); },
+  objUrl(du){ try { const i = du.indexOf(','), mime = du.slice(5, du.indexOf(';')), bin = atob(du.slice(i + 1)), a = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k); return URL.createObjectURL(new Blob([a], {type: mime})); } catch (e) { return du; } },
+  async fetchPhoto(pid){ // → data URL segura o null (sin foto)
+    const idx = await this.phIndex();
+    if (idx.includes(pid)) { const c = await KV.get('socph:' + pid); if (c && Date.now() - (c.at || 0) < 7 * 864e5 && safePhoto(c.u)) { this.phTouch(pid); return c.u; } }
+    const d = await Cloud.fs('GET', Cloud.name('posts', pid) + '?mask.fieldPaths=photo');
+    const u = safePhoto(d && d.fields && d.fields.photo ? d.fields.photo.stringValue : null);
+    if (u) this.phTouch(pid, u);
+    return u || null;
+  },
+  photoQueue(pid){ if (!pid || this.photos.has(pid) || this.photoBusy.has(pid) || this.photoFail.has(pid) || this.photoQ.includes(pid)) return; this.photoQ.push(pid); this.photoPump(); },
+  photoPump(){
+    while (this.photoRun < 2 && this.photoQ.length) {
+      const pid = this.photoQ.shift(), g = this.gen; if (this.photos.has(pid) || this.photoBusy.has(pid) || this.photoFail.has(pid)) continue;
+      this.photoBusy.add(pid); this.photoRun++;
+      this.fetchPhoto(pid).then(u => { if (g !== this.gen) return; this.photos.set(pid, u ? this.objUrl(u) : null); this.paintPhoto(pid); })
+        .catch(() => { this.photoFail.add(pid); })
+        .finally(() => { this.photoBusy.delete(pid); if (g === this.gen) { this.photoRun--; this.photoPump(); } });
+    }
+  },
+  setImg(el, u){
+    if (el.querySelector('img') || !u || !(u.startsWith('blob:') || safePhoto(u))) return;
+    const im = document.createElement('img'); im.alt = 'Foto del entreno'; im.decoding = 'sync'; im.src = u; el.appendChild(im);
+  },
+  paintPhoto(pid){ const u = this.photos.get(pid); if (u) document.querySelectorAll('.post-photo[data-pid]').forEach(el => { if (el.dataset.pid === pid) this.setImg(el, u); }); },
+  mountPhotos(root){ // rellena las fotos de las tarjetas ya pintadas y pide (solo si se acercan a la pantalla) las que faltan; idempotente
+    const todo = [];
+    (root || document).querySelectorAll('.post-photo[data-pid]').forEach(el => {
+      const pid = el.dataset.pid, u = this.photos.get(pid);
+      if (u) this.setImg(el, u); else if (u === undefined && !this.photoFail.has(pid) && !this.photoBusy.has(pid)) todo.push(el);
+    });
+    if (!todo.length) return;
+    if (!window.IntersectionObserver) { todo.forEach(el => this.photoQueue(el.dataset.pid)); return; }
+    if (!this.phIO) this.phIO = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { this.phIO.unobserve(en.target); this.photoQueue(en.target.dataset.pid); } }), {rootMargin: '300px'});
+    todo.forEach(el => this.phIO.observe(el));
+  },
+  async wipeCache(uid){ // cierre de sesión o cuenta borrada: fuera lo guardado en el móvil
+    KV.del('soc:' + uid); KV.del('socn:' + uid);
+    const idx = await this.phIndex(); idx.splice(0).forEach(pid => KV.del('socph:' + pid)); KV.del('socph:idx');
+  },
+  reset(){
+    if (!Cloud.session && this.cacheUid) this.wipeCache(this.cacheUid);
+    clearTimeout(this._sv); this.photos.forEach(u => { if (typeof u === 'string' && u.startsWith('blob:')) try { URL.revokeObjectURL(u); } catch (e) {} });
+    if (this.phIO) { this.phIO.disconnect(); this.phIO = null; }
+    Object.assign(this, {following: new Set(), followers: [], feed: [], posts: new Map(), users: new Map(), comments: new Map(), loading: false, loaded: false, more: true, err: null, errKind: '', at: 0, notifs: [], unseen: 0, notifLoaded: false, search: {q: '', res: [], loading: false},
+      gen: this.gen + 1, fFollow: [], fDisc: [], disc: {at: 0, more: true, loaded: false, loading: false}, lo: 0, followsAt: 0, hydrated: false, fromCache: false, tryAt: 0, optim: new Map(), photos: new Map(), photoBusy: new Set(), rej: new Set(), photoFail: new Set(), photoQ: [], photoRun: 0, phIdx: null, cacheUid: ''});
+  },
   postId(w){ return `${this.myUid()}_${String(1e13 - w.start).padStart(14, '0')}_${w.id}`; },
   postBody(w){
     const p = this.me();
@@ -3631,8 +3799,8 @@ const Social = {
     const p = this.me(), w30 = inRange(Date.now() - 30 * 864e5, Date.now() + 1), a30 = agg(w30);
     // resumen de los últimos 30 días para «Comparar» (cuenta todos tus entrenos, no solo los publicados; sin pesos corporales ni detalle)
     const m30 = Object.fromEntries(Object.entries(muscleSets(w30)).map(([k, v]) => [k, Math.round(v)]));
-    const b = {uid: this.myUid(), username: p.username, name: this.myName(), bio: p.bio || '', private: !!p.private,
-      stats: JSON.stringify({n7: inRange(Date.now() - 7 * 864e5, Date.now() + 1).length, workouts: S.workouts.length, vol: Math.round(S.workouts.reduce((a, w) => a + wVolume(w), 0)), streak: weekStreak(), n30: a30.n, ms30: Math.round(a30.ms / 60000) * 60000, vol30: Math.round(a30.vol), sets30: a30.sets, mus30: m30, since: S.workouts.length ? S.workouts[S.workouts.length - 1].start : 0})};
+    const b = {uid: this.myUid(), username: p.username, name: this.myName(), nameLc: nrm(this.myName()).slice(0, 40), bio: p.bio || '', private: !!p.private};
+    if (!p.private) b.stats = JSON.stringify({n7: inRange(Date.now() - 7 * 864e5, Date.now() + 1).length, workouts: S.workouts.length, vol: Math.round(S.workouts.reduce((a, w) => a + wVolume(w), 0)), streak: weekStreak(), n30: a30.n, ms30: Math.round(a30.ms / 60000) * 60000, vol30: Math.round(a30.vol), sets30: a30.sets, mus30: m30, since: S.workouts.length ? S.workouts[S.workouts.length - 1].start : 0}); // perfil privado: no se suben estadísticas
     const rk = rkPublic(); if (rk != null) b.rank = rk; // rango global (0-24), solo si la persona lo comparte
     return b;
   },
@@ -3657,10 +3825,31 @@ const Social = {
     for (const wid in sp) if (!want.has(wid)) { const id = sp[wid].id; items.push([{delete: Cloud.name('posts', id)}, () => { delete sp[wid]; }]); }
     return items;
   },
+  /* Un post ajeno nunca se pinta tal cual: cleanPost devuelve siempre tipos correctos (cadenas acotadas, números finitos, listas cerradas) o null y el post se descarta */
+  cleanPost(s){
+    if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id || s.id.length > 300 || typeof s.uid !== 'string' || !s.uid || s.uid.length > 128) return null;
+    const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '', fin = (v, lo, hi, d = 0) => typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+    const nul = (v, hi) => typeof v === 'number' && isFinite(v) && v >= 0 ? Math.min(hi, v) : null, own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+    const obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : null, arr = (v, n) => Array.isArray(v) ? v.slice(0, n) : [];
+    const start = fin(s.start, 0, 8.64e15, 0); if (!start) return null;
+    const m = obj(s.muscles), muscles = {}; if (m) for (const k of Object.keys(m)) if (own(MUSCLES, k)) { const x = fin(m[k], 0, 1e4, -1); if (x >= 0) muscles[k] = x; }
+    const prs = arr(s.prs, 30).map(r => obj(r) ? {ex: str(r.ex, 80), label: str(r.label, 80), txt: str(r.txt, 80)} : null).filter(Boolean);
+    const ex = arr(s.ex, 40).map(e => {
+      e = obj(e); const name = e ? str(e.name, 80).trim() : ''; if (!name) return null;
+      return {id: str(e.id, 64), name, muscle: own(MUSCLES, e.muscle) ? e.muscle : 'completo', equip: own(EQUIP, e.equip) ? e.equip : 'otro', type: own(TYPES, e.type) ? e.type : 'wr',
+        sets: arr(e.sets, 60).map(x => x = obj(x)).filter(Boolean).map(x => ({t: ['n', 'w', 'f', 'd'].includes(x.t) ? x.t : 'n', kg: nul(x.kg, 2000), reps: nul(x.reps, 5000), sec: nul(x.sec, 172800), km: nul(x.km, 5000), min: nul(x.min, 3000)}))};
+    }).filter(Boolean);
+    const lc = obj(s.lastC), lastC = lc && typeof lc.uid === 'string' && lc.uid && typeof lc.cid === 'string' && lc.cid ? {uid: str(lc.uid, 128), cid: str(lc.cid, 64), text: str(lc.text, 140), ts: fin(lc.ts, 0, 8.64e15, 0)} : null;
+    return {v: 1, id: s.id, uid: s.uid, start, end: fin(s.end, start, start + 7 * 864e5, start), title: str(s.title, 80).trim() || 'Entreno', notes: str(s.notes, 1000), name: str(s.name, 40), username: str(s.username, 20), wid: str(s.wid, 80),
+      vol: fin(s.vol, 0, 1e9), sets: Math.floor(fin(s.sets, 0, 1e5)), reps: Math.floor(fin(s.reps, 0, 1e6)), prs, muscles, ex, hasPhoto: s.hasPhoto === true,
+      likes: [...new Set(arr(s.likes, 2000).filter(x => typeof x === 'string' && x && x.length <= 128))], commentCount: Math.floor(fin(s.commentCount, 0, 1e6)), lastC};
+  },
+  putPost(p){ const o = this.posts.get(p.id); if (o) { Object.assign(o, p); return o; } this.posts.set(p.id, p); return p; }, // un solo objeto por post: feed, perfil y detalle lo comparten
   parsePost(doc){
-    const d = docData(doc); let b = {}; try { b = JSON.parse(d.body || '{}'); } catch (e) {}
-    const p = {...b, id: d._id, uid: d.uid, start: d.start, hasPhoto: !!d.hasPhoto, likes: d.likes || [], commentCount: d.commentCount || 0, muscles: b.muscles || {}, prs: b.prs || [], ex: b.ex || []};
-    this.posts.set(p.id, p); return p;
+    let d; try { d = docData(doc); } catch (e) { return null; }
+    let b = {}; try { b = JSON.parse(d.body || '{}'); } catch (e) {} if (!b || typeof b !== 'object' || Array.isArray(b)) b = {};
+    const p = this.cleanPost({...b, id: d._id, uid: d.uid, start: d.start, hasPhoto: d.hasPhoto, likes: d.likes, commentCount: d.commentCount, lastC: d.lastC});
+    return p ? this.putPost(p) : null;
   },
   async claim(username, bio, priv){
     const uid = this.myUid(), old = this.me() && this.me().username, writes = [];
@@ -3682,54 +3871,193 @@ const Social = {
     S.settings.social = {username, bio, private: priv};
     Store.synced.prof = null; Store.mark(); await Sync.run();
   },
-  async loadFollows(){
-    const uid = this.myUid();
-    const [a, b] = await Promise.all([Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid)}), Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid)})]);
-    this.following = new Set(a.filter(r => r.document).map(r => docData(r.document).to));
-    this.followers = b.filter(r => r.document).map(r => docData(r.document).from);
+  /* ---- Feed 4.8: «Siguiendo» por persona seguida (ventana de tiempo sobre el id), «Descubrir» global, caché en el móvil ---- */
+  FRESH: 5 * 60e3, FOLLOWS_TTL: 30 * 60e3, PROFILE_TTL: 5 * 60e3, DISC_TTL: 10 * 60e3,
+  order(ids){ const seen = new Set(); return ids.filter(id => { if (seen.has(id) || !this.posts.has(id)) return false; seen.add(id); return true; }).sort((a, b) => { const x = this.posts.get(a), y = this.posts.get(b); return y.start - x.start || (a < b ? -1 : 1); }); },
+  rebuildFeed(){ this.fFollow = this.order(this.fFollow); this.fDisc = this.order(this.fDisc); this.feed = this.order([...this.fFollow, ...this.fDisc]).map(id => this.posts.get(id)); },
+  pad(t){ return String(1e13 - t).padStart(14, '0'); },
+  async pool(tasks, n){ const out = []; let i = 0; await Promise.all(Array.from({length: Math.min(n, tasks.length)}, async () => { while (i < tasks.length) { const k = i++; out[k] = await tasks[k](); } })); return out; },
+  // posts de varias personas con start en [lo, hi) (hi null = hasta ahora): ids más pequeños = más nuevos, así que es una ventana de ids por uid
+  async windowPosts(uids, hi, lo){
+    let offline = null, failed = [], full = false; const posts = [];
+    const tasks = uids.map(u => async () => {
+      const sq = {from: [{collectionId: 'posts'}], select: POST_FIELDS, where: ff('uid', 'EQUAL', u), orderBy: [{field: {fieldPath: '__name__'}, direction: 'ASCENDING'}], limit: 20,
+        endAt: {values: [{referenceValue: Cloud.name('posts', u + '_' + this.pad(lo - 1))}], before: false}};
+      if (hi) sq.startAt = {values: [{referenceValue: Cloud.name('posts', u + '_' + this.pad(hi - 1))}], before: false};
+      try { const r = await Cloud.queryRoot(sq), ps = r.filter(x => x.document).map(x => this.parsePost(x.document)).filter(p => p && p.uid === u); if (ps.length >= 20) full = true; posts.push(...ps); }
+      catch (e) { if (e.offline) offline = e; failed.push(u); }
+    });
+    await this.pool(tasks, 6);
+    if (offline) throw offline;
+    if (uids.length && failed.length === uids.length) throw new Error('feed');
+    return {posts, failed, full};
   },
-  async loadFeed(more){
+  async loadFollows(){
+    const uid = this.myUid(), sel = f => ({fields: [{fieldPath: f}]});
+    const [a, b] = await Promise.all([Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: sel('to')}), Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid), select: sel('from')})]);
+    this.following = new Set(a.filter(r => r.document).map(r => docData(r.document).to).filter(x => typeof x === 'string'));
+    this.followers = b.filter(r => r.document).map(r => docData(r.document).from).filter(x => typeof x === 'string'); this.followsAt = Date.now();
+  },
+  // ---- caché en el móvil: soc:{uid}
+  saveCache(){ clearTimeout(this._sv); this._sv = setTimeout(() => this.saveNow(), 400); },
+  saveNow(){
+    if (!this.ready() || !this.loaded) return; const uid = this.myUid(); this.cacheUid = uid;
+    const posts = this.fFollow.map(id => this.posts.get(id)).filter(Boolean).slice(0, 60);
+    const profiles = [...this.users].filter(([, u]) => u.profile).sort((x, y) => (y[1].profileAt || 0) - (x[1].profileAt || 0)).slice(0, 100).map(([, u]) => ({...u.profile, _at: u.profileAt || 0}));
+    KV.set('soc:' + uid, {v: 1, uid, at: this.at, lo: this.lo, followsAt: this.followsAt, following: [...this.following], followers: this.followers, posts, profiles});
+  },
+  async hydrate(){
+    this.hydrated = true; const g = this.gen, uid = this.myUid(), c = await KV.get('soc:' + uid);
+    if (g !== this.gen || !c || c.v !== 1 || c.uid !== uid) return false;
+    this.cacheUid = uid; this.following = new Set((c.following || []).filter(x => typeof x === 'string')); this.followers = (c.followers || []).filter(x => typeof x === 'string');
+    this.followsAt = +c.followsAt || 0; this.lo = +c.lo || 0; this.at = +c.at || 0;
+    (c.profiles || []).forEach(p => { if (p && typeof p.uid === 'string') { const {_at, ...pr} = p; const u = this.users.get(p.uid) || {}; u.profile = pr; u.profileAt = +_at || 0; this.users.set(p.uid, u); } });
+    const ids = (c.posts || []).map(p => this.cleanPost(p)).filter(Boolean).map(p => this.putPost(p).id);
+    this.fFollow = [...ids, ...this.fFollow, ...this.optim.keys()]; this.rebuildFeed(); this.loaded = true; this.fromCache = true; return true;
+  },
+  async load(force){
     if (!this.ready() || this.loading) return;
-    this.loading = true;
+    const g = this.gen; this.loading = true; this.tryAt = Date.now();
     try {
-      if (!more) await this.loadFollows();
-      const sq = {from: [{collectionId: 'posts'}], select: POST_FIELDS, orderBy: [{field: {fieldPath: 'start'}, direction: 'DESCENDING'}], limit: 40};
-      if (more && this.feed.length) sq.where = ff('start', 'LESS_THAN', this.feed[this.feed.length - 1].start);
-      const res = await Cloud.queryRoot(sq);
-      const posts = res.filter(r => r.document).map(r => this.parsePost(r.document));
-      this.more = posts.length === 40;
-      this.feed = more ? [...this.feed, ...posts] : posts;
-      this.loaded = true; this.err = null;
-      if (!more) this.loadNotifs();
-      // perfiles de los autores (aro del avatar): una sola petición por carga del feed
-      const authors = [...new Set(posts.map(p => p.uid))].filter(id => id !== this.myUid());
-      if (authors.length) this.profilesOf(authors).then(() => socRender()).catch(() => {});
-    } catch (e) { this.err = e.offline ? 'Sin conexión. Conéctate para ver el feed.' : 'No se ha podido cargar el feed.'; if (!e.offline) console.warn('feed', e); }
-    this.loading = false; socRender();
+      if (!this.hydrated && await this.hydrate() && g === this.gen) { socRender(); if (!force && Date.now() - this.at < this.FRESH) return; }
+      if (g !== this.gen) return;
+      await this.fetchFollowing(g);
+      if (g !== this.gen) return;
+      if (this.mode === 'discover') await this.loadDiscover(false, true);
+    } catch (e) { if (g === this.gen) { this.err = e.offline ? 'Sin conexión. Conéctate para ver el feed.' : 'No se ha podido cargar el feed.'; this.errKind = e.offline ? 'offline' : 'server'; if (!e.offline) console.warn('feed', e); } }
+    finally { if (g === this.gen) { this.loading = false; socRender(); } }
+  },
+  async fetchFollowing(g){
+    const me = this.myUid(), now = Date.now();
+    if (!this.followsAt || now - this.followsAt > this.FOLLOWS_TTL) { try { await this.loadFollows(); } catch (e) { if (!this.followsAt) throw e; } } // si falla pero hay caché, se usa
+    if (g !== this.gen) return;
+    const uids = [...this.following, me], lo0 = now - 7 * 864e5; let lo = lo0;
+    const r = await this.windowPosts(uids, null, lo0); if (g !== this.gen) return;
+    let got = r.posts, failed = r.failed;
+    if (got.length < 5) { lo = now - 30 * 864e5; const r2 = await this.windowPosts(uids, lo0, lo); if (g !== this.gen) return; got = got.concat(r2.posts); failed = [...new Set([...failed, ...r2.failed])]; }
+    const seen = new Set(got.map(p => p.id)); seen.forEach(id => this.optim.delete(id));
+    const keep = this.fFollow.map(id => this.posts.get(id)).filter(p => p && uids.includes(p.uid) && !seen.has(p.id) && (p.start < lo || failed.includes(p.uid)));
+    for (const [id, p] of this.optim) if (!seen.has(id) && S.workouts.some(w => w.id === p.wid && w.shared)) keep.push(p); else if (!seen.has(id)) this.optim.delete(id);
+    this.fFollow = [...got, ...keep].map(p => p.id); this.lo = Math.min(this.lo || lo, lo);
+    this.more = true; this.loaded = true; this.fromCache = false; this.err = null; this.errKind = ''; this.at = Date.now(); this.photoFail.clear(); this.rebuildFeed();
+    const authors = [...new Set(this.fFollow.map(id => this.posts.get(id).uid))].filter(id => id !== me), fans = this.followers.filter(u => !this.following.has(u)).slice(0, 12);
+    this.profilesOf([...authors, ...fans]).then(() => { if (g === this.gen) { socRender(); this.saveCache(); } }).catch(() => {});
+    this.pollNotifs(); this.saveCache();
+  },
+  async loadOlder(){ // «Ver entrenos anteriores»: 30 días más
+    if (!this.ready() || this.loading || !this.loaded) return; const g = this.gen; this.loading = true;
+    try {
+      const uids = [...this.following, this.myUid()], hi = this.lo, lo = hi - 30 * 864e5, r = await this.windowPosts(uids, hi, lo); if (g !== this.gen) return;
+      this.fFollow = [...this.fFollow, ...r.posts.map(p => p.id)]; this.lo = lo; this.more = r.posts.length > 0; this.rebuildFeed(); this.saveCache();
+      this.profilesOf([...new Set(r.posts.map(p => p.uid))].filter(id => id !== this.myUid())).then(() => socRender()).catch(() => {});
+    } catch (e) { if (g === this.gen) { this.err = e.offline ? 'Sin conexión. Conéctate para ver el feed.' : 'No se ha podido cargar el feed.'; this.errKind = e.offline ? 'offline' : 'server'; } }
+    finally { if (g === this.gen) { this.loading = false; socRender(); } }
+  },
+  async loadDiscover(more, force){
+    const d = this.disc; if (!this.ready() || d.loading) return;
+    if (!more && !force && d.loaded && Date.now() - d.at < this.DISC_TTL) return;
+    const g = this.gen; d.loading = true; if (!more) { this.err = this.mode === 'discover' ? null : this.err; }
+    try {
+      const sq = {from: [{collectionId: 'posts'}], select: POST_FIELDS, orderBy: [{field: {fieldPath: 'start'}, direction: 'DESCENDING'}], limit: 20}, last = more && this.fDisc.length ? this.posts.get(this.fDisc[this.fDisc.length - 1]) : null;
+      if (last) sq.where = ff('start', 'LESS_THAN', last.start);
+      const res = await Cloud.queryRoot(sq); if (g !== this.gen) return;
+      const ps = res.filter(r => r.document).map(r => this.parsePost(r.document)).filter(Boolean);
+      d.more = res.filter(r => r.document).length >= 20; this.fDisc = more ? [...this.fDisc, ...ps.map(p => p.id)] : ps.map(p => p.id); d.loaded = true; d.at = Date.now(); this.rebuildFeed();
+      this.profilesOf([...new Set(ps.map(p => p.uid))].filter(id => id !== this.myUid())).then(() => socRender()).catch(() => {});
+    } catch (e) { if (g === this.gen) { d.loaded = d.loaded || false; this.err = e.offline ? 'Sin conexión. Conéctate para ver el feed.' : 'No se ha podido cargar el feed.'; this.errKind = e.offline ? 'offline' : 'server'; } }
+    finally { if (g === this.gen) { d.loading = false; socRender(); } }
+  },
+  autoRefresh(){ // refresco automático: al volver a la app, al recuperar la red y al pintar el feed con datos de más de 5 min
+    if (!this.ready() || tab !== 'social' || this.loading || !this.loaded || Date.now() - this.tryAt < 60e3) return;
+    if (Date.now() - this.at > this.FRESH) this.refresh(true);
+    else if (this.mode === 'discover' && this.disc.loaded && Date.now() - this.disc.at > this.DISC_TTL) this.loadDiscover(false, true);
+  },
+  onOnline(){ this.photoFail.clear(); if (!this.ready() || tab !== 'social' || this.loading) return; if (this.err || !this.loaded) { this.tryAt = 0; this.refresh(true); } else this.autoRefresh(); },
+  /* ---- Contrato 4.8 ---- */
+  userOf(uid){ const u = this.users.get(uid); return (u && u.profile) || null; },
+  nameOf(uid, fallback){ const p = this.userOf(uid); return (p && p.name) || (uid && uid === this.myUid() && this.myName()) || (fallback !== undefined ? fallback : 'Alguien'); },
+  feedList(mode){
+    const me = this.myUid(); mode = mode || this.mode;
+    if (!this._st) this._st = setTimeout(() => { this._st = 0; this.autoRefresh(); }, 0);
+    const of = ids => ids.map(id => this.posts.get(id)).filter(Boolean);
+    if (mode === 'discover') { if (this.ready() && !this.disc.loaded && !this.disc.loading) setTimeout(() => this.loadDiscover(), 0); return of(this.fDisc).filter(p => p.uid !== me && !this.following.has(p.uid)); }
+    if (mode === 'mine') return this.feed.filter(p => p.uid === me);
+    return of(this.fFollow).filter(p => this.following.has(p.uid) || p.uid === me);
+  },
+  feedState(){
+    const d = this.mode === 'discover', ds = this.disc;
+    return {loading: this.loading || (d && ds.loading), err: this.err ? (this.errKind || 'server') : '', cached: this.fromCache, at: d ? ds.at : this.at, more: d ? ds.more : this.more, end: d ? ds.loaded && !ds.more : this.loaded && !this.more};
+  },
+  refresh(force){ if (this.loading) return Promise.resolve(); if (force) { this.err = null; this.errKind = ''; } else if (this.loaded) return Promise.resolve(); return this.load(force); },
+  loadFeed(more){ return more ? this.loadMore() : this.load(true); },
+  loadMore(){ return this.mode === 'discover' ? this.loadDiscover(true) : this.loadOlder(); },
+  onPublished(w){ // inserción optimista: el entreno recién guardado sale el primero sin esperar a la red
+    if (!w || !w.shared || !this.canPublish()) return;
+    try {
+      const id = this.postId(w), p = this.cleanPost({...this.postBody(w), id, uid: this.myUid(), start: w.start, hasPhoto: !!this.photos.get(id), likes: [], commentCount: 0, lastC: null}); if (!p) return;
+      this.optim.set(id, this.putPost(p)); this.fFollow.push(id); this.rebuildFeed(); toast('Publicado en Social'); socRender(); this.saveCache();
+    } catch (e) { console.warn('onPublished', e); }
+  },
+  onFollowChange(uid, on){
+    if (!this.loaded) return; const g = this.gen;
+    if (!on) { this.fFollow = this.fFollow.filter(id => (this.posts.get(id) || {}).uid !== uid); this.rebuildFeed(); socRender(); this.saveCache(); return; }
+    this.windowPosts([uid], null, this.lo || Date.now() - 7 * 864e5).then(r => { if (g !== this.gen) return; this.fFollow = [...this.fFollow, ...r.posts.map(p => p.id)]; this.rebuildFeed(); socRender(); this.saveCache(); }).catch(() => {});
+    this.profilesOf([uid]).then(() => { if (g === this.gen) socRender(); }).catch(() => {});
+  },
+  suggestions(){ // «Te siguen» (seguidores que no sigues) y autores de Descubrir: [{uid, name, username, why: 'te-sigue'|'descubrir'}], máx. 8, sin lecturas
+    const me = this.myUid(), out = [], seen = new Set([me]);
+    const add = (uid, why) => { if (out.length >= 8 || !uid || seen.has(uid) || this.following.has(uid)) return; const p = this.userOf(uid); if (!p) return; seen.add(uid); out.push({uid, name: p.name || '', username: p.username || '', why}); };
+    this.followers.forEach(u => add(u, 'te-sigue')); this.fDisc.forEach(id => { const p = this.posts.get(id); if (p) add(p.uid, 'descubrir'); });
+    return out;
+  },
+  async loadPost(pid){
+    try {
+      const d = await Cloud.fs('GET', Cloud.name('posts', pid) + '?' + POST_FIELDS.fields.map(f => 'mask.fieldPaths=' + f.fieldPath).join('&'));
+      if (!d) return null;
+      const old = this.posts.get(pid), p = this.parsePost(d); if (old && old !== p) Object.assign(old, p), this.posts.set(pid, old);
+      socRender(); return this.posts.get(pid) || null;
+    } catch (e) { return null; }
   },
   async loadUser(uid, force){
     let u = this.users.get(uid);
-    if (u && (u.loading || (u.loaded && !force))) return u;
-    u = u || {}; u.loading = true; this.users.set(uid, u);
+    if (u && (u.loading || (u.loaded && !force && Date.now() - (u.at || 0) < this.PROFILE_TTL))) return u;
+    u = u || {}; u.loading = true; this.users.set(uid, u); const g = this.gen;
     try {
       const [pd, posts, fr, fg] = await Promise.all([
         Cloud.fs('GET', Cloud.name('profiles', uid)),
-        Cloud.queryRoot({from: [{collectionId: 'posts'}], select: POST_FIELDS, where: ff('uid', 'EQUAL', uid), limit: 60}),
+        Cloud.queryRoot({from: [{collectionId: 'posts'}], select: POST_FIELDS, where: ff('uid', 'EQUAL', uid), orderBy: [{field: {fieldPath: '__name__'}, direction: 'ASCENDING'}], limit: 20}),
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid), select: {fields: [{fieldPath: 'from'}]}}),
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: {fields: [{fieldPath: 'to'}]}})
       ]);
-      const prof = pd ? docData(pd) : null; if (prof) { try { prof.stats = JSON.parse(prof.stats || '{}'); } catch (e) { prof.stats = {}; } }
-      Object.assign(u, {profile: prof, posts: posts.filter(r => r.document).map(r => this.parsePost(r.document)).sort((a, b) => b.start - a.start),
+      if (g !== this.gen) return u;
+      const prof = pd ? docData(pd) : null; if (prof) { try { prof.stats = JSON.parse(prof.stats || '{}'); } catch (e) { prof.stats = {}; } if (!prof.stats || typeof prof.stats !== 'object') prof.stats = {}; }
+      const docs = posts.filter(r => r.document);
+      Object.assign(u, {profile: prof, profileAt: Date.now(), at: Date.now(), more: docs.length >= 20, cursor: docs.length ? docs[docs.length - 1].document.name : '', posts: this.order2(docs.map(r => this.parsePost(r.document)).filter(p => p && p.uid === uid)),
         followers: fr.filter(r => r.document).map(r => docData(r.document).from), following: fg.filter(r => r.document).map(r => docData(r.document).to), loaded: true, err: null});
     } catch (e) { u.err = e.offline ? 'Sin conexión.' : 'No se ha podido cargar el perfil.'; }
     u.loading = false; socRender(); return u;
   },
+  order2(list){ const seen = new Set(); return list.filter(p => !seen.has(p.id) && seen.add(p.id)).sort((a, b) => b.start - a.start || (a.id < b.id ? -1 : 1)); },
+  async loadUserMore(uid, upto){ // más publicaciones de un perfil (20 por página); upto = mínimo que se quiere tener (Comparar pide hasta 60)
+    const u = this.users.get(uid); if (!u || !u.loaded || u.loadingMore || !u.cursor) return;
+    u.loadingMore = true; const g = this.gen; if (!upto) socRepaint();
+    try {
+      for (let k = 0; k < 4 && u.more && (!upto || u.posts.length < upto); k++) {
+        const res = await Cloud.queryRoot({from: [{collectionId: 'posts'}], select: POST_FIELDS, where: ff('uid', 'EQUAL', uid), orderBy: [{field: {fieldPath: '__name__'}, direction: 'ASCENDING'}], startAt: {values: [{referenceValue: u.cursor}], before: false}, limit: 20});
+        if (g !== this.gen) return;
+        const docs = res.filter(r => r.document), ps = docs.map(r => this.parsePost(r.document)).filter(p => p && p.uid === uid);
+        u.posts = this.order2([...u.posts, ...ps]); u.more = docs.length >= 20; if (docs.length) u.cursor = docs[docs.length - 1].document.name;
+        if (!upto) break;
+      }
+    } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se han podido cargar más entrenos'); }
+    u.loadingMore = false; socRepaint();
+  },
   async profilesOf(uids){
-    const need = uids.filter(id => !(this.users.get(id) && this.users.get(id).profile));
+    const now = Date.now(), need = [...new Set(uids)].filter(id => { const u = this.users.get(id); return !(u && u.profile) || now - (u.profileAt || 0) > this.PROFILE_TTL; }).slice(0, 100);
     if (need.length) {
       try {
         const res = await Cloud.fs('POST', Cloud.root() + ':batchGet', {documents: need.map(id => Cloud.name('profiles', id))});
-        (res || []).forEach(r => { if (r.found) { const p = docData(r.found); try { p.stats = JSON.parse(p.stats || '{}'); } catch (e) { p.stats = {}; } const u = this.users.get(p.uid) || {}; u.profile = p; this.users.set(p.uid, u); } });
+        (res || []).forEach(r => { if (r.found) { const p = docData(r.found); try { p.stats = JSON.parse(p.stats || '{}'); } catch (e) { p.stats = {}; } if (!p.stats || typeof p.stats !== 'object') p.stats = {}; const u = this.users.get(p.uid) || {}; u.profile = p; u.profileAt = Date.now(); this.users.set(p.uid, u); } });
       } catch (e) {}
     }
     return uids.map(id => (this.users.get(id) || {}).profile).filter(Boolean);
@@ -3742,24 +4070,29 @@ const Social = {
     const me = this.myUid();
     await Cloud.commit([{update: {name: Cloud.name('follows', me + '_' + uid), fields: fsFields({from: me, to: uid, ts: Date.now()})}}]);
     this.following.add(uid); const u = this.users.get(uid); if (u && u.followers && !u.followers.includes(me)) u.followers.push(me);
-    this.notify(uid, 'follow', me + '_follow');
+    this.notify(uid, 'follow', me + '_follow'); this.onFollowChange(uid, true);
   },
   async unfollow(uid){
     const me = this.myUid();
     await Cloud.commit([{delete: Cloud.name('follows', me + '_' + uid)}]);
     this.following.delete(uid); const u = this.users.get(uid); if (u && u.followers) u.followers = u.followers.filter(x => x !== me);
+    this.onFollowChange(uid, false);
   },
   async toggleLike(p){
+    const lk = this._lk || (this._lk = new Set()); if (lk.has(p.id)) return; lk.add(p.id); // un solo toque a la vez por publicación
     const me = this.myUid(), liked = p.likes.includes(me);
     p.likes = liked ? p.likes.filter(x => x !== me) : [...p.likes, me]; socRender();
     try {
       await Cloud.commit([{transform: {document: Cloud.name('posts', p.id), fieldTransforms: [{fieldPath: 'likes', [liked ? 'removeAllFromArray' : 'appendMissingElements']: {values: [fsv(me)]}}]}, currentDocument: {exists: true}}]);
       if (!liked) this.notify(p.uid, 'like', `${me}_like_${p.id}`, {pid: p.id, title: p.title || ''});
-    } catch (e) { p.likes = liked ? [...p.likes, me] : p.likes.filter(x => x !== me); socRender(); toast(e.offline ? 'Sin conexión' : 'No se ha podido guardar el me gusta'); }
+    } catch (e) {
+      p.likes = liked ? [...p.likes, me] : p.likes.filter(x => x !== me); socRender(); toast(e.offline ? 'Sin conexión' : 'No se ha podido. Revisa la conexión.');
+      document.querySelectorAll(`[data-act="soc-like"][data-id="${p.id}"]`).forEach(b => { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); });
+    } finally { lk.delete(p.id); }
   },
   async loadComments(pid){
     const c = this.comments.get(pid) || {list: [], loading: false}; this.comments.set(pid, c);
-    if (c.loading) return; c.loading = true;
+    if (c.loading) return; c.loading = true; c.err = false;
     try {
       const res = await Cloud.query(['posts', pid], {from: [{collectionId: 'comments'}], orderBy: [{field: {fieldPath: 'ts'}, direction: 'ASCENDING'}], limit: 200});
       c.list = res.filter(r => r.document).map(r => docData(r.document)); c.loaded = true;
@@ -3768,52 +4101,144 @@ const Social = {
   },
   async addComment(p, text){
     const me = this.myUid(), cid = rid(), body = {uid: me, name: this.myName(), username: this.me().username, text, ts: Date.now()};
-    await Cloud.commit([
-      {update: {name: Cloud.name('posts', p.id, 'comments', cid), fields: fsFields(body)}, currentDocument: {exists: false}},
-      {transform: {document: Cloud.name('posts', p.id), fieldTransforms: [{fieldPath: 'commentCount', increment: fsv(1)}]}, currentDocument: {exists: true}}
-    ]);
+    const lastC = {uid: me, cid, text: text.slice(0, 140), ts: body.ts};
+    const cw = {update: {name: Cloud.name('posts', p.id, 'comments', cid), fields: fsFields(body)}, currentDocument: {exists: false}};
+    let withLast = true;
+    try {
+      await Cloud.commit([cw, {update: {name: Cloud.name('posts', p.id), fields: fsFields({lastC})}, updateMask: {fieldPaths: ['lastC']}, updateTransforms: [{fieldPath: 'commentCount', increment: fsv(1)}], currentDocument: {exists: true}}]);
+    } catch (e) {
+      if (e.status !== 403) throw e; // reglas antiguas (4.7): se repite sin la vista previa
+      withLast = false;
+      await Cloud.commit([cw, {transform: {document: Cloud.name('posts', p.id), fieldTransforms: [{fieldPath: 'commentCount', increment: fsv(1)}]}, currentDocument: {exists: true}}]);
+    }
     const c = this.comments.get(p.id) || {list: []}; c.list.push({_id: cid, ...body}); this.comments.set(p.id, c);
-    p.commentCount = (p.commentCount || 0) + 1;
+    p.commentCount = (p.commentCount || 0) + 1; if (withLast) p.lastC = lastC;
     this.notify(p.uid, 'comment', `${me}_c_${cid}`, {pid: p.id, title: p.title || '', text: text.slice(0, 140)});
+    return {_id: cid, ...body};
   },
   async delComment(p, cid){
-    await Cloud.commit([{delete: Cloud.name('posts', p.id, 'comments', cid)}, {transform: {document: Cloud.name('posts', p.id), fieldTransforms: [{fieldPath: 'commentCount', increment: fsv(-1)}]}, currentDocument: {exists: true}}]);
+    const last = !!(p.lastC && p.lastC.cid === cid), dn = Cloud.name('posts', p.id, 'comments', cid), dec = [{fieldPath: 'commentCount', increment: fsv(-1)}];
+    const plain = {transform: {document: Cloud.name('posts', p.id), fieldTransforms: dec}, currentDocument: {exists: true}};
+    if (last) {
+      try { await Cloud.commit([{delete: dn}, {update: {name: Cloud.name('posts', p.id), fields: {}}, updateMask: {fieldPaths: ['lastC']}, updateTransforms: dec, currentDocument: {exists: true}}]); }
+      catch (e) { if (e.status !== 403) throw e; await Cloud.commit([{delete: dn}, plain]); }
+    } else await Cloud.commit([{delete: dn}, plain]);
     const c = this.comments.get(p.id); if (c) c.list = c.list.filter(x => x._id !== cid);
-    p.commentCount = Math.max(0, (p.commentCount || 1) - 1);
+    p.commentCount = Math.max(0, (p.commentCount || 1) - 1); if (last) p.lastC = null;
   },
-  async loadNotifs(){
+  /* ---- Avisos 4.8: caché local socn:{uid}, consulta incremental (1 lectura si no hay novedades), freno de 2 min ---- */
+  nst(){
+    const uid = this.myUid();
+    if (!this._n || this._n.uid !== uid) this._n = {uid, at: 0, busy: null, seen: 0, since: null, cache: false, full: 0, err: ''};
+    return this._n;
+  },
+  async ncache(n){ // carga la caché local de avisos y el último visto (una vez por sesión)
+    if (n.cache) return; n.cache = true;
+    const [c, seen] = await Promise.all([KV.get('socn:' + n.uid), KV.get('notifSeen:' + n.uid)]);
+    n.seen = Math.max(n.seen, +seen || 0);
+    if (c && Array.isArray(c.list) && c.list.length && !this.notifLoaded) { this.notifs = c.list.filter(x => x && x._id && typeof x.ts === 'number'); n.full = c.full || 0; this.notifLoaded = true; }
+    this.notifCount(); renderTabs(); this.notifPaint();
+  },
+  notifCount(){ const n = this.nst(); this.unseen = this.notifs.filter(x => x.ts > n.seen).length; },
+  notifPaint(){ const v = cur(); if (tab === 'social' && v && v.type === 'notifs') socRender(); },
+  pollNotifs(force){
+    if (!this.ready()) return Promise.resolve();
+    const n = this.nst();
+    if (n.busy) return n.busy;
+    if (!force && Date.now() - n.at < 120000) return Promise.resolve();
+    n.at = Date.now();
+    return n.busy = this.fetchNotifs(n).catch(() => {}).then(() => { n.busy = null; });
+  },
+  loadNotifs(){ return this.pollNotifs(); }, // compatibilidad: respeta el freno de 2 min
+  async fetchNotifs(n){
+    await this.ncache(n);
+    const uid = n.uid, q = {from: [{collectionId: 'items'}], orderBy: [{field: {fieldPath: 'ts'}, direction: 'DESCENDING'}]};
+    const last = this.notifs.length ? this.notifs[0].ts : 0;
+    let full = !last || Date.now() - n.full > 864e5;
     try {
-      const res = await Cloud.query(['notifs', this.myUid()], {from: [{collectionId: 'items'}], orderBy: [{field: {fieldPath: 'ts'}, direction: 'DESCENDING'}], limit: 40});
-      this.notifs = res.filter(r => r.document).map(r => docData(r.document));
-      const seen = (await KV.get('notifSeen:' + this.myUid())) || 0;
-      this.unseen = this.notifs.filter(n => n.ts > seen).length; this.notifLoaded = true;
-      renderTabs(); socRender();
-    } catch (e) {}
+      let res;
+      if (!full) {
+        res = await Cloud.query(['notifs', uid], {...q, where: ff('ts', 'GREATER_THAN', last - 600000), limit: 20});
+        const rows = res.filter(r => r.document); if (rows.length >= 20 && jsv(rows[rows.length - 1].document.fields.ts) > last) full = true; // tantas novedades que el límite pudo dejar fuera alguna: carga completa
+      }
+      if (full) res = await Cloud.query(['notifs', uid], {...q, limit: 40});
+      const got = res.filter(r => r.document).map(r => docData(r.document)).filter(x => typeof x.ts === 'number');
+      let list;
+      if (full) { list = got; n.full = Date.now(); }
+      else { const m = new Map(this.notifs.map(x => [x._id, x])); got.forEach(x => m.set(x._id, x)); list = [...m.values()]; }
+      list.sort((a, b) => b.ts - a.ts);
+      if (list.length > 60) { // purga en el servidor de los más antiguos (un commit, máx. 20)
+        const extra = list.slice(60, 80); list = list.slice(0, 60);
+        Cloud.commit(extra.map(x => ({delete: Cloud.name('notifs', uid, 'items', x._id)}))).catch(() => {});
+      }
+      this.notifs = list; this.notifLoaded = true; n.err = '';
+      KV.set('socn:' + uid, {list, full: n.full, ts: Date.now()});
+      this.notifCount(); renderTabs();
+      const v = cur(); if (tab === 'social' && v && v.type === 'notifs') { this.markSeen(); const miss = [...new Set(list.map(x => x.from).filter(id => id && !this.userOf(id)))]; if (miss.length) this.profilesOf(miss).then(() => this.notifPaint()).catch(() => {}); }
+      this.notifPaint();
+    } catch (e) { n.err = e.offline ? 'offline' : 'server'; this.notifPaint(); }
   },
-  async markSeen(){ this.unseen = 0; await KV.set('notifSeen:' + this.myUid(), Date.now()); renderTabs(); },
+  async openNotifs(){ // al abrir la pantalla: lo nuevo se marca respecto al último visto y todo pasa a visto
+    const n = this.nst(); await this.ncache(n);
+    n.since = n.seen; await this.markSeen(); this.notifPaint(); this.pollNotifs(true); // abrir la campana es una acción explícita: 1 lectura, sin freno
+    const miss = [...new Set(this.notifs.map(x => x.from).filter(id => id && !this.userOf(id)))];
+    if (miss.length) this.profilesOf(miss).then(() => this.notifPaint()).catch(() => {});
+  },
+  async markSeen(){
+    const n = this.nst(); n.seen = Math.max(n.seen, ...this.notifs.map(x => x.ts));
+    this.unseen = 0; renderTabs(); await KV.set('notifSeen:' + n.uid, n.seen);
+  },
+  teSiguen(){ return this.followers.filter(id => id !== this.myUid() && !this.following.has(id)); },
   async searchUsers(q){
-    q = cleanUser(q);
-    this.search.q = q; const out = () => { const el = $('#socRes'); if (el) el.innerHTML = searchResHTML(); else socRender(); };
-    if (q.length < 2) { this.search.res = []; out(); return; }
+    const raw = q; q = cleanUser(q); const nm = nrm(raw);
+    this.search.q = String(raw || '').trim(); this.search.tok = (this.search.tok || 0) + 1; const tok = this.search.tok;
+    const out = () => socRepaint();
+    if (nm.length < 2 && q.length < 2) { this.search.res = []; this.search.loading = false; out(); return; }
     this.search.loading = true; out();
+    const pre = (f, v) => Cloud.queryRoot({from: [{collectionId: 'profiles'}], where: {compositeFilter: {op: 'AND', filters: [ff(f, 'GREATER_THAN_OR_EQUAL', v), ff(f, 'LESS_THAN', v + '￿')]}}, orderBy: [{field: {fieldPath: f}, direction: 'ASCENDING'}], limit: 10});
     try {
-      const res = await Cloud.queryRoot({from: [{collectionId: 'profiles'}], where: {compositeFilter: {op: 'AND', filters: [ff('username', 'GREATER_THAN_OR_EQUAL', q), ff('username', 'LESS_THAN', q + '')]}}, orderBy: [{field: {fieldPath: 'username'}, direction: 'ASCENDING'}], limit: 20});
-      if (this.search.q !== q) return;
-      this.search.res = res.filter(r => r.document).map(r => { const p = docData(r.document); try { p.stats = JSON.parse(p.stats || '{}'); } catch (e) { p.stats = {}; } const u = this.users.get(p.uid) || {}; u.profile = p; this.users.set(p.uid, u); return p; });
-    } catch (e) { this.search.res = []; }
+      const [a, b] = await Promise.all([q.length >= 2 ? pre('username', q) : [], nm.length >= 2 ? pre('nameLc', nm.slice(0, 40)) : []]);
+      if (this.search.tok !== tok) return;
+      const seen = new Set(), res = [];
+      [...a, ...b].filter(r => r.document).forEach(r => {
+        const p = docData(r.document); if (!p.uid || seen.has(p.uid)) return; seen.add(p.uid);
+        try { p.stats = JSON.parse(p.stats || '{}'); } catch (e) { p.stats = {}; }
+        const u = this.users.get(p.uid) || {}; u.profile = p; this.users.set(p.uid, u); res.push(p);
+      });
+      this.search.res = res;
+    } catch (e) { if (this.search.tok !== tok) return; this.search.res = []; }
     this.search.loading = false; out();
   },
   // Copia un entreno de otra persona a tus ejercicios (crea los que no tengas)
-  exercisesFrom(p){
-    return p.ex.map(e => {
-      let x = exMap.get(e.id);
-      if (!x) x = S.customEx.find(c => norm(c.name) === norm(e.name));
-      if (!x) { x = {id: 'c-' + rid(), name: e.name, muscle: e.muscle || 'completo', equip: e.equip || 'otro', type: e.type || 'wr', aliases: [], custom: true}; S.customEx.push(x); rebuildEx(); Store.mark(); }
-      return {exId: x.id, rest: null, notes: '', ss: null, sets: (e.sets || []).map(s => ({t: s.t || 'n', kg: s.kg ?? null, reps: s.reps ?? null, sec: s.sec ?? null, km: s.km ?? null, min: s.min ?? null}))};
-    });
+  exercisesFrom(p){ // copia un entreno ajeno: se valida todo contra los catálogos (MUSCLES, EQUIP, TYPES) antes de crear ejercicios propios
+    let made = 0; const num0 = (v, hi) => typeof v === 'number' && isFinite(v) && v >= 0 ? Math.min(hi, v) : null;
+    return (Array.isArray(p && p.ex) ? p.ex : []).slice(0, 40).map(e => {
+      if (!e || typeof e !== 'object') return null;
+      const nm = typeof e.name === 'string' ? e.name.replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+      let x = typeof e.id === 'string' ? exMap.get(e.id) : null;
+      if (!x && nm) x = allEx().find(c => norm(c.name) === norm(nm));
+      if (!x) {
+        if (!nm || made >= 25 || S.customEx.length >= 300) return null; made++;
+        const has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+        x = {id: 'c-' + rid(), name: nm, muscle: has(MUSCLES, e.muscle) ? e.muscle : 'completo', equip: has(EQUIP, e.equip) ? e.equip : 'otro', type: has(TYPES, e.type) ? e.type : 'wr', aliases: [], custom: true}; S.customEx.push(x); rebuildEx(); Store.mark();
+      }
+      return {exId: x.id, rest: null, notes: '', ss: null, sets: (Array.isArray(e.sets) ? e.sets : []).slice(0, 60).filter(s => s && typeof s === 'object').map(s => ({t: ['n', 'w', 'f', 'd'].includes(s.t) ? s.t : 'n', kg: num0(s.kg, 2000), reps: num0(s.reps, 5000), sec: num0(s.sec, 172800), km: num0(s.km, 5000), min: num0(s.min, 3000)}))};
+    }).filter(Boolean);
   }
 };
-function socRender(){ if ((tab === 'social' || tab === 'clan') && !ED) { const sc = $('#view').scrollTop; render(); $('#view').scrollTop = sc; } }
+const SOC_KEEP = ['cmtText', 'socQ', 'soUser', 'soBio', 'soName']; // campos que no pueden perder valor, foco ni selección al repintar
+function socRender(){
+  if ((tab !== 'social' && tab !== 'clan') || ED) return;
+  const cv = cur(); if (tab === 'social' && cv && cv.type === 'search') { const el = $('#socRes'); if (el) { el.innerHTML = searchResHTML(); return; } } // Buscar: el campo no se recrea nunca, solo los resultados
+  const v = $('#view'), sc = v.scrollTop, ae = document.activeElement, keep = {};
+  SOC_KEEP.forEach(id => { const el = document.getElementById(id); if (el && 'value' in el) keep[id] = {v: el.value, focus: el === ae, a: el.selectionStart, b: el.selectionEnd, d: el.selectionDirection}; });
+  render(); v.scrollTop = sc;
+  for (const id in keep) { const el = document.getElementById(id), k = keep[id]; if (!el) continue; if (el.value !== k.v) el.value = k.v; if (k.focus) { try { el.focus({preventScroll: true}); if (k.a != null) el.setSelectionRange(k.a, k.b, k.d || 'none'); } catch (e) {} } }
+  if (typeof cmtSync === 'function') cmtSync();
+  Social.mountPhotos(v);
+}
+window.addEventListener('online', () => Social.onOnline());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { Social.autoRefresh(); if (Social.ready()) Social.pollNotifs(); } }); // al volver a la app: feed si tiene >5 min y avisos (ambos con freno; pollNotifs no repite lectura)
 /* Barra inferior persistente: los 5 botones y la píldora se crean UNA vez; luego solo se actualizan aria-current, insignias y la posición de la píldora */
 const TABS = {el: null, pill: null, drag: null, mx: [], w: 48};
 const TAB_DEF = [['home', 'Inicio', 'home'], ['train', 'Entrenar', 'dumbbell'], ['social', 'Social', 'users'], ['clan', 'Clanes', 'shield'], ['me', 'Perfil', 'user']];
@@ -3918,93 +4343,220 @@ function fnPhotoHTML(){
   return u ? `<div class="fnphoto"><img src="${u}" alt="Foto elegida"><div class="stack" style="gap:6px"><button class="btn sm" data-act="fn-photo">Cambiar foto</button><button class="btn sm ghost danger" data-act="fn-photo-del">Quitar</button></div></div>`
     : `<button class="btn block" data-act="fn-photo">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} Añadir foto a la publicación</button>`;
 }
-function postCard(p){
-  const me = Social.myUid(), liked = p.likes.includes(me);
-  const lines = p.ex.slice(0, 3).map(e => { const b = exBestInSets(e.sets || [], e.type); return `<span><b>${e.sets.length} ×</b>${esc(e.name)}${b ? `<em>${esc(setText(b, e.type))}</em>` : ''}</span>`; }).join('');
-  return `<article class="card post">
-    <div class="row"><button class="row who" data-act="soc-user" data-id="${p.uid}">${avatar(p.name, 'sm', n7Of(p.uid))}<span><b>${esc(p.name)}</b><small>@${esc(p.username)} · ${ago(p.start)}</small></span></button></div>
-    ${(() => { const u = Social.photoOf(p); return u === null ? '' : `<button class="post-photo" data-act="soc-post" data-id="${p.id}" data-pid="${p.id}" aria-label="Ver publicación">${u ? `<img src="${u}" alt="Foto del entreno">` : ''}</button>`; })()}
-    <button class="post-body" data-act="soc-post" data-id="${p.id}">
-      <h3>${esc(p.title)}</h3>${p.notes ? `<p>${esc(p.notes)}</p>` : ''}
-      <div class="bm-row" style="align-items:flex-start"><div class="stack" style="flex:1;min-width:0">
-        <div class="row" style="gap:16px"><div class="stat"><b>${fmtDur(p.end - p.start)}</b><span>Duración</span></div><div class="stat"><b>${fmtKg(p.vol || 0)}</b><span>Volumen</span></div></div>
-        <div class="ex-lines">${lines}${p.ex.length > 3 ? `<span class="muted small">y ${p.ex.length - 3} más</span>` : ''}</div></div>
-        <div class="side">${p.prs.length ? `<span class="pill gold">${ICON.trophy} ${plural(p.prs.length, 'chiquipunto', 'chiquipuntos')}</span>` : ''}<div class="bm-xs">${bodyMap(p.muscles, {labels: false})}</div></div></div>
-    </button>
-    <div class="post-actions">
-      <button class="${liked ? 'liked' : ''}" data-act="soc-like" data-id="${p.id}" aria-pressed="${liked}" aria-label="Me gusta">${liked ? ICON.heartFill : ICON.heart}<span class="num">${p.likes.length || ''}</span></button>
-      <button data-act="soc-post" data-id="${p.id}" aria-label="Comentarios">${ICON.comment}<span class="num">${p.commentCount || ''}</span></button>
-      <button class="end" data-act="soc-copy" data-id="${p.id}">${ICON.copy}<span>Copiar</span></button>
-      ${p.uid !== me ? `<button data-act="soc-compare" data-id="${p.uid}">${ICON.compare}<span>Comparar</span></button>` : `<button data-act="soc-photo" data-id="${p.id}" aria-label="${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}">${ICON.camera}<span>Foto</span></button>`}
-    </div></article>`;
+/* Social 4.8 · tarjeta del feed (P2). Solo usa el contrato de Social; cada tarjeta se genera en try/catch */
+const SOC_HIDE = new Set(); // publicaciones propias que acabo de dejar de publicar (se ocultan hasta que Sync las borre)
+const SOC_ASKED = new Set(); // uids de quienes dan me gusta cuyo perfil ya se ha pedido
+const SOC_REFRESH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.5L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.5l1.7-2M20 20v-4.5h-4.5"/></svg>';
+const nameOfPost = p => String(Social.nameOf(p.uid, p.name) || p.name || 'Alguien');
+const userNameOfPost = p => { const u = Social.userOf(p.uid); return String((u && u.username) || (p.uid === Social.myUid() && Social.me() && Social.me().username) || p.username || ''); };
+function postLikeLine(p){
+  const me = Social.myUid(), likes = (Array.isArray(p.likes) ? p.likes : []).filter(x => typeof x === 'string'), mine = likes.includes(me), others = likes.filter(x => x !== me);
+  const names = others.map(u => Social.userOf(u)).filter(Boolean).map(u => shortName(u.name || u.username || '')).filter(Boolean), B = n => `<b>${esc(n)}</b>`, N = others.length;
+  if (mine) return !N ? 'Te gusta' : N === 1 ? (names[0] ? `Os gusta a ti y a ${B(names[0])}` : 'Os gusta a ti y a 1 más') : `Os gusta a ti y a ${N} más`;
+  if (!N) return '';
+  if (!names.length) return plural(N, 'me gusta', 'me gusta');
+  if (N === 1) return `Le gusta a ${B(names[0])}`;
+  if (N === 2 && names.length === 2) return `Le gusta a ${B(names[0])} y ${B(names[1])}`;
+  return `Le gusta a ${B(names[0])} y ${N - 1} más`;
 }
+const PR_SHORT = {'Peso máximo': 'Peso', 'Volumen de serie': 'Volumen', '1RM estimado': '1RM'}; // tipo de récord en la tarjeta (nombres cortos)
+function postCardH(p, opt){
+  opt = opt && typeof opt === 'object' ? opt : {};
+  if (SOC_HIDE.has(p.id)) return '';
+  const me = Social.myUid(), mine = p.uid === me, likes = Array.isArray(p.likes) ? p.likes : [], liked = likes.includes(me), id = esc(p.id);
+  const ex = Array.isArray(p.ex) ? p.ex.filter(e => e && typeof e === 'object') : [];
+  const prs = Array.isArray(p.prs) ? p.prs.filter(r => r && typeof r === 'object') : [];
+  const mus = p.muscles && typeof p.muscles === 'object' ? Object.entries(p.muscles).filter(([, v]) => +v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => MUSCLES[k] || (String(k).charAt(0).toUpperCase() + String(k).slice(1))) : [];
+  const menu = `<button class="iconbtn post-more" data-act="soc-menu" data-id="${id}" aria-label="Más opciones">${ICON.dots}</button>`;
+  const head = opt.noHead
+    ? `<div class="post-date"><span>${esc(fmtDate(p.start, false))} · ${esc(ago(p.start))}</span>${menu}</div>`
+    : `<div class="post-head"><button class="who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(nameOfPost(p), 'sm', n7Of(p.uid))}<span><b>${esc(nameOfPost(p))}</b><small>@${esc(userNameOfPost(p))} · ${esc(ago(p.start))}</small></span></button>${menu}</div>`;
+  const phKnown = Social.photos && Social.photos.has(p.id), photoOk = p.hasPhoto && !(phKnown && !Social.photos.get(p.id)) && !Social.photoFail.has(p.id);
+  const dur = Math.max(0, (+p.end || 0) - (+p.start || 0)), sets = Number.isFinite(+p.sets) && p.sets != null ? +p.sets : ex.reduce((a, e) => a + (Array.isArray(e.sets) ? e.sets.length : 0), 0);
+  const rows = ex.slice(0, 2).map(e => { const ss = Array.isArray(e.sets) ? e.sets : [], b = ss.length ? exBestInSets(ss, e.type) : null; return `<span><b>${ss.length} ×</b><i class="nm">${esc(e.name)}</i>${b ? `<em>${esc(setText(b, e.type))}</em>` : '<em></em>'}</span>`; }).join('');
+  const prH = prs.length ? `<div class="post-prs">${prs.slice(0, 2).map(r => { const lb = PR_SHORT[r.label] || r.label || '', txt = String(r.txt == null ? '' : r.txt); return `<div><i>✦</i><b>${esc(r.ex)}</b><span>· ${lb && !txt.toLowerCase().includes(String(lb).toLowerCase()) ? `<em>${esc(lb)}</em> ` : ''}${esc(txt)}</span></div>`; }).join('')}${prs.length > 2 ? `<div class="more">+${prs.length - 2} chiquipuntos más</div>` : ''}</div>` : '';
+  const likeL = postLikeLine(p), lc = p.lastC && typeof p.lastC === 'object' && p.lastC.text ? p.lastC : null, cc = +p.commentCount || 0;
+  const social = likeL || lc ? `<button class="post-social" data-act="soc-post" data-id="${id}" data-cmt="1">${likeL ? `<div>${likeL}</div>` : ''}${lc ? `<div class="cm"><b>${esc(shortName(Social.nameOf(lc.uid, '') || 'Alguien'))}</b> ${esc(lc.text)}</div>` : ''}${cc > 1 ? `<div>Ver los ${cc} comentarios</div>` : ''}</button>` : '';
+  return `<article class="card post" data-pid="${id}">${head}
+    <button class="post-body" data-act="soc-post" data-id="${id}"><h3>${esc(p.title)}</h3>${mus.length ? `<div class="post-mus">${esc(mus.join(' · '))}</div>` : ''}${p.notes ? `<p>${esc(p.notes)}</p>` : ''}</button>
+    ${photoOk ? `<button class="post-photo" data-act="soc-post" data-id="${id}" data-pid="${id}" aria-label="Ver publicación"></button>` : ''}
+    <button class="post-body" data-act="soc-post" data-id="${id}"><div class="post-stats"><div><b>${esc(fmtDur(dur))}</b><span>Duración</span></div><div><b>${esc(fmtKg(+p.vol || 0))}</b><span>Volumen</span></div><div><b>${esc(sets)}</b><span>Series</span></div></div>${prH}${ex.length ? `<div class="ex-lines">${rows}${ex.length > 2 ? `<span class="all">Ver los ${ex.length} ejercicios</span>` : ''}</div>` : ''}</button>
+    ${social}
+    <div class="post-actions"><button class="${liked ? 'liked' : ''}" data-act="soc-like" data-id="${id}" aria-pressed="${liked}" aria-label="Me gusta">${liked ? ICON.heartFill : ICON.heart}<span class="num">${likes.length || ''}</span></button><button data-act="soc-post" data-id="${id}" data-cmt="1" aria-label="Comentarios">${ICON.comment}<span class="num">${cc || ''}</span></button></div></article>`;
+}
+function postCard(p, opt){ try { return postCardH(p, opt); } catch (e) { return ''; } }
 function socialSetupHTML(edit){
   const p = Social.me() || {}, sug = norm(Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : '').replace(/ /g, '').slice(0, 20);
   return `<div class="card stack">${edit ? '' : `<h2>Entrena con tus amigos</h2><div class="muted">Crea tu perfil para seguir a tus amigos, ver sus entrenos, darles me gusta y comentar. Tus medidas y datos privados no se comparten nunca.</div>`}
     ${edit && Cloud.session ? `<label class="f">Nombre (el que se ve en el clan y el feed)<input id="soName" value="${esc(Cloud.session.name || '')}" maxlength="40" autocomplete="nickname"></label>` : ''}
     <label class="f">Nombre de usuario<div class="at"><span>@</span><input id="soUser" value="${esc(p.username || sug)}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20"></div></label>
-    <div class="small muted">3–20 caracteres: minúsculas, números, punto o guion bajo. Tus amigos te buscarán por él.${edit ? ' Cambiar el @ no cambia el nombre de arriba.' : ''}</div>
-    <label class="f">Sobre ti (opcional)<input id="soBio" value="${esc(p.bio || '')}" maxlength="120" placeholder="p. ej. Torso/Pierna 4 días · objetivo: 100 kg en banca"></label>
-    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="soPriv" style="width:auto;margin-top:3px" ${p.private ? 'checked' : ''}><span>Perfil privado<br><span class="small muted" style="font-weight:500">No publica tus entrenos; sigues pudiendo ver y seguir a otros.</span></span></label>
     <div id="soMsg" class="small err"></div>
+    <div class="small muted">3–20 caracteres: minúsculas, números, punto o guion bajo. Tus amigos te buscarán por él.${edit ? ' Cambiar el @ no cambia el nombre de arriba.' : ''}</div>
+    <label class="f">Sobre ti (opcional)<input id="soBio" value="${esc(p.bio || '')}" maxlength="120" placeholder="Ej.: objetivo 100 kg en banca"></label>
+    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="soPriv" style="width:auto;margin-top:3px" ${p.private ? 'checked' : ''}><span>Perfil privado<br><span class="small muted" style="font-weight:500">No se publican tus entrenos ni tus estadísticas. Te pueden encontrar y seguir por tu @.</span></span></label>
     <button class="btn primary block" data-act="soc-claim">${edit ? 'Guardar perfil' : 'Crear mi perfil'}</button></div>`;
 }
+function socEmpty(emoji, title, text, btns, link){
+  return `<div class="card stack empty">${EI(emoji)}<h3>${title}</h3><div class="small muted">${text}</div>${btns ? `<div class="${btns.length > 1 ? 'grid2' : 'stack'}">${btns.map(([act, label, cls, k]) => `<button class="btn ${cls || ''}" data-act="${act}"${k ? ` data-k="${k}"` : ''}>${label}</button>`).join('')}</div>` : ''}${link ? `<button class="linkbtn" data-act="${link[0]}">${link[1]}</button>` : ''}</div>`;
+}
+function socSeen(at){ const a = ago(at); return /^hace /.test(a) ? 'visto ' + a : /^(ahora|ayer)$/.test(a) ? 'visto ' + a : 'visto el ' + a; }
 function viewSocial(){
   if (!Cloud.enabled() || !Cloud.session) return `<div class="empty">${EI('👥')}<h3>Social</h3><div>La parte social necesita que la app tenga cuentas (Firebase configurado). Mira el LEEME.</div></div>`;
   if (!Social.ready()) return socialSetupHTML(false);
-  if (!Social.loaded && !Social.loading && !Social.err) setTimeout(() => Social.loadFeed(), 0);
-  const me = Social.myUid();
-  let h = `<div class="chips">${[['following', 'Siguiendo'], ['discover', 'Descubrir'], ['mine', 'Tus entrenos']].map(([k, l]) => `<button class="chip" data-act="soc-mode" data-k="${k}" aria-pressed="${Social.mode === k}">${l}</button>`).join('')}</div>`;
-  if (Social.err) h += `<div class="card row between"><span class="small">${esc(Social.err)}</span><button class="btn sm" data-act="soc-refresh">Reintentar</button></div>`;
-  if (!Social.loaded) return h + (Social.err ? '' : '<div class="empty">Cargando el feed…</div>');
-  const list = Social.feed.filter(p => Social.mode === 'mine' ? p.uid === me : Social.mode === 'following' ? (Social.following.has(p.uid) || p.uid === me) : p.uid !== me);
-  if (Social.mode === 'following' && !Social.following.size) h += `<div class="card stack empty">${EI('🤝')}<h3>Aún no sigues a nadie</h3><div class="small muted">Busca a tus amigos por su nombre de usuario o mira quién entrena en Descubrir.</div><div class="grid2"><button class="btn primary" data-act="soc-search">Buscar amigos</button><button class="btn" data-act="soc-mode" data-k="discover">Descubrir</button></div></div>`;
-  if (Social.me().private) h += `<div class="card small muted">Tu perfil es privado: tus entrenos no se publican. Puedes cambiarlo en tu perfil público.</div>`;
-  h += list.map(postCard).join('') || (Social.mode === 'mine' ? `<div class="empty">${EI('📸')}<h3>Aún no has publicado</h3><div>Al terminar un entreno, marca «Publicar en el feed» y aparecerá aquí.</div><button class="btn primary" data-act="tab" data-tab="train">Empezar un entreno</button></div>` : Social.mode === 'discover' ? `<div class="empty">${EI('🌱')}<h3>Todavía no hay nada</h3><div>Aún no ha publicado nadie más. ¡Invita a tus amigos a Hierro!</div></div>` : (Social.following.size ? `<div class="empty">${EI('😴')}<h3>Todo tranquilo</h3><div>Las personas que sigues aún no han publicado entrenos.</div><button class="btn" data-act="soc-mode" data-k="discover">Descubrir gente</button></div>` : ''));
-  if (Social.more && Social.feed.length) h += `<button class="btn block" data-act="soc-more">${Social.loading ? 'Cargando…' : 'Ver más'}</button>`;
+  const st = Social.feedState();
+  if (!Social.loaded && !st.loading && !st.err) setTimeout(() => Social.refresh(), 0);
+  if (Social.mode !== 'discover') Social.mode = 'following';
+  const mode = Social.mode;
+  let h = `<div class="soc-top"><div class="chips">${[['following', 'Siguiendo'], ['discover', 'Descubrir']].map(([k, l]) => `<button class="chip" data-act="soc-mode" data-k="${k}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div><button class="iconbtn${st.loading ? ' spin' : ''}" data-act="soc-refresh" aria-label="Actualizar">${SOC_REFRESH_ICON}</button></div>`;
+  const list = (Social.feedList(mode) || []).filter(p => p && !SOC_HIDE.has(p.id));
+  if (list.length && st.err) h += `<div class="card row between small"><span>${st.err === 'offline' ? 'Sin conexión' : 'No se ha podido actualizar'}${st.at ? ' · ' + esc(socSeen(st.at)) : ''}</span><button class="btn sm" data-act="soc-refresh">Reintentar</button></div>`;
+  if (Social.me().private) h += `<div class="card row between small"><span>Tu perfil es privado: tus entrenos no se publican.</span><button class="linkbtn" data-act="soc-edit">Cambiar</button></div>`;
+  if (mode === 'discover') {
+    let sg = []; try { sg = (Social.suggestions() || []).slice(0, 8); } catch (e) {}
+    if (sg.length) h += `<div class="soc-sug"><b>Gente que entrena</b><div class="sug">${sg.map(s => { const uid = s.uid || s.id, u = Social.userOf(uid) || s; return `<div><button class="who" data-act="soc-user" data-id="${esc(uid)}">${avatar(u.name || u.username || '?', 'sm', n7Of(uid))}<b>${esc(shortName(u.name || u.username))}</b></button><button class="btn sm" data-act="soc-follow" data-id="${esc(uid)}">Seguir</button></div>`; }).join('')}</div></div>`;
+  }
+  if (!list.length) {
+    if (st.err) h += st.err === 'offline' ? socEmpty('📡', 'Sin conexión', 'Conéctate para ver qué han entrenado tus amigos.', [['soc-refresh', 'Reintentar', 'primary']]) : socEmpty('⚠️', 'No se ha podido cargar', 'Inténtalo de nuevo en un momento.', [['soc-refresh', 'Reintentar', 'primary']]);
+    else if (st.loading || !Social.loaded) h += '<article class="card post skel" aria-hidden="true"></article>'.repeat(3);
+    else if (mode === 'discover') h += socEmpty('🌱', 'Aún no hay nadie más', 'Invita a tus amigos y esto se llenará de entrenos.', [['soc-invite', 'Invitar amigos', 'primary']]);
+    else if (!Social.following.size) h += socEmpty('🤝', 'Aún no sigues a nadie', 'Busca a tus amigos por su nombre o mira quién entrena en Descubrir.', [['soc-search', 'Buscar amigos', 'primary'], ['soc-mode', 'Descubrir', '', 'discover']], ['soc-invite', 'Invitar a un amigo']);
+    else h += socEmpty('😴', 'Todo tranquilo por aquí', 'Tus amigos no han publicado últimamente. ¡Da ejemplo!', [['tab', 'Empezar un entreno', 'primary'], ['soc-mode', 'Descubrir', '', 'discover']]);
+    return h.replace('data-act="tab"', 'data-act="tab" data-tab="train"');
+  }
+  if (mode === 'following' && !Social.following.size) h += socEmpty('🤝', 'Aún no sigues a nadie', 'Busca a tus amigos por su nombre o mira quién entrena en Descubrir.', [['soc-search', 'Buscar amigos', 'primary'], ['soc-mode', 'Descubrir', '', 'discover']], ['soc-invite', 'Invitar a un amigo']);
+  // nombres de quienes dan me gusta: se piden una vez (para «Le gusta a Pepe»)
+  const need = [...new Set(list.flatMap(p => (Array.isArray(p.likes) ? p.likes : []).filter(x => typeof x === 'string' && x !== Social.myUid() && !Social.userOf(x) && !SOC_ASKED.has(x))))].slice(0, 30);
+  if (need.length) { need.forEach(x => SOC_ASKED.add(x)); setTimeout(() => { try { Promise.resolve(Social.profilesOf(need)).then(() => socRender(), () => {}); } catch (e) {} }, 0); }
+  h += list.map(p => postCard(p)).join('');
+  if (st.more) h += `<button class="btn block" data-act="soc-more"${st.loading ? ' disabled' : ''}>${st.loading ? 'Cargando…' : 'Ver entrenos anteriores'}</button>`;
+  else if (st.end) h += '<div class="soc-end">Ya has visto todo</div>';
   return h;
 }
+/* Detalle de una publicación (4.8): maquetación propia, comentarios con barra fija. Todo lo que viene del post se trata como hostil (tipos y esc). */
+const POSTX = {}; // publicaciones pedidas por id que no estaban en memoria: {s: 'loading'|'gone', t}
+const PFREQ = new Set(); // perfiles ya pedidos desde el detalle (no se repite la petición)
+const CMX = new Set(); // comentarios largos desplegados con «ver más»
+const DET = {pid: '', until: 0, focus: '', poll: new Set()};
+let CMT_BUSY = false;
+const detRender = () => { if (tab === 'social' || tab === 'clan') socRender(); else render(); };
+const detName = uid => Social.nameOf(uid, '') || 'Alguien';
+function detProfiles(uids){
+  const need = [...new Set(uids)].filter(id => typeof id === 'string' && id && !Social.userOf(id) && !PFREQ.has(id) && id !== Social.myUid()).slice(0, 30);
+  if (!need.length) return; need.forEach(id => PFREQ.add(id));
+  setTimeout(() => Social.profilesOf(need).then(() => detRender()), 0);
+}
+function detLikeLine(likes, me){
+  if (!likes.length) return '';
+  const mineL = likes.includes(me), others = likes.filter(x => x !== me), named = others.filter(id => Social.userOf(id)).slice(0, mineL ? 2 : 3);
+  if (!mineL && !named.length) return `${likes.length} me gusta`;
+  const parts = (mineL ? ['ti'] : []).concat(named.map(id => `<b>${esc(shortName(Social.nameOf(id, '')))}</b>`)), rest = others.length - named.length;
+  const t = rest > 0 ? parts.join(', ') + ` y ${rest} más` : parts.length > 1 ? parts.slice(0, -1).join(', ') + ' y ' + parts[parts.length - 1] : parts[0];
+  return mineL ? (others.length ? `Os gusta a ${t}` : 'Te gusta') : `Le gusta a ${t}`;
+}
+function cmtHTML(m, p, me, mine){
+  const uid = String(m.uid || ''), nm = detName(uid), id = String(m._id || ''), can = uid === me || mine, open = CMX.has(id);
+  return `<div class="comment" data-cid="${esc(id)}">${avatar(nm, 'sm')}<div class="cm-b"><div class="cm-h"><b>${esc(nm)}</b><span class="muted">· ${esc(ago(+m.ts || 0))}</span>${can ? `<button class="cm-del" data-act="soc-del-comment" data-id="${esc(p.id)}" data-c="${esc(id)}">Borrar</button>` : ''}</div><div class="cm-t${open ? ' open' : ''}">${esc(m.text)}</div><button class="cm-more" data-act="soc-cmt-more" data-c="${esc(id)}" hidden>${open ? 'ver menos' : 'ver más'}</button></div></div>`;
+}
+function cmtFit(){ document.querySelectorAll('#comments .cm-t').forEach(t => { const b = t.nextElementSibling; if (b) b.hidden = !(t.classList.contains('open') || t.scrollHeight > t.clientHeight + 1); }); }
+function cmtSync(){ const f = $('#cmtForm'), i = $('#cmtText'); if (f && i) f.querySelector('button').disabled = CMT_BUSY || !i.value.trim(); }
+function cmtAdd(p, m){ // inserta el comentario nuevo por DOM, sin repintar la vista
+  const f = $('#cmtForm'), list = $('#cmtList'); if (!f || !list || f.dataset.id !== p.id) return;
+  const e = $('#cmtEmpty'); if (e) e.remove();
+  const me = Social.myUid(); list.insertAdjacentHTML('beforeend', cmtHTML(m, p, me, p.uid === me));
+  const h = $('#cmtH'); if (h) h.textContent = `Comentarios (${list.querySelectorAll('.comment').length})`;
+  cmtFit(); const n = list.lastElementChild; if (n) n.scrollIntoView({block: 'nearest'});
+}
+function detScroll(){ if (DET.pid && Date.now() < DET.until) { const c = $('#comments'); if (c) c.scrollIntoView({block: 'start'}); } }
+function detPhoto(pid){ // pone la foto por DOM y solo si es una imagen válida; true cuando ya no hay nada que esperar
+  const el = document.querySelector(`.det-photo[data-dp="${CSS.escape(pid)}"]`); if (!el) return true;
+  if (Social.photoFail.has(pid)) { el.remove(); return true; }
+  const u = Social.photos.get(pid); if (u === undefined) return false;
+  const ok = typeof u === 'string' && u.startsWith('blob:') ? u : safePhoto(u); // blob: lo crea Social.objUrl a partir de una data URL ya validada
+  if (!ok) { el.remove(); return true; }
+  if (!el.querySelector('img')) { const i = new Image(); i.alt = 'Foto del entreno'; i.onload = detScroll; i.src = ok; el.textContent = ''; el.appendChild(i); el.classList.add('on'); }
+  return true;
+}
+function detPhotoLoad(p){
+  if (detPhoto(p.id)) return;
+  Social.photoQueue(p.id); // photoOf ya no descarga: el detalle pide la foto por su cuenta
+  if (DET.poll.has(p.id)) return; DET.poll.add(p.id);
+  let n = 0; const t = () => { if (detPhoto(p.id) || ++n > 40) DET.poll.delete(p.id); else setTimeout(t, 400); }; setTimeout(t, 400);
+}
 function viewPost(pid){
+  const st = navStack[tab] || [], v = st[st.length - 1];
   const p = Social.posts.get(pid);
-  if (!p) return '<div class="empty">Esta publicación ya no está disponible.</div>';
-  const c = Social.comments.get(pid); if (!c || (!c.loaded && !c.loading && !c.err)) setTimeout(() => Social.loadComments(pid), 0);
-  const me = Social.myUid(), mine = p.uid === me;
-  let h = postCard(p).replace('<article class="card post">', '<article class="card post open">');
-  if (mine && S.workouts.some(w => w.id === p.wid)) h += `<div class="grid2"><button class="btn" data-act="soc-photo" data-id="${p.id}">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} ${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.hasPhoto ? `<button class="btn danger" data-act="soc-photo-del" data-id="${p.id}">Quitar foto</button>` : ''}</div>`;
-  if (p.prs.length) h += `<div class="stack"><h3>Chiquipuntos</h3>${p.prs.map(r => `<div class="prcard">${ICON.trophy}<div><b>${esc(r.ex)}</b><small>${esc(r.label)}</small></div><span class="num">${esc(r.txt)}</span></div>`).join('')}</div>`;
-  for (const e of p.ex) {
-    let n = 0;
-    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${e.sets.map(s => `<tr><td><b class="st-${s.t || 'n'}">${s.t === 'n' || !s.t ? ++n : s.t.toUpperCase()}</b></td><td>${setText(s, e.type)}</td></tr>`).join('')}</table></div>`;
+  if (!p) {
+    const x = POSTX[pid];
+    if (x && x.s === 'gone' && Date.now() - x.t < 30000) return `<div class="empty">${EI('🗑️')}<h3>Esta publicación ya no está</h3><div>Puede que su autor la haya borrado.</div><button class="btn" data-act="back">Volver</button></div>`;
+    if (!x || x.s === 'gone') { POSTX[pid] = {s: 'loading', t: Date.now()}; Social.loadPost(pid).then(r => { if (r) delete POSTX[pid]; else POSTX[pid] = {s: 'gone', t: Date.now()}; detRender(); }); }
+    return `<div class="card stack det-skel" aria-busy="true"><div class="sk w40"></div><div class="sk w90"></div><div class="sk w70"></div><div class="sk h"></div></div>`;
   }
-  if (p.likes.length) { setTimeout(() => Social.profilesOf(p.likes).then(() => {}), 0); h += `<div class="small muted">${ICON.heartFill.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Le gusta a ${p.likes.map(id => { const pr = (Social.users.get(id) || {}).profile; return id === me ? 'ti' : pr ? esc(pr.name) : 'alguien'; }).join(', ')}</div>`; }
-  h += `<div class="card stack" id="comments"><h3>Comentarios</h3>${!c || c.loading && !c.loaded ? '<div class="small muted">Cargando…</div>' : c.list.length ? c.list.map(m => `<div class="comment">${avatar(m.name, 'xs')}<div><b>${esc(m.name)}</b> <small class="muted">${ago(m.ts)}</small><div>${esc(m.text)}</div></div>${m.uid === me || mine ? `<button class="iconbtn" data-act="soc-del-comment" data-id="${p.id}" data-c="${m._id}" aria-label="Borrar comentario">${ICON.x}</button>` : ''}</div>`).join('') : '<div class="small muted">Sé el primero en comentar.</div>'}
-    <form id="cmtForm" class="row" data-id="${p.id}"><input id="cmtText" maxlength="500" placeholder="Escribe un comentario…" autocomplete="off"><button class="btn primary sm" type="submit">Enviar</button></form></div>`;
-  h += `<div class="grid2"><button class="btn" data-act="soc-copy" data-id="${p.id}">Empezar este entreno</button><button class="btn" data-act="soc-copy-routine" data-id="${p.id}">Guardar como rutina</button></div>
-    <button class="btn ghost block" data-act="soc-copytext" data-id="${p.id}">Copiar como texto</button>`;
+  const arr = x => Array.isArray(x) ? x : [], isO = x => !!x && typeof x === 'object' && !Array.isArray(x), num = x => Number.isFinite(+x) ? +x : 0;
+  const me = Social.myUid(), mine = p.uid === me, likes = arr(p.likes).filter(x => typeof x === 'string'), exs = arr(p.ex).filter(isO), prs = arr(p.prs).filter(isO), liked = likes.includes(me);
+  const c = Social.comments.get(pid); if (!c || (!c.loaded && !c.loading && !c.err)) setTimeout(() => Social.loadComments(pid), 0);
+  detProfiles([p.uid, ...likes.slice(0, 8), ...(c && c.list ? c.list.map(m => m.uid) : [])]);
+  if (v && v.cmt) { v.cmt = false; DET.pid = pid; DET.until = Date.now() + 2500; DET.focus = pid; }
+  if (DET.pid === pid && Date.now() < DET.until) setTimeout(detScroll, 0);
+  if (DET.focus === pid && c && c.loaded) { DET.focus = ''; if (!c.list.length) setTimeout(() => { const i = $('#cmtText'); if (i) i.focus(); }, 0); }
+  const pr = Social.userOf(p.uid), dt = new Date(num(p.start)), when = fmtDate(num(p.start), false) + ', ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  const mus = Object.entries(isO(p.muscles) ? p.muscles : {}).filter(([k, n]) => Object.prototype.hasOwnProperty.call(MUSCLES, k) && num(n) > 0).map(([k, n]) => [k, num(n)]), mc = Object.fromEntries(mus), m7 = mus.sort((a, b) => b[1] - a[1]);
+  let h = `<div class="card stack det-top">
+    <div class="row"><button class="row who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(detName(p.uid), 'sm', n7Of(p.uid))}<span><b>${esc(detName(p.uid))}</b><small>${pr && pr.username ? '@' + esc(pr.username) + ' · ' : ''}${esc(when)}</small></span></button></div>
+    <h2 class="det-title">${esc(p.title)}</h2>${p.notes ? `<p class="det-notes">${esc(p.notes)}</p>` : ''}`;
+  if (p.hasPhoto) { h += `<div class="det-photo" data-dp="${esc(p.id)}"></div>`; setTimeout(() => detPhotoLoad(p), 0); }
+  if (mine && S.workouts.some(w => w.id === p.wid)) h += `<div class="grid2"><button class="btn sm" data-act="soc-photo" data-id="${esc(p.id)}">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} ${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.hasPhoto ? `<button class="btn sm" data-act="soc-photo-del" data-id="${esc(p.id)}">Quitar foto</button>` : ''}</div>`;
+  h += `</div>
+    <div class="card det-stats"><div class="stat"><b>${fmtDur(num(p.end) - num(p.start))}</b><span>Duración</span></div><div class="stat"><b>${fmtKg(num(p.vol))}</b><span>Volumen</span></div><div class="stat"><b>${fmtN(num(p.sets), 0)}</b><span>Series</span></div><div class="stat"><b>${fmtN(num(p.reps), 0)}</b><span>Reps</span></div></div>`;
+  if (m7.length) h += `<div class="card stack"><h3>Músculos</h3><div class="bm-row"><div class="bm-sm">${bodyMap(mc)}</div><div class="mlist">${m7.slice(0, 4).map(([k, n]) => `<div><i style="background:${heat(n / m7[0][1])}"></i><span>${esc(MUSCLES[k])}</span><b class="num">${n}</b></div>`).join('')}</div></div></div>`;
+  if (prs.length) h += `<div class="stack"><h3>Chiquipuntos</h3>${prs.map(r => `<div class="prcard">${ICON.trophy}<div><b>${esc(r.ex)}</b><small>${esc(r.label)}</small></div><span class="num">${esc(r.txt)}</span></div>`).join('')}</div>`;
+  const safeSet = (s, t) => { try { return setText(s, t); } catch (e) { return ''; } };
+  for (const e of exs) {
+    let n = 0;
+    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${t === 'n' ? ++n : t.toUpperCase()}</b></td><td>${esc(safeSet(s, e.type))}</td></tr>`; }).join('')}</table></div>`;
+  }
+  h += `<button class="btn primary block" data-act="soc-copy" data-id="${esc(p.id)}">Hacer este entreno</button>
+    <div class="grid2 det-acts"><button class="btn" data-act="soc-copy-routine" data-id="${esc(p.id)}">Guardar como rutina</button><button class="btn" data-act="soc-copytext" data-id="${esc(p.id)}">Copiar texto</button></div>
+    <div class="det-likes"><button class="det-flame${liked ? ' liked' : ''}" data-act="soc-like" data-id="${esc(p.id)}" aria-pressed="${liked}" aria-label="Me gusta">${liked ? ICON.heartFill : ICON.heart}<span class="num">${likes.length || ''}</span></button><span class="det-likeline">${detLikeLine(likes, me)}</span></div>`;
+  const total = c && c.loaded ? c.list.length : num(p.commentCount);
+  h += `<div class="card stack" id="comments"><h3 id="cmtH">Comentarios${c && c.err && !c.loaded ? '' : ` (${total})`}</h3><div class="stack" id="cmtList">${
+    !c || (c.loading && !c.loaded) ? '<div class="small muted">Cargando comentarios…</div>'
+    : c.err && !c.loaded ? `<div class="small muted">No se han podido cargar los comentarios.</div><button class="btn sm" data-act="soc-cmt-retry" data-id="${esc(p.id)}">Reintentar</button>`
+    : c.list.length ? c.list.map(m => cmtHTML(m, p, me, mine)).join('') : '<div class="small muted" id="cmtEmpty">Sé el primero en comentar.</div>'}</div></div>
+    <form id="cmtForm" class="cmt-bar" data-id="${esc(p.id)}" autocomplete="off"><input id="cmtText" maxlength="500" placeholder="Escribe un comentario…" enterkeyhint="send" autocomplete="off" aria-label="Comentario"><button class="btn primary sm" type="submit" disabled>Enviar</button></form>`;
+  setTimeout(cmtFit, 0);
   return h;
 }
 function viewUser(uid){
   const me = Social.myUid(), isMe = uid === me;
   const u = Social.users.get(uid); if (!u || (!u.loaded && !u.loading && !u.err)) setTimeout(() => Social.loadUser(uid), 0);
-  if (!u || !u.loaded) return u && u.err ? `<div class="empty">${esc(u.err)}<button class="btn" data-act="soc-user-reload" data-id="${uid}">Reintentar</button></div>` : '<div class="empty">Cargando perfil…</div>';
+  if (!u || !u.loaded) return u && u.err ? `<div class="card empty">${EI('📡')}<h3>No se ha podido cargar el perfil</h3><button class="btn primary" data-act="soc-user-reload" data-id="${esc(uid)}">Reintentar</button></div>` : '<div class="empty">Cargando perfil…</div>';
   const p = u.profile;
   if (!p) return '<div class="empty">Este perfil no existe o se ha eliminado.</div>';
-  const fol = Social.following.has(uid), st = p.stats || {};
-  const n7 = isMe ? n7Of(uid) : st.n7;
-  let h = `<div class="uhead">${avatar(p.name, '', n7)}<div style="flex:1;min-width:0"><h2>${esc(p.name)}</h2>${(rk => rk != null ? rkTag(rk, 18, 'sm') : '')(isMe ? rkPublic() : Number.isInteger(p.rank) && p.rank >= 0 && p.rank <= 24 ? p.rank : null)}<div class="small muted">@${esc(p.username)}${p.private ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="muted" style="font-size:14.5px;line-height:1.35;margin-top:4px">${esc(p.bio)}</div>` : ''}</div></div>
-    <div class="stats" style="padding:0 4px"><button class="stat" data-act="soc-people" data-id="${uid}" data-k="followers"><b>${u.followers.length}</b><span>Seguidores</span></button><button class="stat" data-act="soc-people" data-id="${uid}" data-k="following"><b>${u.following.length}</b><span>Siguiendo</span></button><div class="stat"><b>${st.workouts || 0}</b><span>Entrenos</span></div></div>
-    <div class="small muted" style="padding:0 4px">${plural(st.n30 || 0, 'entreno', 'entrenos')} en los últimos 30 días · ${plural(st.streak || 0, 'semana seguida', 'semanas seguidas')}</div>
-    ${isMe ? `<button class="btn block" data-act="soc-edit">Editar perfil público</button>` : `<div class="grid2"><button class="btn ${fol ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${uid}">${fol ? 'Siguiendo ✓' : 'Seguir'}</button><button class="btn" data-act="soc-compare" data-id="${uid}">${ICON.compare} Comparar</button></div>`}`;
+  const fol = Social.following.has(uid), st = p.stats || {}, priv = !!p.private, nm = shortName(p.name) || 'Esta persona';
+  const n7 = isMe ? n7Of(uid) : st.n7, sid = esc(uid);
+  const rk = isMe ? rkPublic() : Number.isInteger(p.rank) && p.rank >= 0 && p.rank <= 24 ? p.rank : null;
+  let h = `<div class="uhead">${avatar(p.name, '', n7)}<div class="ub"><h2>${esc(p.name)}</h2>${rk != null ? rkTag(rk, 18, 'sm') : ''}<div class="small muted ur">@${esc(p.username)}${!isMe && Social.followers.includes(uid) ? ' <span class="pill accent">Te sigue</span>' : ''}${priv ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="ubio">${esc(p.bio)}</div>` : ''}</div></div>
+    <div class="stats" style="padding:0 4px${priv ? ';grid-template-columns:repeat(2,1fr)' : ''}"><button class="stat" data-act="soc-people" data-id="${sid}" data-k="followers"><b>${u.followers.length}</b><span>Seguidores</span></button><button class="stat" data-act="soc-people" data-id="${sid}" data-k="following"><b>${u.following.length}</b><span>Siguiendo</span></button>${priv ? '' : `<div class="stat"><b>${isMe ? S.workouts.length : st.workouts || 0}</b><span>Entrenos</span></div>`}</div>`;
+  if (!priv) {
+    const ws = weekStart(Date.now()), tIdx = (new Date().getDay() + 6) % 7, tr = new Set(u.posts.filter(x => x.start >= ws).map(x => (new Date(x.start).getDay() + 6) % 7));
+    h += `<div class="card stack uweek"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${isMe ? weekStreak() : clamp(st.streak || 0, 0, 999)}</b> sem. seguidas</span></div>
+      <div class="wk" role="img" aria-label="Días con publicación esta semana: ${tr.size}">${[0, 1, 2, 3, 4, 5, 6].map(i => `<div class="${tr.has(i) ? 'on' : i > tIdx ? 'fut' : ''} ${i === tIdx ? 'today' : ''}"><i>${tr.has(i) ? CHECK_SVG : ''}</i><span>${'LMXJVSD'[i]}</span></div>`).join('')}</div></div>`;
+  }
+  h += isMe ? `<div class="grid2"><button class="btn" data-act="soc-edit">Editar perfil</button><button class="btn" data-act="soc-invite">Invitar amigos</button></div>`
+    : priv ? `<button class="btn block ${fol ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${sid}">${fol ? 'Siguiendo ✓' : 'Seguir'}</button>`
+    : `<div class="grid2"><button class="btn ${fol ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${sid}">${fol ? 'Siguiendo ✓' : 'Seguir'}</button><button class="btn" data-act="soc-compare" data-id="${sid}">${ICON.compare} Comparar</button></div>`;
   h += clanProfileHTML(uid);
-  if (!isMe && !p.private) {
+  if (!isMe && !priv) {
     // «Este mes, frente a frente»: mis entrenos locales del mes frente a sus publicaciones del mes
     const d0 = new Date(), ms0 = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime();
     const mine = inRange(ms0, Date.now() + 1), theirs = u.posts.filter(x => x.start >= ms0);
     const rowsC = [['entrenos', mine.length, theirs.length, v => v], ['volumen', agg(mine).vol, theirs.reduce((a, x) => a + (x.vol || 0), 0), v => fmtKg(v)], ['chiquipuntos', mine.reduce((a, w) => a + (w.prs || []).length, 0), theirs.reduce((a, x) => a + (x.prs || []).length, 0), v => v]];
-    if (mine.length || theirs.length) h += `<div class="card stack"><h3>Este mes, frente a frente</h3><div class="cmp"><div class="a hd">Tú</div><span></span><div class="b hd">${esc(p.name.split(' ')[0])}</div>${rowsC.map(([l, x, y, f]) => { const mx = Math.max(x, y, 1); return `<div class="a">${f(x)}<i style="width:${Math.round(64 * x / mx)}px"></i></div><span>${l}</span><div class="b"><i style="width:${Math.round(64 * y / mx)}px"></i>${f(y)}</div>`; }).join('')}</div></div>`;
+    if (mine.length || theirs.length) h += `<div class="card stack"><h3>Este mes, frente a frente</h3><div class="cmp"><div class="a hd">Tú</div><span></span><div class="b hd">${esc(nm)}</div>${rowsC.map(([l, x, y, f]) => { const mx = Math.max(x, y, 1); return `<div class="a">${f(x)}<i style="width:${Math.round(64 * x / mx)}px"></i></div><span>${l}</span><div class="b"><i style="width:${Math.round(64 * y / mx)}px"></i>${f(y)}</div>`; }).join('')}</div></div>`;
   }
-  if (p.private && !isMe) h += `<div class="empty">${EI('🔒')}<div>Este perfil es privado y no publica sus entrenos.</div></div>`;
-  else h += (u.posts.map(postCard).join('') || `<div class="empty">${EI(isMe ? '📸' : '🌱')}<div>${isMe ? 'Aún no has publicado entrenos. Al terminar uno, marca «Publicar en el feed».' : 'Todavía no ha publicado entrenos.'}</div></div>`);
+  if (priv && !isMe) return h + `<div class="card empty">${EI('🔒')}<h3>Perfil privado</h3><div>${esc(nm)} no publica sus entrenos ni sus estadísticas. Puedes seguirle igualmente.</div></div>`;
+  if (!u.posts.length) return h + (isMe ? `<div class="card empty">${EI('🏋️')}<h3>Aún no has publicado nada</h3><div>Marca “Publicar en el feed” al terminar un entreno.</div><button class="btn primary" data-act="tab" data-tab="train">Empezar un entreno</button></div>` : `<div class="card empty">${EI('🏋️')}<h3>Aún no ha publicado nada</h3></div>`);
+  h += `<div class="section-h"><h2>Entrenos</h2></div>` + u.posts.map(x => postCard(x, {noHead: true})).join('');
+  if (u.more) h += `<button class="btn block" data-act="soc-user-more" data-id="${sid}"${u.loadingMore ? ' disabled' : ''}>${u.loadingMore ? 'Cargando…' : 'Ver más entrenos'}</button>`;
   return h;
 }
 function viewPeople(uid, kind){
@@ -4012,25 +4564,80 @@ function viewPeople(uid, kind){
   const ids = kind === 'followers' ? u.followers : u.following;
   const missing = ids.filter(id => !(Social.users.get(id) || {}).profile);
   if (missing.length && !u._pl) { u._pl = true; Social.profilesOf(missing).then(() => { u._pl = false; socRender(); }); }
-  return `<h2>${kind === 'followers' ? 'Seguidores' : 'Siguiendo'}</h2>` + (ids.map(id => personRow((Social.users.get(id) || {}).profile, id)).join('') || `<div class="empty">${EI('🌱')}<div>Nadie todavía.</div></div>`);
+  return ids.map(id => personRow((Social.users.get(id) || {}).profile, id)).join('') || `<div class="empty">${EI('🌱')}<div>Nadie todavía.</div></div>`;
 }
-function personRow(p, uid){
+function personRow(p, uid, opt = {}){
   const me = Social.myUid(); if (!p) return `<div class="person muted small">Cargando…</div>`;
-  const fol = Social.following.has(p.uid);
-  return `<div class="person"><button class="row who" data-act="soc-user" data-id="${p.uid}">${avatar(p.name, 'sm')}<span><b>${esc(p.name)}</b><small>@${esc(p.username)} · ${plural((p.stats || {}).workouts || 0, 'entreno', 'entrenos')}</small></span></button>${p.uid !== me ? `<button class="btn sm ${fol ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${p.uid}">${fol ? 'Siguiendo' : 'Seguir'}</button>` : ''}</div>`;
+  const fol = Social.following.has(p.uid), id = esc(p.uid);
+  return `<div class="person"><button class="row who" data-act="soc-user" data-id="${id}">${avatar(p.name, 'sm', n7Of(p.uid))}<span><b>${esc(p.name)}</b><small>@${esc(p.username)}${p.uid !== me && Social.followers.includes(p.uid) ? ' <span class="pill accent">Te sigue</span>' : ''}</small></span></button>${p.uid !== me ? `<button class="btn sm pbtn ${fol ? '' : 'primary'}${opt.wide ? ' wide' : ''}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${id}">${fol ? 'Siguiendo' : opt.label || 'Seguir'}</button>` : ''}</div>`;
 }
-function searchResHTML(){ const s = Social.search; return s.loading ? '<div class="small muted">Buscando…</div>' : s.q.length < 2 ? '<div class="small muted">Escribe al menos 2 letras del usuario de tu amigo (por ejemplo, guille).</div>' : s.res.length ? s.res.map(p => personRow(p)).join('') : '<div class="small muted">No hay nadie con ese usuario.</div>'; }
+function searchResHTML(){
+  const s = Social.search, q = nrm(s.q), inv = `<div class="card stack"><h3>Invita a tus amigos</h3><div class="small muted">Mándales el enlace de la app; cuando creen su cuenta y su perfil podrás buscarlos aquí.</div><button class="btn" data-act="soc-invite">Copiar enlace de invitación</button></div>`;
+  if (q.length >= 2) return (s.loading ? '<div class="small muted">Buscando…</div>' : s.res.length ? s.res.map(p => personRow(p)).join('') : '<div class="small muted">No hay nadie que se llame así. Si aún no tiene Hierro, invítale.</div>') + inv;
+  if (q.length === 1) return '<div class="small muted">Escribe al menos 2 letras.</div>' + inv;
+  const ts = Social.teSiguen(), miss = ts.filter(id => !Social.userOf(id)), sg = Social.suggestions().filter(x => x.why === 'descubrir').slice(0, 6).map(x => Social.userOf(x.uid) || x); // los que ya te siguen salen arriba en «Te siguen»
+  if (miss.length && Social._tsKey !== miss.join()) { Social._tsKey = miss.join(); Social.profilesOf(miss).then(() => socRepaint()).catch(() => {}); }
+  const tsp = ts.map(id => Social.userOf(id)).filter(Boolean);
+  let h = '';
+  if (tsp.length) h += `<div class="sect-t">Te siguen</div>${tsp.map(p => personRow(p, p.uid, {label: 'Seguir también', wide: true})).join('')}`;
+  if (sg.length) h += `<div class="sect-t">Sugerencias</div>${sg.map(p => personRow(p)).join('')}`;
+  if (!tsp.length && !sg.length) h += '<div class="small muted">Escribe al menos 2 letras.</div>';
+  return h + inv;
+}
+function socRepaint(){ // repinta solo los resultados si la búsqueda está abierta (el campo no se vuelve a crear)
+  const v = cur(); if (tab === 'social' && v && v.type === 'search') { const el = $('#socRes'); if (el) { el.innerHTML = searchResHTML(); return; } }
+  socRender();
+}
 function viewSearch(){
   const s = Social.search;
-  return `<input id="socQ" type="search" placeholder="Busca por nombre de usuario" value="${esc(s.q)}" autocomplete="off" autocapitalize="none" spellcheck="false">
-    <div class="stack" id="socRes">${searchResHTML()}</div>
-    <div class="card stack"><h3>Invita a tus amigos</h3><div class="small muted">Mándales el enlace de la app; cuando creen su cuenta y su perfil podrás buscarlos aquí.</div><button class="btn" data-act="soc-invite">Copiar enlace de invitación</button></div>`;
+  if (!Social.loaded && !Social.loading && !Social.err) setTimeout(() => Social.refresh(), 0);
+  return `<input id="socQ" type="search" placeholder="Nombre o @usuario" value="${esc(s.q)}" autocomplete="off" autocapitalize="none" spellcheck="false">
+    <div class="stack" id="socRes">${searchResHTML()}</div>`;
 }
 function viewNotifs(){
-  if (!Social.notifLoaded) { setTimeout(() => Social.loadNotifs(), 0); return '<div class="empty">Cargando…</div>'; }
-  const T = {like: 'le ha dado me gusta a tu entreno', comment: 'ha comentado en', follow: 'ha empezado a seguirte',
-    'rel-alianza': 'os propone una alianza 🤝', 'rel-pique': 'os lanza un pique ⚔️', 'rel-ok-alianza': 'ha aceptado vuestra alianza 🤝', 'rel-ok-pique': 'ha aceptado el pique. ¡Que empiece la guerra! ⚔️', 'rel-no': 'ha rechazado vuestra propuesta'};
-  return Social.notifs.map(n => n.rel ? `<button class="notif" data-act="cl-goto" data-id="${esc(n.rel)}"><span class="cl-emo xs" aria-hidden="true">${esc(n.cemoji || '🛡️')}</span><span><b>${esc(n.cname || 'Un clan')}</b> ${T[n.type] || ''}${n.text ? `: <span class="muted">«${esc(n.text)}»</span>` : ''}<small>${esc(n.name)} · ${ago(n.ts)}</small></span></button>` : `<button class="notif" data-act="${n.pid && Social.posts.has(n.pid) ? 'soc-post' : n.pid ? 'soc-user' : 'soc-user'}" data-id="${n.pid && Social.posts.has(n.pid) ? n.pid : n.from}">${avatar(n.name, 'sm')}<span><b>${esc(n.name)}</b> ${T[n.type] || ''}${n.title ? ` «${esc(n.title)}»` : ''}${n.text ? `: <span class="muted">${esc(n.text)}</span>` : ''}<small>${ago(n.ts)}</small></span></button>`).join('') || '<div class="empty">No tienes notificaciones.</div>';
+  const n = Social.nst();
+  if (!Social.notifLoaded) {
+    if (n.err) return `<div class="card empty">${EI('📡')}<h3>No se han podido cargar los avisos</h3><button class="btn primary" data-act="soc-notifs-retry">Reintentar</button></div>`;
+    if (!n.busy && n.cache) setTimeout(() => Social.pollNotifs(true), 0);
+    return '<div class="empty">Cargando…</div>';
+  }
+  const since = n.since != null ? n.since : n.seen;
+  const T = {'rel-alianza': 'os propone una alianza 🤝', 'rel-pique': 'os lanza un pique ⚔️', 'rel-ok-alianza': 'ha aceptado vuestra alianza 🤝', 'rel-ok-pique': 'ha aceptado el pique. ¡Que empiece la guerra! ⚔️', 'rel-no': 'ha rechazado vuestra propuesta'};
+  const cut = (t, k) => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); return t.length > k ? t.slice(0, k - 1).trimEnd() + '…' : t; };
+  const nameB = x => `<b>${esc(shortName(Social.nameOf(x.from, x.name)) || 'Alguien')}</b>`;
+  const group = list => { // me gusta y comentarios por publicación; seguimientos y clanes sueltos
+    const out = [], idx = new Map();
+    for (const x of list) {
+      if (!x.rel && (x.type === 'like' || x.type === 'comment') && x.pid) {
+        const k = x.type + '|' + x.pid; let g = idx.get(k);
+        if (!g) { g = {type: x.type, pid: x.pid, items: [], ts: x.ts}; idx.set(k, g); out.push(g); }
+        g.items.push(x);
+      } else out.push({type: x.rel ? 'rel' : x.type, items: [x], ts: x.ts});
+    }
+    return out.sort((a, b) => b.ts - a.ts);
+  };
+  const row = (g, isNew) => {
+    const x = g.items[0], dot = isNew ? '<i class="ndot" aria-label="Nuevo"></i>' : '', tail = `<span class="nt-time">${ago(g.ts)}</span>`;
+    const chev = `<span class="nchev" aria-hidden="true">${ICON.chev}</span>`;
+    if (x.rel) return `<div class="nrow"><button class="notif" data-act="cl-goto" data-id="${esc(x.rel)}"><span class="cl-emo sm" aria-hidden="true">${esc(x.cemoji || '🛡️')}</span><span class="nb"><span class="nt"><b>${esc(cut(x.cname || 'Un clan', 30))}</b> ${T[x.type] || ''}${x.text ? `: <span class="muted">«${esc(cut(x.text, 80))}»</span>` : ''}</span>${tail}</span>${dot}${chev}</button></div>`;
+    if (g.type === 'follow') {
+      const fol = Social.following.has(x.from);
+      return `<div class="nrow"><button class="notif" data-act="soc-user" data-id="${esc(x.from)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${nameB(x)} ha empezado a seguirte</span>${tail}</span>${dot}${chev}</button>${fol ? '' : `<button class="btn sm nfol" data-act="soc-follow" data-id="${esc(x.from)}">Seguir también</button>`}</div>`;
+    }
+    const who = []; g.items.forEach(i => { if (!who.some(w => w.from === i.from)) who.push(i); });
+    const nm = who.map(nameB), more = who.length - 2;
+    const names = who.length === 1 ? nm[0] : who.length === 2 ? `${nm[0]} y ${nm[1]}` : `${nm[0]}, ${nm[1]} y ${more} más`;
+    const title = `«${esc(cut(x.title || 'Entreno', 40))}»`;
+    const txt = g.type === 'like' ? `${names} ${who.length === 1 ? 'le ha dado' : 'le han dado'} me gusta a ${title}`
+      : `${names} ${who.length === 1 ? 'ha comentado' : 'han comentado'} en ${title}${x.text ? `: <span class="muted">“${esc(cut(x.text, 80))}”</span>` : ''}`;
+    return `<div class="nrow"><button class="notif" data-act="soc-notif" data-k="${g.type}" data-id="${esc(g.pid)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${txt}</span>${tail}</span>${dot}${chev}</button></div>`;
+  };
+  const nw = Social.notifs.filter(x => x.ts > since), old = Social.notifs.filter(x => x.ts <= since);
+  let h = '';
+  if (n.err) h += `<div class="card row between"><span class="small">No se han podido actualizar los avisos.</span><button class="btn sm" data-act="soc-notifs-retry">Reintentar</button></div>`;
+  if (!Social.notifs.length) return h + `<div class="card empty">${EI('🔔')}<h3>Sin avisos todavía</h3><div>Aquí verás los me gusta, los comentarios y quién empieza a seguirte.</div></div>`;
+  if (nw.length) h += `<div class="sect-t">Nuevos</div>` + group(nw).map(g => row(g, true)).join('') + (old.length ? `<div class="sect-t">Anteriores</div>` : '');
+  return h + group(old).map(g => row(g, false)).join('');
 }
 function viewCompare(uid){
   const u = Social.users.get(uid); if (!u || !u.loaded) { setTimeout(() => Social.loadUser(uid), 0); return '<div class="empty">Cargando…</div>'; }
@@ -4057,12 +4664,16 @@ document.addEventListener('submit', async e => {
   if (e.target.id !== 'cmtForm') return;
   e.preventDefault();
   const input = $('#cmtText'), text = input.value.trim(), p = Social.posts.get(e.target.dataset.id);
-  if (!text || !p) return;
-  input.disabled = true;
-  try { await Social.addComment(p, text); input.value = ''; socRender(); const c = $('#comments'); if (c) c.scrollIntoView({block: 'end'}); }
-  catch (err) { toast(err.offline ? 'Sin conexión' : 'No se ha podido publicar el comentario'); }
-  input.disabled = false;
+  if (!text || !p || CMT_BUSY) return; // un solo envío a la vez
+  CMT_BUSY = true; cmtSync();
+  try {
+    const m = await Social.addComment(p, text);
+    const i = $('#cmtText'); if (i && i.value.trim() === text) i.value = '';
+    cmtAdd(p, m); if (i) i.focus({preventScroll: true});
+  } catch (err) { toast(err.offline ? 'Sin conexión. No se ha enviado.' : 'No se ha podido publicar el comentario'); }
+  CMT_BUSY = false; cmtSync();
 });
+document.addEventListener('input', e => { if (e.target.id === 'cmtText') cmtSync(); });
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'wallForm') return;
   e.preventDefault();
@@ -4167,6 +4778,7 @@ const A = {
     S.workouts.push(out); sortW(); out.prs = computePRs(out);
     rkReset(); const rkUp = rkDiff(rk0, rkAll()); if (rkUp.length) out.rk = rkUp; // ascensos de rango de este entreno
     if (out.shared && A._pendingPhoto) Social.queuePhoto(out, A._pendingPhoto); A._pendingPhoto = null;
+    Social.onPublished(out);
     const routine = out.routineId && S.routines.find(r => r.id === out.routineId);
     S.active = null; A._pendingFinish = null;
     Store.mark('active', monthKey(out.start));
@@ -4362,20 +4974,41 @@ const A = {
     try { await Cloud.deleteEverything(); await signOutLocal(); showAuth('✓ Tu cuenta y tus datos se han eliminado.'); }
     catch (e) { ask('No se pudo eliminar', esc(e.offline ? 'Necesitas conexión a internet.' : (e.message || 'Inténtalo otra vez.')), [['ok', 'Vale']]).then(closeModal); }
   },
-  'soc-mode'(el){ Social.mode = el.dataset.k; render(); },
-  'soc-refresh'(){ Social.err = null; Social.loaded = false; Social.loadFeed(); render(); },
-  'soc-more'(){ Social.loadFeed(true); },
+  'soc-mode'(el){ Social.mode = el.dataset.k === 'discover' ? 'discover' : 'following'; render(); Social.refresh(); },
+  'soc-refresh'(){ Social.refresh(true); render(); },
+  'soc-more'(){ Social.loadMore(); },
+  'soc-menu'(el){
+    const p = Social.posts.get(el.dataset.id); if (!p) return;
+    const id = esc(p.id), mine = p.uid === Social.myUid(), u = Social.userOf(p.uid), B = (act, label, cls) => `<button${cls ? ` class="${cls}"` : ''} data-act="${act}" data-id="${act === 'soc-compare' ? esc(p.uid) : id}">${label}</button>`;
+    const items = mine
+      ? [B('soc-photo', p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'), p.hasPhoto ? B('soc-photo-del', 'Quitar foto') : '', B('soc-copytext', 'Copiar como texto'), B('soc-unpublish', 'Dejar de publicar', 'danger')]
+      : [B('soc-copy', 'Hacer este entreno'), B('soc-copy-routine', 'Guardar como rutina'), u && u.private ? '' : B('soc-compare', 'Comparar con ' + esc(shortName(nameOfPost(p)))), B('soc-copytext', 'Copiar como texto')];
+    modal(esc(p.title || 'Entreno'), `<div class="menu">${items.join('')}</div>`);
+    const m = $('#modal .menu'); if (m) m.addEventListener('click', () => closeModal()); // cierra la hoja antes de que actúe la opción
+  },
+  async 'soc-unpublish'(el){
+    const p = Social.posts.get(el.dataset.id), w = p && S.workouts.find(x => x.id === p.wid);
+    if (!w) { toast('Ese entreno no está en este móvil'); return; }
+    const r = await ask('Dejar de publicar', 'Se borrará la publicación con sus me gusta y comentarios. El entreno sigue en tu historial.', [['0', 'Cancelar'], ['1', 'Dejar de publicar', 'danger']]); closeModal();
+    if (r !== '1') return; w.shared = false; Store.mark(); SOC_HIDE.add(p.id); socRender(); toast('Quitado de Social');
+  },
   'soc-user'(el){ go({type: 'user', id: el.dataset.id}); },
   'soc-user-reload'(el){ Social.loadUser(el.dataset.id, true); },
-  'soc-post'(el){ go({type: 'post', id: el.dataset.id}); },
+  'soc-post'(el){ go({type: 'post', id: el.dataset.id, cmt: el.dataset.cmt === '1'}); },
   'soc-like'(el){ const p = Social.posts.get(el.dataset.id); if (p) Social.toggleLike(p); },
-  'soc-search'(){ go({type: 'search'}); setTimeout(() => { const i = $('#socQ'); if (i) i.focus(); }, 50); },
-  'soc-notifs'(){ go({type: 'notifs'}); Social.markSeen(); },
+  'soc-search'(){ go({type: 'search'}); setTimeout(() => { const i = $('#socQ'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } }, 50); },
+  'soc-notifs'(){ go({type: 'notifs'}); Social.openNotifs(); },
+  'soc-notifs-retry'(){ Social.nst().err = ''; Social.pollNotifs(true); Social.notifPaint(); },
+  'soc-notif'(el){ // me gusta y comentarios abren siempre el detalle; si el post no está en memoria, el detalle lo carga por id (o dice que ya no está)
+    const pid = el.dataset.id, k = el.dataset.k;
+    go({type: 'post', id: pid, cmt: k === 'comment'});
+  },
+  'soc-user-more'(el){ Social.loadUserMore(el.dataset.id); },
   'soc-people'(el){ go({type: 'people', id: el.dataset.id, k: el.dataset.k}); },
-  'soc-compare'(el){ go({type: 'compare', id: el.dataset.id}); },
+  'soc-compare'(el){ go({type: 'compare', id: el.dataset.id}); Social.loadUserMore(el.dataset.id, 60); },
   'soc-edit'(){ go({type: 'socedit'}); },
-  async 'soc-follow'(el){ el.disabled = true; try { await Social.follow(el.dataset.id); toast('Ahora le sigues'); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido seguir'); } socRender(); },
-  async 'soc-unfollow'(el){ const ok = await ask('Dejar de seguir', 'Ya no verás sus entrenos en tu feed.', [['0', 'Cancelar'], ['1', 'Dejar de seguir', 'danger']]); closeModal(); if (ok !== '1') return; try { await Social.unfollow(el.dataset.id); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido'); } socRender(); },
+  async 'soc-follow'(el){ el.disabled = true; try { await Social.follow(el.dataset.id); toast('Ahora le sigues'); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido seguir'); } socRepaint(); },
+  async 'soc-unfollow'(el){ const ok = await ask('Dejar de seguir', 'Ya no verás sus entrenos en tu feed.', [['0', 'Cancelar'], ['1', 'Dejar de seguir', 'danger']]); closeModal(); if (ok !== '1') return; try { await Social.unfollow(el.dataset.id); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido'); } socRepaint(); },
   async 'soc-claim'(el){
     const u = cleanUser($('#soUser').value), bio = $('#soBio').value.trim(), pv = $('#soPriv').checked, msg = t => { $('#soMsg').textContent = t; };
     if (!USERNAME_RE.test(u)) return msg('El usuario debe tener 3–20 caracteres: minúsculas, números, punto o guion bajo.');
@@ -4388,11 +5021,17 @@ const A = {
   },
   'soc-copy'(el){ const p = Social.posts.get(el.dataset.id); if (!p) return; startWorkout({title: p.title, exercises: Social.exercisesFrom(p)}); },
   'soc-copy-routine'(el){ const p = Social.posts.get(el.dataset.id); if (!p) return; openEditor('routine', {id: rid(), name: p.title, notes: '', exercises: Social.exercisesFrom(p), _new: true}); },
-  async 'soc-del-comment'(el){ const p = Social.posts.get(el.dataset.id); if (!p) return; try { await Social.delComment(p, el.dataset.c); socRender(); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido borrar'); } },
+  async 'soc-del-comment'(el){
+    const p = Social.posts.get(el.dataset.id); if (!p) return;
+    const ok = await ask('Borrar comentario', '¿Borrar este comentario?', [['0', 'Cancelar'], ['1', 'Borrar', 'danger']]); closeModal(); if (ok !== '1') return;
+    try { await Social.delComment(p, el.dataset.c); socRender(); } catch (e) { toast(e.offline ? 'Sin conexión' : 'No se ha podido borrar'); }
+  },
+  'soc-cmt-retry'(el){ Social.loadComments(el.dataset.id); socRender(); },
+  'soc-cmt-more'(el){ const id = el.dataset.c, t = el.previousElementSibling; if (CMX.has(id)) CMX.delete(id); else CMX.add(id); if (t) t.classList.toggle('open', CMX.has(id)); el.textContent = CMX.has(id) ? 'ver menos' : 'ver más'; },
   async 'soc-invite'(){ const url = location.href.split('#')[0]; try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: 'Apúntate a Hierro y entrenamos juntos 💪', url}); else { await navigator.clipboard.writeText(url); toast('Enlace copiado'); } } catch (e) {} },
   'w-copytext'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (w) copyText(workoutTextW(w), 'Entreno copiado'); },
   'soc-copytext'(el){ const p = Social.posts.get(el.dataset.id); if (p) copyText(workoutText(p), 'Entreno copiado'); },
-  'w-share'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (!w) return; if (!w.shared && !Social.canPublish()) { toast(Social.ready() ? 'Tu perfil es privado' : 'Crea tu perfil en la pestaña Social'); return; } w.shared = !w.shared; Store.mark(); render(); toast(w.shared ? 'Publicado en el feed' : 'Quitado del feed'); },
+  'w-share'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (!w) return; if (!w.shared && !Social.canPublish()) { toast(Social.ready() ? 'Tu perfil es privado' : 'Crea tu perfil en la pestaña Social'); return; } w.shared = !w.shared; Store.mark(); render(); toast(w.shared ? 'Publicado en Social' : 'Quitado de Social'); },
   'm-close'(){ if (modalCb) { const cb = modalCb; modalCb = null; cb(null); } closeModal(); },
   'm-answer'(el){ const cb = modalCb; modalCb = null; if (cb) cb(el.dataset.v); },
   // estado de la sincronización: qué falta por subir y el último error
@@ -5671,7 +6310,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.7.1';
+const APP_VERSION = '4.8.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -5741,8 +6380,7 @@ function pullRefresh(){
       clanRender();
       if (Clan.err) toast(Clan.err);
     } else if (root && tab === 'social' && Social.ready()) {
-      Social.err = null;
-      await Social.loadFeed();
+      await Social.refresh(true);
       await wait(() => !Social.loading, 7000);
       socRender();
       if (Social.err) toast(Social.err);
@@ -5852,7 +6490,7 @@ rebuildEx();
   autoUpdate();
   // si se actualizó con el entreno abierto, se vuelve a abrir donde estaba
   try { if (sessionStorage.getItem('hierro.reopen') === '1') { sessionStorage.removeItem('hierro.reopen'); if (S.active && !ED) openEditor('active'); } } catch (e) {}
-  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() + mergeImportedEx() : 0)) render(); if (Social.ready()) Social.loadNotifs(); });
+  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() + mergeImportedEx() : 0)) render(); if (Social.ready()) Social.pollNotifs(); });
 })();
 /* Desvanecido en el borde de los carriles de chips que hacen scroll (solo estética) */
 (function(){
