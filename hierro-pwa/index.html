@@ -434,6 +434,50 @@ label.chk{display:flex;align-items:flex-start;gap:10px;font-weight:700;min-heigh
 .fzr .fill{height:100%;background:var(--acc);border-radius:5px}
 .fzr b{text-align:right;font-variant-numeric:tabular-nums}
 .fzr .delta{text-align:right;overflow:hidden;text-overflow:ellipsis}
+/* Rangos (desde 4.7) */
+.rk-b{flex:none;display:block}
+.rk-tag{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:14.5px;color:var(--texto);min-width:0}
+.rk-tag span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-tag.sm{font-size:13px;color:var(--apagado);margin-top:2px}
+.rk-bar{height:8px;border-radius:4px;background:var(--track);overflow:hidden}
+.rk-bar i{display:block;height:100%;border-radius:4px;background:var(--rk,var(--acc))}
+.rk-hero{align-items:center;gap:8px;text-align:center}
+.rk-hero h2{font-size:26px;line-height:1.15}
+.rk-xh{display:flex;align-items:center;gap:12px;min-width:0}
+.rk-xh h3{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-xh .small{flex:none;white-space:nowrap}
+.rk-lnk{font-size:13.5px;font-weight:700;color:var(--acc-t);min-height:44px;padding:0 4px;margin-left:-4px;text-decoration:underline;text-underline-offset:3px}
+.rk-list{display:flex;flex-direction:column}
+.rk-row{display:grid;grid-template-columns:28px minmax(0,1fr) 92px;gap:10px;align-items:center;width:100%;min-height:52px;padding:8px 0;border-top:1px solid var(--linea);text-align:left;color:var(--texto)}
+.rk-list>.rk-row:first-child{border-top:0}
+.rk-row>span{display:grid;place-items:center}
+.rk-row>div{min-width:0}
+.rk-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-row small{display:block;color:var(--apagado);font-size:13px;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-row .rk-bar{margin-top:5px}
+.rk-row.sub{padding-left:14px;min-height:44px}
+.rk-row.sub b{font-weight:600}
+.rk-row.idle{opacity:.62}
+.rk-row em{text-align:right;font-style:normal;font-weight:700;font-size:13.5px;color:var(--apagado);white-space:nowrap}
+.rk-none{padding:8px 0;border-top:1px solid var(--linea);min-width:0}
+.rk-list>.rk-none:first-child{border-top:0}
+.rk-none b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
+.rk-none small{display:block;color:var(--apagado);font-size:13px}
+.rk-leg{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:center;font-size:13px;color:var(--apagado)}
+.rk-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--rk)}
+.rk-up{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--r-l);background:var(--sup);box-shadow:inset 0 0 0 1px var(--glass-borde)}
+.rk-up div{flex:1;min-width:0}.rk-up b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-up small{display:block;color:var(--apagado);font-size:13.5px}
+.rk-chip{flex:none;display:grid;place-items:center;width:28px;height:28px;position:relative}
+.rk-chip.up::after{content:'';position:absolute;top:0;right:0;width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.rk-sc{gap:12px}.rk-sc div{flex:1;min-width:0}.rk-sc b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-sc small{display:block;color:var(--apagado);font-size:13.5px}.rk-sc i{font-style:normal;font-size:24px;color:var(--tenue)}
+.rk-ladder{display:flex;flex-direction:column;gap:2px;font-size:14.5px}
+.rk-ladder>div{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:34px;padding:3px 8px;border-radius:10px}
+.rk-ladder>div.me{background:var(--acc-soft)}
+.rk-ladder>div>span{min-width:0;overflow-wrap:anywhere}
+.rk-anc{color:var(--apagado);font-size:12.5px;font-weight:700}
+@media (prefers-reduced-motion:no-preference){.rk-chip.just svg{animation:medalla .7s cubic-bezier(.2,.9,.3,1.3)}}
 .hab-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end}
 .hd{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--apagado)}
 .hd .hb{width:100%;max-width:34px;height:70px;display:flex;align-items:flex-end;background:var(--track);border-radius:8px;overflow:hidden}
@@ -890,6 +934,7 @@ button[data-act="open-ex"].row{min-height:44px}
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
   <linearGradient id="gforja" x1="0" y1="1" x2="0" y2="0"><stop offset="0" style="stop-color:var(--g1)"/><stop offset=".55" style="stop-color:var(--g2)"/><stop offset="1" style="stop-color:var(--g3)"/></linearGradient>
   <linearGradient id="gmark" gradientUnits="userSpaceOnUse" x1="14" y1="12" x2="50" y2="52"><stop offset="0" stop-color="#5B8CFF"/><stop offset=".55" stop-color="#A86BFF"/><stop offset="1" stop-color="#FF6FB1"/></linearGradient>
+  <linearGradient id="grk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5B8CFF"/><stop offset=".55" stop-color="#A86BFF"/><stop offset="1" stop-color="#FF6FB1"/></linearGradient>
   </defs></svg>
 <div id="app">
   <header id="top"></header>
@@ -1181,7 +1226,7 @@ function guessEquip(name){
   return 'otro';
 }
 let exMap = new Map();
-function rebuildEx(){ exMap = new Map(); [...LIB, ...S.customEx].forEach(e => exMap.set(e.id, e)); }
+function rebuildEx(){ exMap = new Map(); [...LIB, ...S.customEx].forEach(e => exMap.set(e.id, e)); rkReset(); }
 const exOf = id => exMap.get(id) || {id, name: 'Ejercicio borrado', muscle: 'completo', equip: 'otro', type: 'wr', aliases: []};
 const MTINT = {pecho: 'var(--acc-t)', espalda: 'var(--frio)', lumbares: 'var(--frio)', trapecio: 'var(--frio)', hombros: 'var(--violeta-t)', biceps: 'var(--pr)', triceps: 'var(--pr)', antebrazo: 'var(--pr)', cuadriceps: 'var(--ok-t)', isquios: 'var(--ok-t)', gluteos: 'var(--ok-t)', gemelos: 'var(--ok-t)', aductores: 'var(--ok-t)', abductores: 'var(--ok-t)', abdominales: 'var(--texto)', cardio: 'var(--peligro)'};
 /* Fotos de ejercicios: base de datos libre free-exercise-db (dominio público, github.com/yuhonas/free-exercise-db).
@@ -1375,7 +1420,7 @@ const Store = {
     S.measures = cleanArr(d.measures);
     S.settings = Object.assign({rest: 90, sound: true}, isObj(d.settings) ? d.settings : {});
     S.active = isObj(d.active) && Array.isArray(d.active.exercises) ? d.active : null;
-    sortW(); rebuildEx();
+    sortW(); rebuildEx(); rkReset();
   },
   applyMeta(m){ if (!isObj(m)) return; S.routines = cleanArr(m.routines).map(cleanR); S.customEx = cleanArr(m.customEx); S.measures = cleanArr(m.measures); S.settings = Object.assign({rest: 90, sound: true}, isObj(m.settings) ? m.settings : {}); rebuildEx(); },
   async load(uid){
@@ -1387,7 +1432,7 @@ const Store = {
     try { this.persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false; } catch (e) {}
     this.loaded = true;
   },
-  mark(){ ActBak.put(); clearTimeout(this.timer); this.timer = setTimeout(() => this.save(), 250); Sync.schedule(); },
+  mark(){ if (arguments[0] !== 'active' || arguments.length > 1) rkReset(); /* 'active' solo toca el entreno en curso, que no está en S.workouts */ ActBak.put(); clearTimeout(this.timer); this.timer = setTimeout(() => this.save(), 250); Sync.schedule(); },
   markMonthOf(){ this.mark(); },
   async save(){
     clearTimeout(this.timer); this.timer = null;
@@ -2104,12 +2149,12 @@ function bodyMap(counts, opts = {}){
   const edge = opts.bg || P.edge;
   const part = ([k, s, mir]) => {
     const v = k ? (counts[k] || 0) : 0;
-    const fill = !k ? P.none : v ? heat(v / max, th) : P.off;
+    const fill = !k ? P.none : opts.fills ? (opts.fills[k] || P.off) : v ? heat(v / max, th) : P.off;
     const el = `<g fill="${fill}" stroke="${edge}" stroke-width="0.9">${s}</g>`;
     return el + (mir ? `<g transform="translate(100,0) scale(-1,1)">${el}</g>` : '');
   };
   const lab = opts.labels === false ? '' : `<text x="50" y="197" text-anchor="middle" fill="${P.lab}" font-size="9" font-weight="700">Delante</text><text x="160" y="197" text-anchor="middle" fill="${P.lab}" font-size="9" font-weight="700">Detrás</text>`;
-  return `<svg class="body" viewBox="0 0 210 ${opts.labels === false ? 186 : 200}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa de músculos trabajados"><g>${BODY_FRONT.map(part).join('')}</g><g transform="translate(110,0)">${BODY_BACK.map(part).join('')}</g>${lab}</svg>`;
+  return `<svg class="body" viewBox="0 0 210 ${opts.labels === false ? 186 : 200}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${opts.label || 'Mapa de músculos trabajados'}"><g>${BODY_FRONT.map(part).join('')}</g><g transform="translate(110,0)">${BODY_BACK.map(part).join('')}</g>${lab}</svg>`;
 }
 const GROUPS = [['Espalda', ['espalda', 'lumbares', 'trapecio']], ['Pecho', ['pecho']], ['Hombros', ['hombros']], ['Brazos', ['biceps', 'triceps', 'antebrazo']], ['Piernas', ['cuadriceps', 'isquios', 'gluteos', 'gemelos', 'aductores', 'abductores']], ['Core', ['abdominales']]];
 function radar(cur, prev){
@@ -2152,7 +2197,7 @@ function streakGrid(weeks = 26){
    ========================================================= */
 let tab = 'home';
 const navStack = {home: [], train: [], social: [], clan: [], me: []};
-const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, weekMetric: 'vol', calMonth: null, mMetric: 'weight', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}};
+const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, weekMetric: 'vol', calMonth: null, mMetric: 'weight', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false};
 const cur = () => navStack[tab][navStack[tab].length - 1];
 function go(view){ navTo(() => { navStack[tab].push(view); }); }
 function back(){ navTo(() => { navStack[tab].pop(); }, {keep: true}); }
@@ -2231,6 +2276,8 @@ function render(){
   if (v && v.type === 'workout') { const w = S.workouts.find(x => x.id === v.id); if (!w) { navStack[tab].pop(); return render(); } title = 'Entreno'; html = viewWorkout(w); }
   else if (v && v.type === 'exercise') { title = 'Ejercicio'; html = viewExercise(v.id); }
   else if (v && v.type === 'stats') { title = 'Estadísticas'; html = viewStats(); }
+  else if (v && v.type === 'ranks') { title = 'Rangos'; html = viewRanks(); }
+  else if (v && v.type === 'rankhow') { title = 'Cómo funcionan'; html = viewRankHow(); }
   else if (v && v.type === 'plan') { title = 'Mi plan'; html = viewPlan(); }
   else if (v && v.type === 'month') { title = 'Informe mensual'; html = viewMonth(v.ym); }
   else if (v && v.type === 'post') { title = 'Entreno'; html = viewPost(v.id); }
@@ -2437,6 +2484,7 @@ function viewExercise(id){
   <div class="seg" role="group">${[['prog', 'Progreso'], ['hist', 'Historial'], ['rec', 'Chiquipuntos']].map(([k, l]) => `<button data-act="ex-tab" data-k="${k}" aria-pressed="${UI.exTab === k}">${l}</button>`).join('')}</div>`;
   if (!all.length) return h.slice(0, h.indexOf('<div class="seg" role="group">')) + `<div class="card empty">${EI('🏁')}<h3>Aún sin estrenar</h3><div>Cuando lo hagas en un entreno, aquí verás tu progreso, tu historial y tus chiquipuntos.</div></div>` + customExBtns(x);
   if (UI.exTab === 'prog') {
+    h += rkExCardHTML(id);
     const metrics = x.type === 'wr' ? [['kg', 'Peso máx.'], ['e1rm', '1RM est.'], ['vol', 'Mejor serie'], ['sess', 'Volumen sesión'], ['reps', 'Reps máx.']]
       : x.type === 'bw' ? [['reps', 'Reps máx.'], ['tot', 'Reps totales'], ['kg', 'Lastre máx.']]
       : x.type === 'dur' ? [['sec', 'Mejor tiempo'], ['tsec', 'Tiempo total']] : [['km', 'Distancia'], ['min', 'Minutos']];
@@ -2474,6 +2522,131 @@ function viewExercise(id){
 const customExBtns = x => x.custom ? `<div class="grid2"><button class="btn" data-act="edit-custom-ex" data-id="${x.id}">Editar ejercicio</button><button class="btn danger" data-act="delete-custom-ex" data-id="${x.id}">Eliminar</button></div>` : '';
 
 /* ---------- Perfil ---------- */
+/* ---------- Rangos: interfaz (desde 4.7) ---------- */
+// Insignia: hexágono con 1-3 galones según la división; Simétrico lleva el degradado y un rombo. Colores fijos: sirve también en un canvas.
+function rkBadge(idx, size = 24, theme, hide){
+  const th = theme || themeNow(), none = idx < 0, t = none ? 0 : rkTier(idx), c = none ? (th === 'light' ? '#B9C2DA' : '#3A4368') : t === 8 ? 'url(#grk)' : RK_COL[th][t];
+  const d = none ? 0 : t === 8 ? 0 : idx % 3 + 1, y0 = 12.6 + (d - 1) * 1.7;
+  const ch = Array.from({length: d}, (_, i) => `<path d="M8.2 ${(y0 - i * 3.4 + 1.4).toFixed(1)} 12 ${(y0 - i * 3.4 - 1.4).toFixed(1)} 15.8 ${(y0 - i * 3.4 + 1.4).toFixed(1)}"/>`).join('');
+  const mark = none ? '<path d="M9 12h6"/>' : t === 8 ? '<path d="M12 7.2 16 12 12 16.8 8 12Z" fill="url(#grk)" stroke="none"/>' : ch;
+  const who = hide ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${none ? 'Sin rango' : 'Rango ' + rkName(idx)}"`;
+  return `<svg class="rk-b" width="${size}" height="${size}" viewBox="0 0 24 24" ${who}><path d="M12 1.8 20.8 6.9v10.2L12 22.2 3.2 17.1V6.9Z" fill="${t === 8 && !none ? 'url(#grk)' : c}" fill-opacity=".2" stroke="${c}" stroke-width="1.6" stroke-linejoin="round"/><g fill="none" stroke="${c}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${mark}</g></svg>`;
+}
+const rkIcon = (idx, size) => rkBadge(idx, size, undefined, true); // la insignia va junto a su nombre visible: el lector no la repite
+const rkTag = (idx, size = 18, cls = '') => `<span class="rk-tag ${cls}">${rkIcon(idx, size)}<span>${rkName(idx)}</span></span>`;
+const rkColOf = idx => idx < 0 ? 'var(--tenue)' : RK_COL[themeNow()][rkTier(idx)];
+function rkBar(prog, idx){
+  const w = idx < 0 ? 0 : idx >= 24 ? 100 : Math.max(prog > 0 ? 3 : 0, Math.min(100, prog * 100));
+  return `<div class="rk-bar" aria-hidden="true" style="--rk:${rkColOf(idx)}"><i style="width:${w.toFixed(1)}%${idx >= 24 ? ';background:var(--grad)' : ''}"></i></div>`;
+}
+const rkYes = arr => arr.length < 2 ? arr.join('') : arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1];
+// Mapa corporal: cada músculo del color de su rango (los que no tienen, quedan en gris)
+function rkFills(theme){
+  const th = theme || themeNow(), out = {}, M = rkAll().mus;
+  for (const k in M) if (M[k] && M[k].idx >= 0) out[k] = RK_COL[th][rkTier(M[k].idx)];
+  return out;
+}
+const rkPts = n => plural(Math.round(n), 'punto', 'puntos');
+// Tarjeta del detalle del ejercicio
+function rkExCardHTML(id){
+  const E = rkEx(id);
+  if (!E) {
+    const why = rkWhy(id);
+    if (why === 'bw') return `<div class="card stack"><div>Apunta tu peso para ver tu rango en este ejercicio.</div><button class="btn" data-act="add-measure">Añadir mi peso</button></div>`;
+    if (why === 'std') return `<div class="small muted" style="padding:0 4px">Este ejercicio no tiene rango: no hay un estándar fiable para compararlo.</div>`;
+    return '';
+  }
+  const T = E.idx < 24 ? rkTarget(id) : null, mode = E.info.mode;
+  let nxt = '';
+  if (E.idx >= 24) nxt = 'Lo más alto. Mantén el nivel.';
+  else if (!T) nxt = `Siguiente: <b>${rkName(E.idx + 1)}</b>.`;
+  else nxt = `Siguiente: <b>${rkName(E.idx + 1)}</b>. ` + (mode === 'sec' ? `Aguantando <b>${esc(T.txt)}</b> de forma habitual, es tuyo.` : / reps$/.test(T.txt) ? `Con series de <b>${esc(T.txt)}</b> de forma habitual, es tuyo.` : `Con series como <b>${esc(T.txt)}</b> de forma habitual, es tuyo.`);
+  return `<div class="card stack"><div class="rk-xh">${rkIcon(E.idx, 44)}<h3>${rkName(E.idx)}</h3><span class="small muted num">${rkPts(E.score)}</span></div>${rkBar(E.prog, E.idx)}
+    <div>${nxt}</div>
+    ${E.floor ? '<div class="small muted">Últimamente rindes algo menos; tu rango aguanta en el 85 % de tu mejor momento.</div>' : ''}
+    ${E.ses < 3 ? '<div class="small muted">Rango provisional: se asienta con tus próximas sesiones.</div>' : ''}
+    <div><button class="rk-lnk" data-act="go-rankhow">¿Cómo se calcula?</button></div></div>`;
+}
+// Tarjeta de acceso desde Estadísticas › Músculos
+function rkStatsCard(){
+  const R = rkAll(), g = R.glob;
+  return `<button class="card tap row rk-sc" data-act="go-ranks">${rkIcon(g ? g.idx : -1, 34)}<div><b>Tus rangos</b><small>${g ? 'Global: ' + rkName(g.idx) : R.n ? plural(R.n, 'ejercicio con rango', 'ejercicios con rango') : 'Descubre tu nivel en cada músculo'}</small></div><i>›</i></button>`;
+}
+// Resumen del entreno: ascensos guardados en el propio entreno (w.rk)
+const rkUps = w => (w.rk || []).filter(u => u && u.b >= 0);
+function rkSumPill(w){
+  const L = rkUps(w), n = L.filter(u => u.a >= 0).length;
+  if (!L.length) return '';
+  return n ? `<span class="pill accent">⬆ ${n} ${n === 1 ? 'ascenso' : 'ascensos'}</span>` : `<span class="pill accent">⬆ ${L.length === 1 ? '1 rango nuevo' : L.length + ' rangos nuevos'}</span>`;
+}
+function rkSumHTML(w){
+  const L = rkUps(w); if (!L.length) return '';
+  const nm = u => u.t === 'glob' ? 'Rango global' : u.t === 'mus' ? (MUSCLES[u.id] || u.id) : u.t === 'ex' ? exOf(u.id).name : u.id;
+  const row = u => {
+    const first = u.a < 0;
+    const b = first && u.t === 'glob' ? '¡Rango global desbloqueado!' : nm(u);
+    const s = first ? (u.t === 'glob' ? `Empiezas en ${rkName(u.b)}` : `Estrenas rango: ${rkName(u.b)}`) : `${rkName(u.a)} → ${rkName(u.b)}`;
+    return `<div class="rk-up"><div><b>${esc(b)}</b><small>${esc(s)}</small></div>${rkIcon(u.b, 34)}</div>`;
+  };
+  const more = L.length - 6;
+  return `<div class="stack"><h3 class="sech">Ascensos de rango</h3>${L.slice(0, 6).map(row).join('')}${more > 0 ? `<div class="small muted" style="padding:0 4px">y ${more} más</div>` : ''}<button class="btn" data-act="sum-ranks">Ver mis rangos</button></div>`;
+}
+// Chip de la cabecera del ejercicio en el entreno en curso: el rango que tendría la sesión de hoy
+function rkChipLive(e){
+  if (!ED || ED.mode !== 'active') return '';
+  const L = rkLive(e.exId, ED.data.exercises.filter(q => q.exId === e.exId).flatMap(q => q.sets)), E = rkEx(e.exId); if (!L) return '';
+  const J = ED.rkJust && ED.rkJust.id === e.exId && Date.now() - ED.rkJust.t < 900;
+  return `<span class="rk-chip${E && L.idx > E.idx ? ' up' : ''}${J ? ' just' : ''}" title="Rango: ${rkName(L.idx)}">${rkBadge(L.idx, 22)}</span>`;
+}
+function viewRanks(){
+  const R = rkAll(), G = R.glob, n = R.n;
+  let h = '';
+  if (!R.bw) h += `<div class="card stack"><h3>Falta tu peso</h3><div class="small muted">Los rangos comparan lo que levantas con tu peso corporal. Apúntalo una vez y se calculan solos. No se publica nunca.</div><button class="btn primary" data-act="add-measure">Añadir mi peso</button></div>`;
+  const sexTxt = R.sexSet ? '' : '<div class="small muted">Calculado con el estándar masculino. Si eres mujer, indícalo en Perfil › Ajustes y se ajusta.</div>';
+  if (G) {
+    const nx = G.idx >= 24 ? 'Has llegado arriba del todo. Ahora, a mantenerlo.' : `Vas al ${Math.min(99, Math.round(G.prog * 100))} % de camino a ${rkName(G.idx + 1)}.`;
+    h += `<div class="card stack rk-hero">${rkIcon(G.idx, 84)}<div class="small muted">Rango global</div><h2>${rkName(G.idx)}</h2><div style="width:100%">${rkBar(G.prog, G.idx)}</div><div>${nx}</div>${sexTxt}</div>`;
+  } else if (n) {
+    h += `<div class="card stack rk-hero">${rkIcon(-1, 84)}<h2>Rango global bloqueado</h2><div class="muted">Se desbloquea con ${RK.minEx} ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna.</div><div><b>Llevas ${Math.min(n, RK.minEx)} de ${RK.minEx} ejercicios.</b></div>${R.miss.length ? `<div class="small muted">Te falta: ${rkYes(R.miss)}.</div>` : ''}${sexTxt}</div>`;
+  } else if (R.bw) {
+    h += `<div class="card stack rk-hero">${rkIcon(-1, 84)}<h2>Aún no hay rangos</h2><div class="muted">Haz un entreno con ejercicios de fuerza y aquí verás tu rango en cada uno.</div>${sexTxt}</div>`;
+  }
+  if (n) {
+    const mus = R.mus, th = themeNow(), tiers = [...new Set(Object.values(mus).filter(m => m && m.idx >= 0).map(m => rkTier(m.idx)))].sort((a, b) => a - b);
+    h += `<div class="card stack"><h3>Mapa de rangos</h3><div class="bm-lg">${bodyMap({}, {fills: rkFills(th), label: 'Mapa corporal pintado por rango'})}</div>
+      ${tiers.length ? `<div class="rk-leg">${tiers.map(t => `<span><i style="--rk:${RK_COL[th][t]}"></i>${RK_TIERS[t]}</span>`).join('')}</div>` : ''}
+      <div class="small muted" style="text-align:center">Cada músculo, del color de su rango. En gris, los que aún no tienen.</div></div>`;
+    h += `<div class="card stack"><h3>Grupos y músculos</h3><div class="rk-list">${GROUPS.map(([g, ks]) => {
+      const M = R.grp[g], i = M ? M.idx : -1;
+      const mk = ks.filter(k => R.mus[k]), subs = mk.length > 1 ? mk.map(k => { const m = R.mus[k]; return `<button class="rk-row sub" data-act="rk-mus" data-k="${k}"><span>${rkIcon(m.idx, 22)}</span><div><b>${MUSCLES[k] || k}</b>${rkBar(m.prog, m.idx)}</div><em>${rkName(m.idx)}</em></button>`; }).join('') : '';
+      return `<div class="rk-row"><span>${rkIcon(i, 26)}</span><div><b>${g}</b>${rkBar(M ? M.prog : 0, i)}</div><em>${i < 0 ? 'Sin rango' : rkName(i)}</em></div>${subs}`;
+    }).join('')}</div></div>`;
+    const all = [...R.ex.values()].sort((a, b) => b.pos - a.pos), open = UI.rkMore, LIM = 8;
+    h += `<div class="card stack"><div class="row between"><h3>Ejercicios</h3><span class="small muted">${all.length} con rango</span></div><div class="rk-list">${all.slice(0, open ? all.length : LIM).map(E => `<button class="rk-row${E.active ? '' : ' idle'}" data-act="open-ex" data-id="${esc(E.exId)}"><span>${rkIcon(E.idx, 26)}</span><div><b>${esc(exOf(E.exId).name)}</b><small>${rkPts(E.score)} · ${plural(E.ses, 'sesión', 'sesiones')}${E.active ? '' : ' · hace tiempo que no lo haces'}</small></div><em>${rkName(E.idx)}</em></button>`).join('')}</div>
+      ${all.length > LIM ? `<button class="st-more" data-act="rk-more">${open ? 'Ver menos' : `Ver los ${all.length} ejercicios`}</button>` : ''}</div>`;
+  }
+  if (R.none.size) {
+    const nl = [...R.none].map(([id, why]) => [exOf(id).name, why]).sort((a, b) => a[0].localeCompare(b[0], 'es'));
+    h += `<div class="card"><details><summary class="small muted">Sin rango (${nl.length})</summary><div class="rk-list">${nl.map(([nme, why]) => `<div class="rk-none"><b>${esc(nme)}</b><small>${why === 'bw' ? 'Falta tu peso corporal' : 'No hay un estándar fiable para este ejercicio'}</small></div>`).join('')}</div></details></div>`;
+  }
+  if (Social.ready() && G) h += `<label class="card row" data-act="rk-share" style="font-weight:600;align-items:flex-start"><input type="checkbox" style="width:auto;margin-top:3px" ${(S.settings.rkShare ?? RK.shareDef) ? 'checked' : ''}><span>Enseñar mi rango global a mis amigos<br><span class="small muted" style="font-weight:500">Solo se ve la insignia en tu perfil. Tu peso y tus marcas no salen del móvil.</span></span></label>`;
+  h += `<button class="btn block" data-act="go-rankhow">Cómo funcionan los rangos</button>`;
+  return h;
+}
+function viewRankHow(){
+  const G = rkAll().glob, mine = G ? G.idx : -1;
+  const anc = {3: 'principiante', 6: 'novato', 12: 'intermedio', 16: 'avanzado', 21: 'élite', 24: '1 % superior'};
+  const ladder = Array.from({length: 25}, (_, k) => 24 - k).map(i => `<div class="${i === mine ? 'me' : ''}">${rkIcon(i, 24)}<span><b>${rkName(i)}</b>${anc[i] ? ` <small class="rk-anc">${anc[i]}</small>` : ''}${i === mine ? ' <small class="rk-anc">← tú</small>' : ''}</span><small class="muted num">desde ${Math.max(1, RK_LO[i])}</small></div>`).join('');
+  const C = (t, ...ps) => `<div class="card stack"><h3>${t}</h3>${ps.map(p => `<div>${p}</div>`).join('')}</div>`;
+  return C('Qué es un rango', 'Cada ejercicio de fuerza tiene su rango, de Hierro a Simétrico. Hay 9 rangos y, salvo el último, cada uno tiene tres divisiones: empiezas en la I y subes hasta la III antes de pasar al siguiente.')
+    + C('Cómo se calcula', 'Estimamos tu repetición máxima con tus series normales (no hace falta hacer un máximo) y la comparamos con lo que levanta una persona de nivel intermedio de tu mismo peso. Eso da tus puntos de rango: 100 puntos es nivel intermedio. Pesar más o menos no da ventaja: el listón sube y baja con tu peso.', 'En dominadas y fondos cuenta tu peso más el lastre. En flexiones, abdominales y planchas cuentan las repeticiones o el tiempo.')
+    + C('Constancia, no un día suelto', 'Tu rango sale de tus mejores sesiones recientes de cada ejercicio, no de un pico aislado. Un día flojo no te baja. Descansar unas semanas tampoco. Y aunque pierdas forma, nunca caes por debajo del 85 % de tu mejor momento.')
+    + C('Músculos, grupos y global', 'El rango de un músculo es la media de sus ejercicios; los que más series haces pesan más. Con los músculos se forman los seis grupos (espalda, pecho, hombros, brazos, piernas y core). El rango global se desbloquea con 8 ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna. Piernas, espalda y pecho son los que más cuentan.')
+    + `<div class="card stack"><h3>La escalera</h3><div class="rk-ladder">${ladder}</div></div>`
+    + C('De dónde salen los números', 'No usamos datos de otros usuarios. Los listones vienen de tablas públicas de estándares de fuerza por peso corporal, y son orientativos: una máquina de tu gimnasio puede ser más dura o más blanda que otra. Los ejercicios asistidos, el cardio y los que no tienen un estándar fiable no llevan rango.')
+    + C('Privacidad', 'Tu peso y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
+}
+
 function viewMe(){
   const tot = S.workouts.length, vol = S.workouts.reduce((a, w) => a + wVolume(w), 0), ms = S.workouts.reduce((a, w) => a + (w.end - w.start), 0);
   const name = Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : 'Tú';
@@ -2481,6 +2654,7 @@ function viewMe(){
   let h = `<div class="card row" style="gap:14px"><div class="avatar">${esc(name.slice(0, 1).toUpperCase())}</div><div style="flex:1;min-width:0"><h2 style="overflow:hidden;text-overflow:ellipsis">${esc(name)}</h2><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">${Cloud.session ? esc(Cloud.session.email) : 'Sin cuenta · los datos están solo en este móvil'}</div></div></div>`;
   h += `<div class="card stats"><div class="stat"><b>${tot}</b><span>Entrenos</span></div><div class="stat"><b>${fmtKg(vol)}</b><span>Volumen</span></div><div class="stat"><b>${fmtN(ms / 36e5, 0)} h</b><span>Entrenando</span></div></div>`;
   h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>Tu semana tipo y análisis de tus rutinas</small></div><i>›</i></button><button data-act="go-stats"><span>${ICON.chart}</span><div><b>Estadísticas</b><small>Reparto muscular, evolución, ejercicios principales</small></div><i>›</i></button>
+    <button data-act="go-ranks"><span>${rkIcon(rkAll().glob ? rkAll().glob.idx : -1, 26)}</span><div><b>Rangos</b><small>${rkAll().glob ? 'Global: ' + rkName(rkAll().glob.idx) : 'Tu nivel en cada ejercicio y músculo'}</small></div><i>›</i></button>
     <button data-act="go-month" data-ym="${S.workouts.some(w => { const d = new Date(w.start); return d.getFullYear() * 12 + d.getMonth() === now.getFullYear() * 12 + now.getMonth(); }) ? now.getFullYear() * 12 + now.getMonth() : pm}"><span>${ICON.trophy}</span><div><b>Informe mensual</b><small>Tu mes comparado con el anterior, chiquipuntos y constancia</small></div><i>›</i></button>${S.customEx.length ? `<button data-act="go-myex"><span>${ICON.dumbbell}</span><div><b>Ejercicios propios</b><small>${plural(S.customEx.length, 'ejercicio creado por ti', 'ejercicios creados por ti')}</small></div><i>›</i></button>` : ''}</div>`;
   const sg = streakGrid(26);
   h += `<div class="card stack"><div class="row between"><h3>Constancia</h3><span class="small muted">${sg.days} días · ${weekStreak()} sem. seguidas</span></div>${sg.svg}</div>`;
@@ -2497,6 +2671,7 @@ function viewMe(){
   const tp = Theme.pref();
   h += `<div class="card stack"><h3>Ajustes</h3>
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
+    <div class="f" role="group" aria-labelledby="sexLbl"><span id="sexLbl">Sexo (para los rangos)</span><div class="seg">${[['', 'Sin indicar'], ['m', 'Hombre'], ['f', 'Mujer']].map(([k, l]) => `<button data-act="set-sex" data-v="${k}" aria-pressed="${(S.settings.sex || '') === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">Solo ajusta los estándares de fuerza. No se publica.</div></div>
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
     <label class="row" style="font-weight:600"><input type="checkbox" id="setSound" style="width:auto" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
     <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="setNotif" style="width:auto;margin-top:3px" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}</div>`;
@@ -2604,6 +2779,7 @@ function viewStats(){
     h += `<div class="card stack"><div class="st-h"><h3>Por músculo</h3><div class="small muted">Series de cada músculo${p ? ' y comparación con el periodo anterior' : ''}.</div></div>
       ${ml.slice(0, open ? ml.length : LIM).map(([k, v]) => `<div class="mbar"><span>${MUSCLES[k] || k}</span><div class="track">${fillBar(v / mmax * 100)}</div><b>${v}</b></div>${p ? `<div class="small muted" style="margin:-6px 0 0 104px">antes ${mp[k] || 0} ${delta(v, mp[k] || 0)}</div>` : ''}`).join('') || '<div class="chart-empty">Sin series en este periodo.</div>'}
       ${ml.length > LIM ? `<button class="st-more" data-act="st-more" data-k="mus">${open ? 'Ver menos' : `Ver los ${ml.length} músculos`}</button>` : ''}</div>`;
+    h += rkStatsCard();
     h += strengthCard();
     // series por grupo en el tiempo
     const gi = Math.max(0, GROUPS.findIndex(g => g[0] === UI.stGroup));
@@ -2763,7 +2939,7 @@ function exCardHTML(e, ei){
       ${chk ? `<button class="schk" data-act="set-done" data-ei="${ei}" data-si="${si}" aria-label="Marcar serie hecha" aria-pressed="${!!s.done}">${ICON.check}</button>` : ''}</div></div>`;
   }).join('');
   return `<div class="excard ${e.ss ? 'ss' : ''}" id="ex-${ei}">
-    <div class="exh">${photoUrl(x) ? `<button class="exthumb" data-act="ed-ex-info" data-id="${x.id}" aria-label="Ver ${esc(x.name)}">${photoImg(x)}</button>` : ''}<button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
+    <div class="exh">${photoUrl(x) ? `<button class="exthumb" data-act="ed-ex-info" data-id="${x.id}" aria-label="Ver ${esc(x.name)}">${photoImg(x)}</button>` : ''}<button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${chk ? rkChipLive(e) : ''}${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
     <textarea class="note" rows="1" data-act="ex-note" data-ei="${ei}" placeholder="Añadir notas…" aria-label="Notas">${esc(e.notes || '')}</textarea>
     ${m !== 'past' ? `<div class="exinfo"><button class="restline" data-act="ex-rest" data-ei="${ei}">${ICON.clock} Descanso: ${rest ? fmtClock(rest) : 'desactivado'}${e.rest == null ? ' (por defecto)' : ''}</button><span class="plates" id="pl-${ei}">${platesHTML(e)}</span></div>` : ''}
     <div class="sgrid hd ${chk ? '' : 'nochk'}"><div>Serie</div><div>Anterior</div><div>${cols[0]}</div><div>${cols[1] || ''}</div>${chk ? '<div></div>' : ''}</div>
@@ -3214,10 +3390,11 @@ function openSummary(w, fresh){
   const prs = w.prs || [];
   let h = `<div class="wrap"><div class="ehead"><button class="iconbtn" data-act="sum-close" aria-label="Cerrar">${ICON.x}</button><div class="ttl">Resumen</div><button class="btn sm" data-act="share-img" data-id="${w.id}">${ICON.share} Compartir</button></div><div class="ebody">
     <div class="hero ${fresh ? 'fresh' : ''}">${fresh ? '<span class="pill good">¡Entreno completado!</span>' : ''}<div class="big"><small>Nº</small> ${D.num}</div><h2>${esc(w.title || 'Entreno')}</h2><div class="muted small">${fmtDate(w.start)}</div>
-      <div class="pills"><span class="pill">${D.weekN}º de la semana</span><span class="pill">${weekStreak()} sem. seguidas</span>${prs.length ? `<span class="pill gold">${ICON.trophy} ${prs.length} ${prs.length === 1 ? 'chiquipunto' : 'chiquipuntos'}</span>` : ''}</div></div>
+      <div class="pills"><span class="pill">${D.weekN}º de la semana</span><span class="pill">${weekStreak()} sem. seguidas</span>${prs.length ? `<span class="pill gold">${ICON.trophy} ${prs.length} ${prs.length === 1 ? 'chiquipunto' : 'chiquipuntos'}</span>` : ''}${rkSumPill(w)}</div></div>
     <div class="card stack"><div class="stats4">${tile(fmtDur(w.end - w.start), 'Duración', D.p && delta(D.a.ms, D.p.ms, '', true))}${tile(fmtKg(D.a.vol), 'Volumen', D.p && delta(D.a.vol, D.p.vol))}${tile(D.a.sets, 'Series', D.p && delta(D.a.sets, D.p.sets))}${tile(D.a.reps, 'Reps', D.p && delta(D.a.reps, D.p.reps))}</div>
       <div class="small muted">${D.prev ? `Comparado con tu «${esc(D.prev.title)}» del ${fmtDate(D.prev.start, false)}.` : 'Primera vez que haces este entreno: la próxima vez verás la comparación.'}</div></div>`;
   if (prs.length) h += `<div class="stack"><h3 class="sech">${ICON.trophy} Chiquipuntos personales</h3>${prs.map(p => `<div class="prcard">${ICON.trophy}<div><b>${esc(exOf(p.exId).name)}</b><small>${p.label}${p.prev ? ' · antes ' + p.prev : ''}</small></div><span class="num">${p.txt}</span></div>`).join('')}</div>`;
+  h += rkSumHTML(w);
   h += `<div class="card stack"><h3>Músculos trabajados</h3><div class="bm-row"><div class="bm-md">${bodyMap(D.ms)}</div><div class="stack" style="flex:1;min-width:0">${GROUPS.map(([g], i) => D.gs[i] ? `<div class="mbar sm"><span>${g}</span><div class="track">${fillBar(D.gs[i] / Math.max(...D.gs) * 100)}</div><b>${fmtN(D.gs[i] / D.totS * 100, 0)}%</b></div>` : '').join('')}</div></div></div>`;
   h += `<div class="card stack"><h3>Ejercicios</h3>${D.exs.map(o => `<div class="sx"><div class="row between"><button class="nm" data-act="sum-ex" data-id="${o.x.id}">${esc(o.x.name)}</button><span class="small muted">${o.n} ${o.n === 1 ? 'serie' : 'series'}${o.w ? ` + ${o.w} cal.` : ''}</span></div>
       <div class="row between"><div class="small">${o.best ? `Mejor: <b>${setText(o.best, o.x.type)}</b>` : ''}${o.x.type === 'wr' && o.score ? ` · 1RM <b>${fmtN(o.score)}</b>` : ''} ${o.prevScore ? delta(o.score, o.prevScore, 'vs. anterior') : '<span class="delta flat">primera vez</span>'}</div>${spark(o.series)}</div>
@@ -3437,8 +3614,10 @@ const Social = {
     const p = this.me(), w30 = inRange(Date.now() - 30 * 864e5, Date.now() + 1), a30 = agg(w30);
     // resumen de los últimos 30 días para «Comparar» (cuenta todos tus entrenos, no solo los publicados; sin pesos corporales ni detalle)
     const m30 = Object.fromEntries(Object.entries(muscleSets(w30)).map(([k, v]) => [k, Math.round(v)]));
-    return {uid: this.myUid(), username: p.username, name: this.myName(), bio: p.bio || '', private: !!p.private,
+    const b = {uid: this.myUid(), username: p.username, name: this.myName(), bio: p.bio || '', private: !!p.private,
       stats: JSON.stringify({n7: inRange(Date.now() - 7 * 864e5, Date.now() + 1).length, workouts: S.workouts.length, vol: Math.round(S.workouts.reduce((a, w) => a + wVolume(w), 0)), streak: weekStreak(), n30: a30.n, ms30: Math.round(a30.ms / 60000) * 60000, vol30: Math.round(a30.vol), sets30: a30.sets, mus30: m30, since: S.workouts.length ? S.workouts[S.workouts.length - 1].start : 0})};
+    const rk = rkPublic(); if (rk != null) b.rank = rk; // rango global (0-24), solo si la persona lo comparte
+    return b;
   },
   // Escrituras sociales que salen de la sincronización normal (perfil y entrenos publicados)
   pushItems(){
@@ -3795,7 +3974,7 @@ function viewUser(uid){
   if (!p) return '<div class="empty">Este perfil no existe o se ha eliminado.</div>';
   const fol = Social.following.has(uid), st = p.stats || {};
   const n7 = isMe ? n7Of(uid) : st.n7;
-  let h = `<div class="uhead">${avatar(p.name, '', n7)}<div style="flex:1;min-width:0"><h2>${esc(p.name)}</h2><div class="small muted">@${esc(p.username)}${p.private ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="muted" style="font-size:14.5px;line-height:1.35;margin-top:4px">${esc(p.bio)}</div>` : ''}</div></div>
+  let h = `<div class="uhead">${avatar(p.name, '', n7)}<div style="flex:1;min-width:0"><h2>${esc(p.name)}</h2>${(rk => rk != null ? rkTag(rk, 18, 'sm') : '')(isMe ? rkPublic() : Number.isInteger(p.rank) && p.rank >= 0 && p.rank <= 24 ? p.rank : null)}<div class="small muted">@${esc(p.username)}${p.private ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="muted" style="font-size:14.5px;line-height:1.35;margin-top:4px">${esc(p.bio)}</div>` : ''}</div></div>
     <div class="stats" style="padding:0 4px"><button class="stat" data-act="soc-people" data-id="${uid}" data-k="followers"><b>${u.followers.length}</b><span>Seguidores</span></button><button class="stat" data-act="soc-people" data-id="${uid}" data-k="following"><b>${u.following.length}</b><span>Siguiendo</span></button><div class="stat"><b>${st.workouts || 0}</b><span>Entrenos</span></div></div>
     <div class="small muted" style="padding:0 4px">${plural(st.n30 || 0, 'entreno', 'entrenos')} en los últimos 30 días · ${plural(st.streak || 0, 'semana seguida', 'semanas seguidas')}</div>
     ${isMe ? `<button class="btn block" data-act="soc-edit">Editar perfil público</button>` : `<div class="grid2"><button class="btn ${fol ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${uid}">${fol ? 'Siguiendo ✓' : 'Seguir'}</button><button class="btn" data-act="soc-compare" data-id="${uid}">${ICON.compare} Comparar</button></div>`}`;
@@ -3892,7 +4071,7 @@ const A = {
     if (ws.length) modal(esc(fmtDate(a, false)), ws.map(w => `<button class="recrow" data-act="cal-open" data-id="${w.id}"><span>${esc(w.title || 'Entreno')}<small>${fmtDate(w.start)} · ${fmtDur(w.end - w.start)} · ${fmtKg(wVolume(w))}</small></span><i>›</i></button>`).join(''));
   },
   'cal-open'(el){ closeModal(); go({type: 'workout', id: el.dataset.id}); },
-  'open-ex'(el){ UI.exTab = 'prog'; go({type: 'exercise', id: el.dataset.id}); },
+  'open-ex'(el){ if (el.closest('#modal')) closeModal(); UI.exTab = 'prog'; go({type: 'exercise', id: el.dataset.id}); },
   'ex-tab'(el){ UI.exTab = el.dataset.k; render(); },
   'ex-metric'(el){ UI.exMetric = el.dataset.k; render(); },
   'week-metric'(el){ UI.weekMetric = el.dataset.k; render(); },
@@ -3939,7 +4118,7 @@ const A = {
       const st = new Date($('#edStart').value).getTime(); const dur = Math.max(1, num($('#edDur').value) || 1);
       d.title = $('#edTitle').value.trim() || 'Entreno'; d.notes = $('#edNotes').value; if (st) d.start = st; d.end = d.start + dur * 60000;
       d.exercises = d.exercises.map(e => ({...e, sets: e.sets.filter(s => hasData(s, exOf(e.exId).type)).map(({done, ph, ...s}) => s)})).filter(e => e.sets.length);
-      S.workouts[S.workouts.indexOf(old)] = d; sortW(); d.prs = computePRs(d);
+      S.workouts[S.workouts.indexOf(old)] = d; sortW(); d.prs = computePRs(d); delete d.rk; // los ascensos de un entreno editado ya no son fiables
       Store.markMonthOf(oldStart, d.start); closeEditor(); toast('Entreno actualizado');
     }
   },
@@ -3967,7 +4146,9 @@ const A = {
     out.title = $('#fnTitle').value.trim() || 'Entreno'; out.notes = $('#fnNotes').value.trim(); out.shared = !!($('#fnShare') && $('#fnShare').checked);
     const st = new Date($('#fnStart').value).getTime(); if (st) out.start = st;
     out.end = out.start + Math.max(1, num($('#fnDur').value) || 1) * 60000;
+    const rk0 = rkAll();
     S.workouts.push(out); sortW(); out.prs = computePRs(out);
+    rkReset(); const rkUp = rkDiff(rk0, rkAll()); if (rkUp.length) out.rk = rkUp; // ascensos de rango de este entreno
     if (out.shared && A._pendingPhoto) Social.queuePhoto(out, A._pendingPhoto); A._pendingPhoto = null;
     const routine = out.routineId && S.routines.find(r => r.id === out.routineId);
     S.active = null; A._pendingFinish = null;
@@ -4014,7 +4195,10 @@ const A = {
       const lastInSS = !(next && next.ss === e.ss);
       if (lastInSS) startRest(e.rest ?? S.settings.rest, x.name);
       const pr = setPR(ED.data, ei, si);
-      if (pr) { toast(`🏆 ¡Chiquipunto! ${pr.label}: ${pr.txt}`); try { navigator.vibrate && navigator.vibrate([15, 60, 30]); } catch (err) {} }
+      const E0 = rkEx(e.exId), L = E0 ? rkLive(e.exId, ED.data.exercises.filter(q => q.exId === e.exId).flatMap(q => q.sets)) : null;
+      ED.rkAnn = ED.rkAnn || {}; const seen = ED.rkAnn[e.exId] ?? (E0 ? E0.idx : 99);
+      const upTxt = L && L.idx > seen ? `⬆️ ${rkName(L.idx)}` : ''; if (upTxt) { ED.rkAnn[e.exId] = L.idx; ED.rkJust = {id: e.exId, t: Date.now()}; }
+      if (pr || upTxt) { toast(pr ? `🏆 ¡Chiquipunto! ${pr.label}: ${pr.txt}${upTxt ? ' · ' + upTxt : ''}` : `⬆️ ¡Subes a ${rkName(L.idx)} en ${x.name}!`); try { navigator.vibrate && navigator.vibrate([15, 60, 30]); } catch (err) {} }
     } else s.done = false;
     renderEditor(); edTouch();
   },
@@ -4110,6 +4294,16 @@ const A = {
     Store.mark('meta', 'active', ...months); render(); toast('Datos borrados');
   },
   'go-stats'(){ go({type: 'stats'}); },
+  'go-ranks'(){ go({type: 'ranks'}); },
+  'go-rankhow'(){ go({type: 'rankhow'}); },
+  'rk-more'(){ UI.rkMore = !UI.rkMore; render(); },
+  'rk-mus'(el){
+    const k = el.dataset.k, M = rkAll().mus[k]; if (!M) return;
+    modal(`${esc(MUSCLES[k] || k)} · ${rkName(M.idx)}`, `<div class="small muted" style="margin-bottom:6px">Sale de estos ejercicios; los que más series llevan pesan más.</div><div class="rk-list">${M.ex.map(E => `<button class="rk-row" data-act="open-ex" data-id="${esc(E.exId)}"><span>${rkIcon(E.idx, 26)}</span><div><b>${esc(exOf(E.exId).name)}</b><small>${plural(E.sets, 'serie', 'series')}</small></div><em>${rkName(E.idx)}</em></button>`).join('')}</div>`);
+  },
+  'sum-ranks'(){ A['sum-close'](); go({type: 'ranks'}); },
+  'set-sex'(el){ const v = el.dataset.v; if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
+  'rk-share'(){ S.settings.rkShare = !(S.settings.rkShare ?? RK.shareDef); Store.mark('meta'); render(); toast(S.settings.rkShare ? 'Tus amigos ven tu rango global' : 'Tu rango ya no se enseña'); },
   'go-plan'(){ go({type: 'plan'}); },
   'plan-day'(el){ const i = +el.dataset.i, cur = (S.settings.plan || {}).days || [];
     modal(DAY_NAMES[i], `<div class="menu"><button data-act="plan-set" data-i="${i}" data-id="">${cur[i] ? 'Descanso' : 'Descanso ✓'}</button>${S.routines.map(r => `<button data-act="plan-set" data-i="${i}" data-id="${r.id}">${esc(r.name)}${cur[i] === r.id ? ' ✓' : ''}</button>`).join('')}</div>`); },
@@ -4473,6 +4667,146 @@ function fuerzaOf(t0, t1, bw){
 const fzNew = r => !!(r && typeof r === 'object' && FZ_GROUPS.some(([g]) => g in r));
 const fzTotal = r => fzNew(r) ? Math.round(FZ_GROUPS.reduce((a, [g]) => a + clamp(r[g], 0, CL.maxFz), 0) / FZ_GROUPS.length) : 0;
 const fzName = g => (FZ_GROUPS.find(G => G[0] === g) || [, ''])[1];
+/* Rangos (desde 4.7). Puntos de rango: 1RM estimado ÷ 1RM esperado de un intermedio de tu peso × 100 (100 = intermedio).
+   Independiente de fuerzaOf/myLeague (clanes). Los listones vienen de FZ_STD y de RK_STD/RK_REPS/RK_SEXF (ver «Fuentes» abajo). */
+const RK = {ref: {m: 80, f: 65}, exp: 2 / 3, capWr: 12, capBw: 20, max: 300, win: 6, rec: [1, .9, .8, .7, .6, .5], floor: .85,
+  idleW: 26, minEx: 8, need: ['Pecho', 'Espalda', 'Piernas'], gw: {Piernas: .25, Espalda: .2, Pecho: .2, Hombros: .125, Brazos: .125, Core: .1}, shareDef: false};
+const RK_TIERS = ['Hierro', 'Bronce', 'Plata', 'Oro', 'Rubí', 'Esmeralda', 'Diamante', 'Campeón', 'Simétrico'];
+const RK_LO = [0, 30, 40, 50, 57, 64, 72, 76, 81, 86, 90, 95, 100, 108, 116, 124, 132, 140, 147, 154, 161, 168, 180, 194, 210];
+const RK_COL = {dark: ['#8A93A6', '#C98A5A', '#C9D3E6', '#F2C94C', '#FF5D73', '#3DDC97', '#6FD3FF', '#B58CFF', '#FF6FB1'],
+  light: ['#5E6778', '#A3643A', '#7F8CA8', '#B8860B', '#D42A45', '#0F9D63', '#1485C4', '#7A3FE0', '#C2338A']};
+const rkTier = i => i >= 24 ? 8 : Math.floor(i / 3);
+const rkName = i => i < 0 ? 'Sin rango' : i >= 24 ? 'Simétrico' : RK_TIERS[rkTier(i)] + ' ' + ['I', 'II', 'III'][i % 3];
+const rkStep = n => { if (!(n > 0)) return -1; let i = 0; while (i < 24 && n >= RK_LO[i + 1]) i++; return i; };
+// posición continua en la escalera: parte entera = escalón, decimales = progreso hacia el siguiente
+const rkPos = n => { const i = rkStep(n); return i < 0 ? -1 : i === 24 ? 24 + Math.min(.99, (n - 210) / 60) : i + (n - RK_LO[i]) / (RK_LO[i + 1] - RK_LO[i]); };
+/* De dónde salen los listones (contrastados en nov 2026; son orientativos):
+   · RK_STD: 1RM de un intermedio en veces el peso corporal a ~80 kg, de StrengthLevel (encogimientos 126 kg, gemelos en máquina 141 kg,
+     aductores ~102 kg, abductores ~92 kg, crunch en polea ~68 kg, muñeca inversa 40 kg) y ajustados a la baja en lo que no hay dato directo.
+   · RK_REPS: StrengthLevel, comunidad entera (planchas 11/38/75/118/166 s; lateral 6/24/44/69/95 s; flexiones 5/19/39/62/87; colgado 0/8/17/28/39;
+     rueda 0/7/20/37/55; sit-ups 5/25/54/90/133). Giros rusos, puente de glúteo, hiperextensiones y elevación tumbado solo tienen datos con lastre: valores prudentes sin fuente directa.
+   · RK_SEXF y f de RK_REPS: cociente mujer/hombre de StrengthLevel/StrengthLog y de Symmetric Strength (press banca ≈ .55-.65, sentadilla ≈ .65-.77,
+     press militar ≈ .58, dominadas con lastre casi igual que 1,45×.7).
+   · Exponente 2/3 (RK.exp): en Symmetric Strength el 1RM de un intermedio sube ≈ x^0,7 con el peso corporal (sentadilla 95→117 kg de 60 a 80 kg).
+   · FZ_STD (compartido con la liga, no se toca) queda algo duro frente a StrengthLevel en press banca (1,25× vs ≈1,1×) y dominadas. */
+// 1RM de un intermedio en veces el peso corporal, para lo que no está en FZ_STD (en mancuernas, por mancuerna). Valores prudentes.
+const RK_STD = new Map(`Encogimientos (barra)|1.6;Encogimientos (mancuernas)|0.5;Curl de muñeca|0.6;Curl inverso|0.5
+Abductores (máquina)|1.15;Aductores (máquina)|1.25;Gemelos de pie|1.6;Gemelos sentado|1.1;Gemelos en prensa|2.2
+Crunch en polea|0.9;Crunch en máquina|0.95`.split(/[;\n]/).map(x => x.split('|')).map(([n, k]) => ['x-' + norm(n).replace(/ /g, '-'), +k]));
+// Repeticiones (o segundos) de principiante, novato, intermedio, avanzado y élite en una serie. f = factor para mujer.
+const RK_REPS = new Map(`Flexiones|reps|5,18,40,65,95|0.45;Crunch|reps|10,25,50,85,125|0.8;Elevación de piernas colgado|reps|2,8,16,26,38|0.8
+Elevación de piernas tumbado|reps|5,16,32,52,75|0.85;Rueda abdominal|reps|2,8,20,36,54|0.7;Giros rusos|reps|10,25,48,75,110|0.9
+Hiperextensiones|reps|8,18,32,48,68|0.9;Puente de glúteo|reps|10,24,45,70,100|1;Plancha|sec|11,38,75,118,166|0.83;Plancha lateral|sec|6,24,44,69,95|0.9`
+  .split(/[;\n]/).map(x => x.split('|')).map(([n, mode, a, f]) => ['x-' + norm(n).replace(/ /g, '-'), {mode, a: a.split(',').map(Number), f: +f}]));
+const RK_ANCH = [50, 72, 100, 132, 168];
+// Factor de mujer sobre el estándar de carga, por músculo (relación entre las tablas femenina y masculina a igualdad de nivel)
+const RK_SEXF = {pecho: .62, hombros: .64, triceps: .64, biceps: .66, antebrazo: .66, espalda: .70, trapecio: .70, lumbares: .70,
+  cuadriceps: .76, isquios: .76, gluteos: .80, gemelos: .76, aductores: .80, abductores: .80, abdominales: .80};
+const RK_SEXF_EX = {'x-peso-muerto-barra': .76, 'x-peso-muerto-con-barra-hexagonal': .76}; // músculo «espalda», pero es un levantamiento de pierna
+function rkInfo(id){
+  const x = exMap.get(id); if (!x || x.muscle === 'cardio' || x.muscle === 'completo') return null;
+  const r = RK_REPS.get(id); if (r) return (r.mode === 'sec' ? x.type === 'dur' : x.type === 'bw') ? {mode: r.mode, a: r.a, f: r.f, x} : null;
+  if (x.type !== 'wr' && x.type !== 'bw') return null;
+  let k = FZ_STD.get(id); if (k == null) k = RK_STD.get(id);
+  if (k == null && x.custom && x.type === 'wr' && !/asistid|assist/.test(norm(x.name))) {
+    const lift = Object.keys(REL_RE).find(l => REL_RE[l].test(norm(x.name)));
+    const g = FZ_GROUPS.find(G => G[2].includes(x.muscle));
+    k = lift ? FZ_STD.get(lift) : g ? (FZ_FALL[g[0]] || {})[x.equip] : null;
+  }
+  return k ? {mode: 'load', k, bw: x.type === 'bw', sf: RK_SEXF_EX[id] || RK_SEXF[x.muscle] || .7, x} : null;
+}
+// 1RM (kg) que se espera de un intermedio con ese peso corporal
+function rkExpected(f, bw, sex){ const ref = RK.ref[sex === 'f' ? 'f' : 'm']; return f.k * (sex === 'f' ? f.sf : 1) * ref * Math.pow(bw / ref, RK.exp); }
+// Puntos de una serie (0 = no puntúa). bw puede ser null: entonces solo puntúan reps/tiempo.
+function rkSetScore(f, s, bw, sex){
+  if (!isWork(s)) return 0;
+  if (f.mode !== 'load') {
+    const v = f.mode === 'sec' ? (+s.sec || 0) : (+s.reps || 0); if (!(v > 0)) return 0;
+    const a = sex === 'f' ? f.a.map(q => q * f.f) : f.a;
+    if (v <= a[0]) return v / a[0] * RK_ANCH[0];
+    for (let i = 1; i < 5; i++) if (v <= a[i]) return RK_ANCH[i - 1] + (v - a[i - 1]) / (a[i] - a[i - 1]) * (RK_ANCH[i] - RK_ANCH[i - 1]);
+    return Math.min(RK.max, RK_ANCH[4] + (v - a[4]) / (a[4] - a[3]) * (RK_ANCH[4] - RK_ANCH[3]));
+  }
+  if (!(bw > 0) || !(s.reps > 0)) return 0;
+  const load = f.bw ? bw + (+s.kg || 0) : (+s.kg || 0); if (!(load > 0)) return 0;
+  const rm = s.reps === 1 ? load : load * (1 + Math.min(s.reps, f.bw ? RK.capBw : RK.capWr) / 30);
+  return Math.min(RK.max, rm / rkExpected(f, bw, sex) * 100);
+}
+function rkSust(win){ // win: puntos de las últimas ≤6 sesiones, de la más reciente a la más antigua
+  const m = Math.min(3, Math.ceil(win.length / 2));
+  const a = win.map((n, j) => ({n, w: RK.rec[j]})).sort((p, q) => q.n - p.n || q.w - p.w).slice(0, m);
+  let s = 0, w = 0; for (const o of a) { s += o.n * o.w; w += o.w; } return w ? s / w : 0;
+}
+function rkReset(){ rkAll.c = null; }
+function rkAll(){
+  if (rkAll.c) return rkAll.c;
+  const sex = S.settings.sex === 'f' ? 'f' : 'm';
+  // pesos válidos por fecha (mismo criterio que bodyweightNear: 30-300 kg; el último anterior y, si no hay, el primero posterior)
+  const ms = S.measures.filter(m => m.weight >= 30 && m.weight <= 300).sort((a, b) => a.date - b.date);
+  const bwAt = t => { if (!ms.length) return null; let lo = 0, hi = ms.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (ms[mid].date < t) lo = mid + 1; else hi = mid; } return ms[lo ? lo - 1 : 0].weight; };
+  const info = new Map(), ex = new Map(), none = new Map(); // none: exId → 'std' | 'bw'
+  for (let i = S.workouts.length - 1; i >= 0; i--) {          // S.workouts va de más nuevo a más viejo: se recorre al revés
+    const w = S.workouts[i], bw = bwAt(w.start), per = new Map();
+    for (const e of w.exercises) {
+      let f = info.get(e.exId); if (f === undefined) info.set(e.exId, f = rkInfo(e.exId));
+      if (!f) { if (exMap.has(e.exId) && exOf(e.exId).type !== 'cardio') none.set(e.exId, 'std'); continue; }
+      if (f.mode === 'load' && !bw) { none.set(e.exId, 'bw'); continue; }
+      let o = per.get(e.exId); if (!o) per.set(e.exId, o = {n: 0, k: 0, top: null});
+      for (const s of e.sets) { const v = rkSetScore(f, s, bw, sex); if (v > 0) { o.k++; if (v > o.n) { o.n = v; o.top = s; } } }
+    }
+    per.forEach((o, id) => { if (!(o.n > 0)) return; let E = ex.get(id); if (!E) ex.set(id, E = {exId: id, info: info.get(id), win: [], ks: [], ses: 0, peak: 0});
+      E.win.unshift(o.n); E.ks.unshift(o.k); if (E.win.length > RK.win) { E.win.pop(); E.ks.pop(); }
+      E.ses++; E.last = w.start; E.top = o.top; E.sust = rkSust(E.win); if (E.sust > E.peak) E.peak = E.sust; });
+  }
+  const tRef = S.workouts.length ? S.workouts[0].start : 0;    // «hoy» = tu último entreno: un descanso no vuelve inactivo nada
+  ex.forEach(E => { none.delete(E.exId);
+    E.score = Math.max(E.sust, RK.floor * E.peak); E.floor = E.score > E.sust + 1e-9;
+    E.idx = rkStep(E.score); E.pos = rkPos(E.score); E.prog = E.idx >= 24 ? 1 : E.pos - E.idx;
+    E.sets = E.ks.reduce((a, b) => a + b, 0);                  // series que puntúan en la ventana: el peso del ejercicio en su músculo
+    E.active = E.last >= tRef - RK.idleW * 7 * 864e5; E.muscle = E.info.x.muscle; });
+  // músculo y grupo: media de pos ponderada por series. Cuentan los ejercicios activos; si no hay ninguno activo, todos.
+  const mean = list => { const act = list.filter(E => E.active), l = act.length ? act : list; let s = 0, k = 0; for (const E of l) { s += E.pos * E.sets; k += E.sets; }
+    return k ? (p => ({pos: p, idx: Math.floor(p), prog: p >= 24 ? 1 : p - Math.floor(p), n: l.length, sets: k, ex: l.slice().sort((a, b) => b.sets - a.sets)}))(s / k) : null; };
+  const all = [...ex.values()], mus = {}, grp = {};
+  for (const m of new Set(all.map(E => E.muscle))) mus[m] = mean(all.filter(E => E.muscle === m));
+  for (const [g, list] of GROUPS) { const r = mean(all.filter(E => list.includes(E.muscle))); if (r) grp[g] = r; }
+  // global
+  const n = all.length, miss = RK.need.filter(g => !grp[g]); let glob = null;
+  if (n >= RK.minEx && !miss.length) { let s = 0, k = 0; for (const [g] of GROUPS) if (grp[g]) { s += grp[g].pos * RK.gw[g]; k += RK.gw[g]; }
+    const p = s / k; glob = {pos: p, idx: Math.floor(p), prog: p >= 24 ? 1 : p - Math.floor(p)}; }
+  return rkAll.c = {sex, sexSet: !!S.settings.sex, bw: bwAt(Infinity), ex, none, mus, grp, glob, n, miss};
+}
+const rkEx = id => rkAll().ex.get(id) || null;
+const rkWhy = id => { const R = rkAll(); return R.ex.has(id) ? null : R.none.get(id) || (rkInfo(id) ? 'data' : 'std'); };
+function rkTarget(id){
+  const E = rkEx(id), R = rkAll(); if (!E || E.idx >= 24) return null;
+  const T = RK_LO[E.idx + 1], f = E.info, top = E.top || {};
+  if (f.mode !== 'load') { const a = R.sex === 'f' ? f.a.map(q => q * f.f) : f.a; let v = a[4] + (T - 168) / 36 * (a[4] - a[3]);
+      for (let i = 4; i >= 1; i--) if (T <= RK_ANCH[i]) v = a[i - 1] + (T - RK_ANCH[i - 1]) / (RK_ANCH[i] - RK_ANCH[i - 1]) * (a[i] - a[i - 1]);
+      if (T <= RK_ANCH[0]) v = T / RK_ANCH[0] * a[0]; v = Math.ceil(v - 1e-9);
+      return {idx: E.idx + 1, reps: v, txt: f.mode === 'sec' ? fmtClock(v) : v + ' reps'}; }
+  const rm = T / 100 * rkExpected(f, R.bw, R.sex), r = clamp(top.reps || 5, 1, f.bw ? RK.capBw : RK.capWr), need = r === 1 ? rm : rm / (1 + r / 30);
+  if (f.bw) { const extra = need - R.bw;
+    if (extra <= 0 || !(top.kg > 0)) { const r2 = Math.max(1, Math.ceil(30 * (rm / R.bw - 1) - 1e-9)); if (r2 <= RK.capBw) return {idx: E.idx + 1, kg: 0, reps: r2, txt: r2 + ' reps'}; if (extra <= 0) return null; }
+    const kg = Math.ceil(extra - 1e-9); return {idx: E.idx + 1, kg, reps: r, txt: `+${fmtN(kg)} kg × ${r}`}; }
+  const st = f.x.equip === 'barra' || f.x.equip === 'smith' ? 2.5 : 1, kg = Math.ceil(need / st - 1e-9) * st;
+  return {idx: E.idx + 1, kg, reps: r, txt: `${fmtN(kg)} kg × ${r}`};
+}
+function rkLive(id, sets){
+  const R = rkAll(), E = R.ex.get(id), f = E ? E.info : rkInfo(id); if (!f) return null;
+  let n = 0; for (const s of sets) if (s.done) n = Math.max(n, rkSetScore(f, s, R.bw, R.sex)); if (!(n > 0)) return E ? {idx: E.idx, score: E.score} : null;
+  const sust = rkSust([n, ...(E ? E.win : [])].slice(0, RK.win)), score = Math.max(sust, RK.floor * Math.max(sust, E ? E.peak : 0));
+  return {idx: rkStep(score), score};
+}
+function rkDiff(a, b){
+  const out = [], up = (t, id, x, y) => { if (y && (!x || y.idx > x.idx)) out.push({t, id, a: x ? x.idx : -1, b: y.idx}); };
+  up('glob', '', a.glob, b.glob);
+  for (const [g] of GROUPS) up('grp', g, a.grp[g], b.grp[g]);
+  for (const m in b.mus) up('mus', m, a.mus[m], b.mus[m]);
+  b.ex.forEach((E, id) => up('ex', id, a.ex.get(id), E));
+  return out;
+}
+const rkPublic = () => { const R = rkAll(); return R.glob && (S.settings.rkShare ?? RK.shareDef) ? R.glob.idx : null; };
 // [id, emoji, nombre, cómo se consigue, progreso (valor, meta) | null si es un premio]
 const LOGROS = [
   ['w1', '🎉', 'Primer entreno', 'Registra tu primer entreno', s => [s.n, 1]],
@@ -4500,6 +4834,7 @@ const REL_ACH = new Set(['rb1', 'rs15', 'rd2']);
 const REL_RE = {'x-press-banca-barra': /^(press (de )?banca|bench press)( plano)? (con )?(barra|barbell)$/, 'x-sentadilla-barra': /^(sentadilla|back squat|squat)( trasera)? (con )?(barra|barbell)$/,
   'x-peso-muerto-barra': /^(peso muerto|deadlift)( convencional)? (con )?(barra|barbell)$/, 'x-press-militar-barra': /^(press militar|press de hombros de pie|overhead press)( de pie)? (con )?(barra|barbell)$/};
 const relIds = id => [id, ...S.customEx.filter(c => REL_RE[id] && REL_RE[id].test(norm(c.name))).map(c => c.id)];
+
 const STICKY_ACH = new Set(['p100', 'rb1', 'rs15', 'rd2', 'clan']); // se guardan al conseguirlos (no se pierden si cambia el peso o la semana)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
 ICON.shield = SV('<path d="M12 2.8 19.5 6v5.6c0 4.6-3.1 8.3-7.5 9.6-4.4-1.3-7.5-5-7.5-9.6V6z"/><path d="M8.6 10.2 12 12.6l3.4-2.4M8.6 14 12 16.4l3.4-2.4"/>');
@@ -5319,7 +5654,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.6.0';
+const APP_VERSION = '4.7.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
