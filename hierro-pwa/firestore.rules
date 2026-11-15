@@ -9,13 +9,6 @@ service cloud.firestore {
       allow read, write: if signed() && me() == uid;
     }
 
-    // Perfil público: lo ve cualquiera con cuenta, solo lo cambia su dueño
-    match /profiles/{uid} {
-      allow read: if signed();
-      allow write: if signed() && me() == uid && request.resource.data.uid == uid;
-      allow delete: if signed() && me() == uid;
-    }
-
     // Nombres de usuario únicos
     match /usernames/{name} {
       allow read: if signed();
@@ -23,40 +16,102 @@ service cloud.firestore {
       allow delete: if signed() && resource.data.uid == me();
     }
 
-    // Seguir: el id es "quien_a quien"
+    // ---------- Social 4.8 ----------
+    function nowMs() { return request.time.toMillis(); }
+    function optStr(d, k, max) { return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max); }
+    function optBool(d, k) { return !(k in d) || d[k] == null || d[k] is bool; }
+
+    function validProfile(d) {
+      return d.keys().size() <= 14
+        && d.username is string && d.username.matches('^[a-z0-9_.]{3,20}$')
+        && optStr(d, 'name', 80) && optStr(d, 'nameLc', 80) && optStr(d, 'bio', 200) && optStr(d, 'stats', 6000)
+        && optBool(d, 'private')
+        && (!('rank' in d) || d.rank == null || (d.rank is int && d.rank >= 0 && d.rank <= 24));
+    }
+    match /profiles/{uid} {
+      allow read: if signed();
+      // el @ del perfil tiene que ser tuyo en usernames (solo se comprueba al crearlo o cambiarlo)
+      allow create, update: if signed() && me() == uid && request.resource.data.uid == uid
+        && validProfile(request.resource.data)
+        && ((resource != null && resource.data.get('username', '') == request.resource.data.username)
+            || get(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == me());
+      allow delete: if signed() && me() == uid;
+    }
+
     match /follows/{id} {
       allow read: if signed();
-      allow create: if signed() && request.resource.data.from == me() && id == me() + '_' + request.resource.data.to;
-      allow update: if signed() && resource.data.from == me() && request.resource.data.from == me() && request.resource.data.to == resource.data.to;
+      allow create: if signed() && request.resource.data.from == me()
+        && request.resource.data.to is string && request.resource.data.to.size() <= 128 && request.resource.data.to != me()
+        && id == me() + '_' + request.resource.data.to
+        && request.resource.data.keys().size() <= 4;
+      allow update: if signed() && resource.data.from == me() && request.resource.data.from == me()
+        && request.resource.data.to == resource.data.to && request.resource.data.keys().size() <= 4;
       allow delete: if signed() && (resource.data.from == me() || resource.data.to == me());
     }
 
-    // Entrenos publicados en el feed
+    function validPost(d) {
+      return d.keys().size() <= 10
+        && d.start is number && d.start > 0 && d.start <= nowMs() + 86400000
+        && d.body is string && d.body.size() <= 100000
+        && optBool(d, 'hasPhoto')
+        && (!('photo' in d) || d.photo == null || (d.photo is string && d.photo.size() <= 400000
+             && (d.photo.size() == 0 || d.photo.matches('data:image/(jpeg|png|webp);base64,.*'))));
+    }
+    // vista previa del último comentario: solo quien acaba de comentar la pone; se quita al borrar un comentario
+    function lastCOk() {
+      let a = request.resource.data;
+      let b = resource.data;
+      let dc = a.get('commentCount', 0) - b.get('commentCount', 0);
+      return a.get('lastC', null) == b.get('lastC', null)
+        || (dc == 1 && a.lastC is map && a.lastC.keys().hasOnly(['uid', 'cid', 'text', 'ts'])
+            && a.lastC.uid == me() && a.lastC.text is string && a.lastC.text.size() <= 140 && a.lastC.ts is number)
+        || (dc == -1 && !('lastC' in a));
+    }
     match /posts/{pid} {
       allow read: if signed();
-      allow create: if signed() && request.resource.data.uid == me();
+      // el id empieza por tu uid y la fecha invertida; nace sin me gusta ni contador
+      allow create: if signed() && request.resource.data.uid == me() && validPost(request.resource.data)
+        && pid.matches('^' + me() + '_[0-9]{14}_.{1,80}$')
+        && !request.resource.data.keys().hasAny(['likes', 'commentCount', 'lastC']);
       allow delete: if signed() && resource.data.uid == me();
-      // El dueño lo edita; los demás solo pueden darse/quitarse su propio me gusta y sumar/restar un comentario
       allow update: if signed() && (
-        (resource.data.uid == me() && request.resource.data.uid == me())
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount'])
+        // el dueño edita su entreno, pero no los me gusta ni los contadores
+        (resource.data.uid == me() && request.resource.data.uid == me() && validPost(request.resource.data)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['likes', 'commentCount', 'lastC']))
+        // cualquiera (también el dueño): su propio me gusta, ±1 comentario y la vista previa
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount', 'lastC'])
             && request.resource.data.get('likes', []).toSet().difference(resource.data.get('likes', []).toSet()).hasOnly([me()])
             && resource.data.get('likes', []).toSet().difference(request.resource.data.get('likes', []).toSet()).hasOnly([me()])
-            && (request.resource.data.get('commentCount', 0) - resource.data.get('commentCount', 0)) in [-1, 0, 1]));
+            && request.resource.data.get('likes', []).size() <= 500
+            && (request.resource.data.get('commentCount', 0) - resource.data.get('commentCount', 0)) in [-1, 0, 1]
+            && request.resource.data.get('commentCount', 0) >= 0
+            && lastCOk()));
 
       match /comments/{cid} {
         allow read: if signed();
         allow create: if signed() && request.resource.data.uid == me()
-                      && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500;
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'username', 'text', 'ts'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+          && request.resource.data.ts is number && request.resource.data.ts <= nowMs() + 600000
+          && optStr(request.resource.data, 'name', 80) && optStr(request.resource.data, 'username', 20);
         allow delete: if signed() && (resource.data.uid == me() || get(/databases/$(database)/documents/posts/$(pid)).data.uid == me());
       }
     }
 
-    // Notificaciones: las escribe quien actúa, solo las lee su destinatario
+    // Avisos: solo con causa real (un post del destinatario, un follow existente o un aviso de clan) y con hora creíble
+    function validNotif(d, uid) {
+      return d.from == me() && d.keys().size() <= 12
+        && d.type is string && d.ts is number && d.ts >= nowMs() - 600000 && d.ts <= nowMs() + 600000
+        && optStr(d, 'name', 80) && optStr(d, 'username', 20) && optStr(d, 'title', 300) && optStr(d, 'text', 300)
+        && ((d.type in ['like', 'comment'] && d.pid is string
+              && get(/databases/$(database)/documents/posts/$(d.pid)).data.uid == uid)
+            || (d.type == 'follow' && exists(/databases/$(database)/documents/follows/$(me() + '_' + uid)))
+            || d.type.matches('rel-[a-z0-9-]{1,24}'));
+    }
     match /notifs/{uid}/items/{nid} {
       allow read, delete: if signed() && me() == uid;
-      allow create: if signed() && request.resource.data.from == me();
-      allow update: if signed() && resource.data.from == me() && request.resource.data.from == me();
+      allow create: if signed() && validNotif(request.resource.data, uid);
+      allow update: if signed() && resource.data.from == me() && validNotif(request.resource.data, uid);
     }
 
     // Clanes: los ve cualquiera con cuenta. El jefe (owner) lo edita, expulsa y lo borra;
