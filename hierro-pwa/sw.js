@@ -1,9 +1,9 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-4.9.0';
+const VERSION = 'hierro-4.9.1';
 const PHOTOS = 'hierro-fotos'; // fotos de ejercicios: se guardan al verlas y no se borran al actualizar
-const FONTS = 'hierro-fuentes'; // tipografías de Google Fonts (Sora y Plus Jakarta Sans): se guardan la primera vez y funcionan sin conexión
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './config.js'];
+const FONTS = 'hierro-fuentes'; // caché antigua de Google Fonts (hasta 4.9.0); desde 4.9.1 las fuentes van en ./fonts/ dentro de la app
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './config.js', './fonts/Sora-wght.ttf', './fonts/PlusJakartaSans-wght.ttf'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, {cache: 'reload'})))));
