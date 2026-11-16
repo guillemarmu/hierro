@@ -19,10 +19,12 @@ d.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Hierro</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"></noscript>
+<!-- 4.9.1: tipografías servidas desde la propia web (antes Google Fonts mandaba la IP de cada visitante a Google) -->
+<link rel="preload" href="fonts/PlusJakartaSans-wght.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+@font-face{font-family:'Sora';src:url('fonts/Sora-wght.ttf') format('truetype');font-weight:100 800;font-display:swap}
+@font-face{font-family:'Plus Jakarta Sans';src:url('fonts/PlusJakartaSans-wght.ttf') format('truetype');font-weight:200 800;font-display:swap}
+</style>
 <style>
 /* «Aurora» (oscuro) y «Glaciar» (claro): cristal translúcido sobre luces de aurora, degradado azul → violeta → rosa.
    Columna móvil (máx. 560px), pestañas flotantes abajo; el entreno activo es una hoja a pantalla completa.
@@ -1541,6 +1543,17 @@ function cleanW(w){
   return w;
 }
 const cleanArr = a => (Array.isArray(a) ? a : []).filter(isObj);
+/* Seguridad: una copia .json ajena se sanea al restaurarla. < y > se cambian por ‹ › en todo el texto, y en los campos que se
+   pintan sin esc (ids, tipos de serie...) tambien se quitan comillas, & y acentos graves. Se descarta __proto__ y la profundidad se acota. */
+const DS_IDKEYS = new Set(['id', 'exId', 'routineId', 'wid', 'uid', 'rid', 'src', 't', 'type', 'ss', 'muscle', 'equip', 'clan', 'days']);
+const deepSafe = (v, idl = false, d = 0) => {
+  if (typeof v === 'string') { v = v.replace(/[<>]/g, c => c === '<' ? '\u2039' : '\u203a'); return idl ? v.replace(/["'`&]/g, '_') : v; }
+  if (!v || typeof v !== 'object') return v;
+  if (d > 12) return null;
+  if (Array.isArray(v)) return v.map(x => deepSafe(x, idl, d + 1));
+  const o = {}; for (const k of Object.keys(v)) if (k !== '__proto__') o[k] = deepSafe(v[k], idl || DS_IDKEYS.has(k), d + 1);
+  return o;
+};
 const cleanR = r => { r.exercises = cleanArr(r.exercises).map(e => { e.sets = cleanArr(e.sets); return e; }); return r; };
 const Store = {
   key: 'state', timer: null, persisted: false,
@@ -3465,7 +3478,7 @@ function importHevyCSV(text){
       const ss = get(r, 'superset_id') || null;
       const key = exId + '|' + (ss || '');
       let block = exercises[exercises.length - 1];
-      if (!block || lastKey !== key) { block = {uid: rid(), exId, notes: get(r, 'exercise_notes') || '', rest: null, ss: ss ? 's' + ss : null, sets: []}; exercises.push(block); lastKey = key; }
+      if (!block || lastKey !== key) { block = {uid: rid(), exId, notes: get(r, 'exercise_notes') || '', rest: null, ss: ss ? 's' + String(ss).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 40) : null, sets: []}; exercises.push(block); lastKey = key; }
       const t = {warmup: 'w', failure: 'f', dropset: 'd', drop_set: 'd'}[norm(get(r, 'set_type')).replace(/ /g, '_')] || 'n';
       const kg = kgRaw != null ? (lbs ? kgRaw * 0.45359237 : kgRaw) : null;
       const s = {t, kg: kg != null ? Math.round(kg * 100) / 100 : null, reps, sec: null, km: null, min: null};
@@ -3518,7 +3531,8 @@ async function saveFile(filename, data, mime){
 }
 function toCSV(){
   const head = ['title','start_time','end_time','description','exercise_title','superset_id','exercise_notes','set_index','set_type','weight_kg','reps','distance_km','duration_seconds'];
-  const q = v => { v = v == null ? '' : String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  // 4.9.1: un texto que empieza por = + - @ se trata como fórmula en Excel (un entreno copiado de otro podía colarla): se antepone '
+  const q = v => { const txt = typeof v === 'string'; v = v == null ? '' : String(v); if (txt && /^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const dt = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`; };
   const T = {n: 'normal', w: 'warmup', f: 'failure', d: 'dropset'};
   const lines = [head.join(',')];
@@ -3733,7 +3747,16 @@ const jsv = v => {
   return null;
 };
 const fsFields = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)]));
-const docData = d => ({_id: d.name.split('/').pop(), _name: d.name, ...Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, jsv(v)]))});
+/* Seguridad: el id de un documento lo elige quien lo crea (puede llevar comillas o <>) y varias plantillas lo meten en data-id sin esc.
+   Los ids que no son [A-Za-z0-9_.-] se neutralizan aqui (con prefijo ~ para que no choquen con ids legitimos); los posts van con esc y se dejan.
+   Ademas, «name» siempre es texto: las reglas dejan guardar name=null y .localeCompare(null) rompia la pestana Clanes. */
+const SAFE_DOC_ID = /^[A-Za-z0-9_.\-]{1,200}$/;
+const docData = d => {
+  const id = d.name.split('/').pop(), isPost = /\/documents\/posts\/[^/]*$/.test(d.name);
+  const o = {_id: isPost || SAFE_DOC_ID.test(id) ? id : '~' + id.replace(/[^A-Za-z0-9_.\-]/g, '_').slice(0, 200), _name: d.name, ...Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, jsv(v)]))};
+  if ('name' in o && typeof o.name !== 'string') o.name = '';
+  return o;
+};
 const POST_FIELDS = {fields: ['uid', 'start', 'body', 'likes', 'commentCount', 'hasPhoto', 'lastC'].map(fieldPath => ({fieldPath}))}; // el feed no descarga las fotos
 const ff = (field, op, value) => ({fieldFilter: {field: {fieldPath: field}, op, value: fsv(value)}});
 function ago(t){
@@ -4432,7 +4455,7 @@ function postCard(p, opt){ try { return postCardH(p, opt); } catch (e) { return 
    - bans/{uid}: vetados por el admin (no pueden publicar, comentar, escribir en muros ni crear clanes)
    - admins/{uid}: lo crea Guillermo a mano en la consola de Firebase
    ========================================================= */
-const REPORT_WHY = [['acoso', 'Acoso o insultos'], ['odio', 'Odio o discriminación'], ['sexual', 'Contenido sexual o desnudos'], ['violencia', 'Violencia o amenazas'], ['spam', 'Spam o estafa'], ['suplanta', 'Se hace pasar por otra persona'], ['menor', 'Parece menor de 16 años'], ['otro', 'Otro motivo']];
+const REPORT_WHY = [['acoso', 'Acoso o insultos'], ['odio', 'Odio o discriminación'], ['sexual', 'Contenido sexual o desnudos'], ['violencia', 'Violencia o amenazas'], ['spam', 'Spam o estafa'], ['suplanta', 'Se hace pasar por otra persona'], ['menor', 'Parece menor de 16 años'], ['copyright', 'Usa fotos o textos ajenos sin permiso'], ['otro', 'Otro motivo']];
 const REPORT_KIND = {post: 'publicación', comment: 'comentario', user: 'perfil', msg: 'mensaje del muro', clan: 'clan'};
 const isBlocked = uid => !!uid && Array.isArray(S.settings.blocked) && S.settings.blocked.includes(uid);
 const Mod = {
@@ -4508,6 +4531,9 @@ const Mod = {
   },
   async delContent(rep){
     const p = String(rep.path || ''), seg = p.split('/');
+    // Seguridad: la ruta de una denuncia la escribe el denunciante; solo se borra si es del tipo que dice ser (si no, se descarta la denuncia)
+    const okP = {post: /^posts\/[^/]+$/, comment: /^posts\/[^/]+\/comments\/[^/]+$/, user: /^profiles\/[^/]+$/, msg: /^relations\/[^/]+\/msgs\/[^/]+$/, clan: /^clans\/[^/]+$/}[rep.kind];
+    if (!okP || !okP.test(p)) { toast('Denuncia con ruta no válida: descártala'); return false; }
     const ok = await ask('Borrar contenido', `Se borrará este ${esc(REPORT_KIND[rep.kind] || 'contenido')} para todos. No se puede deshacer.`, [['0', 'Cancelar'], ['1', 'Borrar', 'danger']]); closeModal();
     if (ok !== '1') return false;
     try {
@@ -4735,7 +4761,7 @@ function viewUser(uid){
   const n7 = isMe ? n7Of(uid) : st.n7, sid = esc(uid);
   const rk = isMe ? rkPublic() : Number.isInteger(p.rank) && p.rank >= 0 && p.rank <= 24 ? p.rank : null;
   let h = `<div class="uhead">${avatar(p.name, '', n7)}<div class="ub"><h2>${esc(p.name)}</h2>${rk != null ? rkTag(rk, 18, 'sm') : ''}<div class="small muted ur">@${esc(p.username)}${!isMe && Social.followers.includes(uid) ? ' <span class="pill accent">Te sigue</span>' : ''}${priv ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="ubio">${esc(p.bio)}</div>` : ''}</div></div>
-    <div class="stats" style="padding:0 4px${priv ? ';grid-template-columns:repeat(2,1fr)' : ''}"><button class="stat" data-act="soc-people" data-id="${sid}" data-k="followers"><b>${u.followers.length}</b><span>Seguidores</span></button><button class="stat" data-act="soc-people" data-id="${sid}" data-k="following"><b>${u.following.length}</b><span>Siguiendo</span></button>${priv ? '' : `<div class="stat"><b>${isMe ? S.workouts.length : st.workouts || 0}</b><span>Entrenos</span></div>`}</div>`;
+    <div class="stats" style="padding:0 4px${priv ? ';grid-template-columns:repeat(2,1fr)' : ''}"><button class="stat" data-act="soc-people" data-id="${sid}" data-k="followers"><b>${u.followers.length}</b><span>Seguidores</span></button><button class="stat" data-act="soc-people" data-id="${sid}" data-k="following"><b>${u.following.length}</b><span>Siguiendo</span></button>${priv ? '' : `<div class="stat"><b>${isMe ? S.workouts.length : clamp(st.workouts, 0, 1e6)}</b><span>Entrenos</span></div>`}</div>`;
   if (!priv) {
     const ws = weekStart(Date.now()), tIdx = (new Date().getDay() + 6) % 7, tr = new Set(u.posts.filter(x => x.start >= ws).map(x => (new Date(x.start).getDay() + 6) % 7));
     h += `<div class="card stack uweek"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${isMe ? weekStreak() : clamp(st.streak || 0, 0, 999)}</b> sem. seguidas</span></div>
@@ -5211,7 +5237,15 @@ const A = {
     else if (r.kind === 'user') go({type: 'user', id: seg[1] || r.tuid}); else if (r.kind === 'msg') go({type: 'pique', id: seg[1]}); else if (r.kind === 'clan') go({type: 'clanv', id: seg[1]});
   },
   async 'mod-del'(el){ const r = (Mod.reports || []).find(x => x._id === el.dataset.id); if (r && await Mod.delContent(r)) { const same = Mod.reports.filter(x => x.path === r.path); for (const x of same) await Mod.dismiss(x._id); } },
-  'mod-ban'(el){ const r = (Mod.reports || []).find(x => x._id === el.dataset.id); if (r) Mod.ban(r.tuid, r.reason); },
+  async 'mod-ban'(el){
+    const r = (Mod.reports || []).find(x => x._id === el.dataset.id); if (!r) return;
+    // 4.9.1: el autor (tuid) lo escribe quien denuncia: se comprueba contra el documento real antes de vetar
+    const seg = String(r.path || '').split('/'); let au = null;
+    try { if (r.kind === 'user') au = seg[1]; else { const d = await Cloud.getDoc(...seg), x = d && d.fields ? docData(d) : null; au = x ? (r.kind === 'clan' ? x.owner : x.uid) : null; } } catch (e) {}
+    if (!au) { toast('El contenido ya no existe: no se puede comprobar el autor'); return; }
+    if (au !== r.tuid) { toast('El autor real no coincide con el de la denuncia: no se veta'); return; }
+    Mod.ban(au, r.reason);
+  },
   async 'mod-dismiss'(el){ const r = (Mod.reports || []).find(x => x._id === el.dataset.id); if (r) for (const x of Mod.reports.filter(y => y.path === r.path)) await Mod.dismiss(x._id); },
   'mod-unban'(el){ Mod.unban(el.dataset.id); },
   'mod-ban-u'(el){ Mod.ban(el.dataset.id, 'perfil'); },
@@ -5474,7 +5508,7 @@ $('#fileCsv').addEventListener('change', async ev => {
 $('#fileJson').addEventListener('change', async ev => {
   const f = ev.target.files[0]; if (!f) return;
   try {
-    const d = JSON.parse(await f.text()); if (!d || d.app !== 'hierro') throw new Error('Este archivo no es una copia de Hierro.');
+    const d = deepSafe(JSON.parse(await f.text())); if (!d || d.app !== 'hierro') throw new Error('Este archivo no es una copia de Hierro.');
     const ok = await ask('Restaurar copia', `La copia tiene ${Array.isArray(d.workouts) ? d.workouts.length : 0} entrenos y ${Array.isArray(d.routines) ? d.routines.length : 0} rutinas. Sustituirá lo que tienes ahora.`, [['0', 'Cancelar'], ['1', 'Restaurar', 'primary']]); closeModal();
     if (ok !== '1') return;
     const oldMonths = S.workouts.map(w => monthKey(w.start));
@@ -6536,7 +6570,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.9.0';
+const APP_VERSION = '4.9.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
