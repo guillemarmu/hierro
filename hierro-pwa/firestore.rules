@@ -17,7 +17,11 @@ service cloud.firestore {
     // Nombres de usuario únicos
     match /usernames/{name} {
       allow read: if signed();
-      allow create: if signed() && request.resource.data.uid == me() && name.matches('^[a-z0-9_.]{3,20}$');
+      // 4.9.1: solo el campo uid (antes se podían colgar campos arbitrarios de hasta 1 MiB)
+      allow create: if signed() && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == me() && name.matches('^[a-z0-9_.]{3,20}$');
+      // FASE 2 (requiere cambio en el cliente, ver informe): que no se pueda soltar un @ que el perfil sigue usando:
+      //   allow delete: if signed() && resource.data.uid == me()
+      //     && (!existsAfter(/databases/$(database)/documents/profiles/$(me())) || getAfter(/databases/$(database)/documents/profiles/$(me())).data.username != name);
       allow delete: if signed() && resource.data.uid == me();
     }
 
@@ -25,9 +29,11 @@ service cloud.firestore {
     function nowMs() { return request.time.toMillis(); }
     function optStr(d, k, max) { return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max); }
     function optBool(d, k) { return !(k in d) || d[k] == null || d[k] is bool; }
+    function optNum(d, k) { return !(k in d) || d[k] == null || d[k] is number; } // 4.9.1
 
     function validProfile(d) {
-      return d.keys().size() <= 14
+      // 4.9.1: lista cerrada de campos (antes valían hasta 14 campos cualquiera, de cualquier tamaño)
+      return d.keys().hasOnly(['uid', 'username', 'name', 'nameLc', 'bio', 'private', 'stats', 'rank'])
         && d.username is string && d.username.matches('^[a-z0-9_.]{3,20}$')
         && optStr(d, 'name', 80) && optStr(d, 'nameLc', 80) && optStr(d, 'bio', 200) && optStr(d, 'stats', 6000)
         && optBool(d, 'private')
@@ -45,18 +51,22 @@ service cloud.firestore {
 
     match /follows/{id} {
       allow read: if signed();
+      // 4.9.1: solo from/to/ts (antes: hasta 4 campos cualquiera)
       allow create: if signed() && request.resource.data.from == me()
         && request.resource.data.to is string && request.resource.data.to.size() <= 128 && request.resource.data.to != me()
         && id == me() + '_' + request.resource.data.to
-        && request.resource.data.keys().size() <= 4
+        && request.resource.data.keys().hasOnly(['from', 'to', 'ts']) && optNum(request.resource.data, 'ts')
         && !banned() && !blockedBy(request.resource.data.to);
       allow update: if signed() && resource.data.from == me() && request.resource.data.from == me()
-        && request.resource.data.to == resource.data.to && request.resource.data.keys().size() <= 4;
+        && request.resource.data.to == resource.data.to
+        && request.resource.data.keys().hasOnly(['from', 'to', 'ts']) && optNum(request.resource.data, 'ts');
       allow delete: if signed() && (resource.data.from == me() || resource.data.to == me());
     }
 
     function validPost(d) {
-      return d.keys().size() <= 10
+      // 4.9.1: lista cerrada de campos (antes: hasta 10 campos cualquiera). likes/commentCount/lastC se admiten aquí porque
+      // el dueño edita un post que ya los tiene; en create se prohíben aparte y en update el dueño no puede tocarlos.
+      return d.keys().hasOnly(['uid', 'start', 'body', 'hasPhoto', 'photo', 'likes', 'commentCount', 'lastC'])
         && d.start is number && d.start > 0 && d.start <= nowMs() + 86400000
         && d.body is string && d.body.size() <= 100000
         && optBool(d, 'hasPhoto')
@@ -64,14 +74,22 @@ service cloud.firestore {
              && (d.photo.size() == 0 || d.photo.matches('data:image/(jpeg|png|webp);base64,.*'))));
     }
     // vista previa del último comentario: solo quien acaba de comentar la pone; se quita al borrar un comentario
-    function lastCOk() {
+    // 4.9.1: antes cualquiera podía sumar +1 al contador y poner «último comentario» (hasta 140 car.) en CUALQUIER post sin
+    // crear comentario (saltándose veto y bloqueo). Ahora el +1 solo vale si en el mismo lote nace un comentario nuevo suyo
+    // cuyo id es lastC.cid (la regla de create de comments ya comprueba veto y bloqueo).
+    function lastCOk(pid) {
       let a = request.resource.data;
       let b = resource.data;
       let dc = a.get('commentCount', 0) - b.get('commentCount', 0);
-      return a.get('lastC', null) == b.get('lastC', null)
-        || (dc == 1 && a.lastC is map && a.lastC.keys().hasOnly(['uid', 'cid', 'text', 'ts'])
-            && a.lastC.uid == me() && a.lastC.text is string && a.lastC.text.size() <= 140 && a.lastC.ts is number)
-        || (dc == -1 && !('lastC' in a));
+      let same = a.get('lastC', null) == b.get('lastC', null);
+      return (dc == 0 && same)
+        || (dc == 1 && a.get('lastC', null) is map && a.lastC.keys().hasOnly(['uid', 'cid', 'text', 'ts'])
+            && a.lastC.uid == me() && a.lastC.cid is string && a.lastC.cid.matches('^[A-Za-z0-9_-]{1,64}$')
+            && a.lastC.text is string && a.lastC.text.size() <= 140 && a.lastC.ts is number
+            && !exists(/databases/$(database)/documents/posts/$(pid)/comments/$(a.lastC.cid))
+            && existsAfter(/databases/$(database)/documents/posts/$(pid)/comments/$(a.lastC.cid))
+            && getAfter(/databases/$(database)/documents/posts/$(pid)/comments/$(a.lastC.cid)).data.uid == me())
+        || (dc == -1 && (same || !('lastC' in a)));
     }
     match /posts/{pid} {
       allow read: if signed();
@@ -89,36 +107,65 @@ service cloud.firestore {
             && request.resource.data.get('likes', []).toSet().difference(resource.data.get('likes', []).toSet()).hasOnly([me()])
             && resource.data.get('likes', []).toSet().difference(request.resource.data.get('likes', []).toSet()).hasOnly([me()])
             && request.resource.data.get('likes', []).size() <= 500
+            // 4.9.1: sin duplicados (una sola cuenta rellenaba los 500 huecos con su uid y nadie más podía dar me gusta)
+            && request.resource.data.get('likes', []).toSet().size() == request.resource.data.get('likes', []).size()
+            // 4.9.1: quien te ha bloqueado no puede darte me gusta (quitar el suyo sí)
+            && (request.resource.data.get('likes', []).toSet().difference(resource.data.get('likes', []).toSet()).size() == 0
+                || !blockedBy(resource.data.uid))
             && (request.resource.data.get('commentCount', 0) - resource.data.get('commentCount', 0)) in [-1, 0, 1]
             && request.resource.data.get('commentCount', 0) >= 0
-            && lastCOk()));
+            && lastCOk(pid)));
 
       match /comments/{cid} {
         allow read: if signed();
         allow create: if signed() && request.resource.data.uid == me()
           && request.resource.data.keys().hasOnly(['uid', 'name', 'username', 'text', 'ts'])
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
-          && request.resource.data.ts is number && request.resource.data.ts <= nowMs() + 600000
+          // 4.9.1: hora creíble por los dos lados (con ts=0 se colaban los primeros 200 de la lista y tapaban los comentarios reales)
+          && request.resource.data.ts is number && request.resource.data.ts <= nowMs() + 600000 && request.resource.data.ts >= nowMs() - 600000
           && optStr(request.resource.data, 'name', 80) && optStr(request.resource.data, 'username', 20)
           && !banned() && !blockedBy(get(/databases/$(database)/documents/posts/$(pid)).data.uid);
         allow delete: if signed() && (resource.data.uid == me() || get(/databases/$(database)/documents/posts/$(pid)).data.uid == me() || admin());
       }
     }
 
-    // Avisos: solo con causa real (un post del destinatario, un follow existente o un aviso de clan) y con hora creíble
-    function validNotif(d, uid) {
-      return d.from == me() && d.keys().size() <= 12
+    // Avisos: solo con causa real y comprobable, un aviso por acción (id determinista) y con hora creíble
+    // 4.9.1: antes el aviso solo comprobaba el tipo: «rel-*» valía para cualquiera y hacia cualquiera, y como id valía cualquiera
+    // (spam ilimitado); los campos eran libres (documentos de 1 MiB en el buzón ajeno); el update no miraba el bloqueo;
+    // pid podía llevar «/» y apuntar a un comentario en vez de a un post; el veto no se miraba.
+    function relIdOk(r) { return r is string && r.matches('^[A-Za-z0-9]{3,40}_[A-Za-z0-9]{3,40}$'); }
+    function relPrefix(t) { return t in ['rel-alianza', 'rel-pique'] ? 'rel' : (t in ['rel-ok-alianza', 'rel-ok-pique'] ? 'relok' : 'relno'); }
+    function validNotif(d, uid, nid) {
+      let post = /databases/$(database)/documents/posts/$(d.get('pid', 'x'));
+      let like = d.type == 'like' && d.pid is string && d.pid.matches('^[^/]{1,150}$') && !d.keys().hasAny(['rel', 'cname', 'cemoji'])
+        && nid == me() + '_like_' + d.pid
+        && get(post).data.uid == uid
+        && me() in get(post).data.get('likes', []);
+      let cmt = d.type == 'comment' && d.pid is string && d.pid.matches('^[^/]{1,150}$') && !d.keys().hasAny(['rel', 'cname', 'cemoji'])
+        && nid.matches('^' + me() + '_c_[A-Za-z0-9]{1,40}$')
+        && get(post).data.uid == uid
+        && get(/databases/$(database)/documents/posts/$(d.get('pid', 'x'))/comments/$(nid.split('_')[2])).data.uid == me();
+      let fol = d.type == 'follow' && !d.keys().hasAny(['pid', 'rel', 'cname', 'cemoji'])
+        && nid == me() + '_follow'
+        && exists(/databases/$(database)/documents/follows/$(me() + '_' + uid));
+      // alianzas y piques: de jefe de un clan a jefe del otro clan de esa relación (el id de la relación es «clanA_clanB»)
+      let rl = d.type in ['rel-alianza', 'rel-pique', 'rel-ok-alianza', 'rel-ok-pique', 'rel-no']
+        && relIdOk(d.get('rel', null)) && !('pid' in d)
+        && nid == me() + '_' + relPrefix(d.type) + '_' + d.rel
+        && ((clanOwner(d.rel.split('_')[0]) == me() && clanOwner(d.rel.split('_')[1]) == uid)
+            || (clanOwner(d.rel.split('_')[1]) == me() && clanOwner(d.rel.split('_')[0]) == uid));
+      return d.from == me()
+        && d.keys().hasOnly(['from', 'name', 'username', 'type', 'ts', 'pid', 'title', 'text', 'rel', 'cname', 'cemoji'])
         && d.type is string && d.ts is number && d.ts >= nowMs() - 600000 && d.ts <= nowMs() + 600000
         && optStr(d, 'name', 80) && optStr(d, 'username', 20) && optStr(d, 'title', 300) && optStr(d, 'text', 300)
-        && ((d.type in ['like', 'comment'] && d.pid is string
-              && get(/databases/$(database)/documents/posts/$(d.pid)).data.uid == uid)
-            || (d.type == 'follow' && exists(/databases/$(database)/documents/follows/$(me() + '_' + uid)))
-            || d.type.matches('rel-[a-z0-9-]{1,24}'));
+        && optStr(d, 'cname', 40) && optStr(d, 'cemoji', 16)
+        && (like || cmt || fol || rl);
     }
     match /notifs/{uid}/items/{nid} {
       allow read, delete: if signed() && me() == uid;
-      allow create: if signed() && validNotif(request.resource.data, uid) && !blockedBy(uid);
-      allow update: if signed() && resource.data.from == me() && validNotif(request.resource.data, uid);
+      allow create: if signed() && validNotif(request.resource.data, uid, nid) && !blockedBy(uid) && !banned();
+      // 4.9.1: el update también respeta bloqueo y veto (antes se podía reescribir un aviso viejo en el buzón de quien te bloqueó)
+      allow update: if signed() && resource.data.from == me() && validNotif(request.resource.data, uid, nid) && !blockedBy(uid) && !banned();
     }
 
     // Clanes: los ve cualquiera con cuenta. El jefe (owner) lo edita, expulsa y lo borra;
@@ -129,17 +176,24 @@ service cloud.firestore {
         && d.desc is string && d.desc.size() <= 120
         && d.owner is string
         && d.members is list && d.members.size() <= 30
+        && d.members.toSet().size() == d.members.size() // 4.9.1: sin duplicados (rellenaban los 30 huecos y el clan quedaba «lleno»)
         && d.get('kicked', []) is list && d.get('kicked', []).size() <= 100;
     }
     match /clans/{cid} {
       allow read: if signed();
-      allow create: if signed() && request.resource.data.owner == me() && request.resource.data.members == [me()]
+      // 4.9.1: el id del clan se pinta sin escapar en el HTML del cliente (data-id="${c._id}"): con un id como  x"><img src=x onerror=...>
+      // cualquier cuenta ejecutaba código en el móvil de todos los que abren la pestaña Clan. Solo ids tipo rid() (a-z0-9).
+      allow create: if signed() && cid.matches('^[a-z0-9]{6,24}$')
+                    && request.resource.data.owner == me() && request.resource.data.members == [me()]
                     && request.resource.data.keys().hasOnly(['name', 'emoji', 'desc', 'owner', 'members', 'created'])
+                    && optNum(request.resource.data, 'created')
                     && validClan(request.resource.data) && !banned();
       allow update: if signed() && validClan(request.resource.data) && (
         // el jefe: cambia nombre, emblema y descripción, expulsa (no puede meter a nadie) y puede pasar el mando a otro miembro
         (resource.data.owner == me()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'emoji', 'desc', 'members', 'owner', 'kicked'])
+          // 4.9.1: un jefe vetado no sigue publicando texto (nombre, emblema, descripción); sí puede expulsar, pasar el mando o irse
+          && (!banned() || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'emoji', 'desc']))
           && request.resource.data.members.toSet().difference(resource.data.members.toSet()).size() == 0
           && request.resource.data.owner in request.resource.data.members)
         // cualquier otro: solo entrar o salir él mismo (y no puede volver si le expulsaron)
@@ -152,13 +206,20 @@ service cloud.firestore {
 
     // Resumen público de la liga (puntos por semana, racha, logros y, si la persona lo activa, el cociente de fuerza relativa).
     // Solo lo escribe su dueño y solo con estos campos: no hay sitio para el peso corporal ni para otros datos privados.
+    // 4.9.1: v, wk, lastWk, streak y username no tenían tipo ni tamaño (un campo de 1 MiB lo descargaban los 300 resúmenes de cada
+    // carga de la liga de todos); updated podía ser 9e15 (primero siempre en la lista de 300). Los valores de weeks/months/rel/ach
+    // siguen siendo declarados por el cliente: las reglas no pueden recorrer un mapa ni comprobarlos contra los entrenos (ver informe).
     match /scores/{uid} {
       allow read: if signed();
       allow create, update: if signed() && me() == uid && request.resource.data.uid == uid
         && request.resource.data.keys().hasOnly(['v', 'uid', 'name', 'username', 'clan', 'wk', 'weeks', 'months', 'streak', 'lastWk', 'ach', 'rel', 'updated'])
         && request.resource.data.name is string && request.resource.data.name.size() <= 60
         && request.resource.data.clan is string && request.resource.data.clan.size() <= 40
-        && request.resource.data.updated is int
+        && request.resource.data.updated is int && request.resource.data.updated <= nowMs() + 86400000
+        && (!('v' in request.resource.data) || (request.resource.data.v is int && request.resource.data.v >= 0 && request.resource.data.v <= 100))
+        && optStr(request.resource.data, 'wk', 12) && optStr(request.resource.data, 'lastWk', 12)
+        && (!('username' in request.resource.data) || (request.resource.data.username is string && request.resource.data.username.matches('^[a-z0-9_.]{0,20}$')))
+        && (!('streak' in request.resource.data) || (request.resource.data.streak is number && request.resource.data.streak >= 0 && request.resource.data.streak <= 1000))
         && request.resource.data.weeks is map && request.resource.data.weeks.size() <= 10
         && request.resource.data.ach is list && request.resource.data.ach.size() <= 60
         && (!('months' in request.resource.data) || (request.resource.data.months is map && request.resource.data.months.size() <= 14))
@@ -176,9 +237,11 @@ service cloud.firestore {
     // Propone el jefe del clan «from»; acepta solo el jefe del otro; cualquiera de los dos jefes rechaza o termina.
     match /relations/{rid} {
       allow read: if signed();
-      allow create: if signed()
+      allow create: if signed() && !banned() // 4.9.1: el veto también cuenta aquí (el mensaje de la propuesta es texto público)
         && request.resource.data.keys().hasOnly(['a', 'b', 'type', 'status', 'from', 'by', 'created', 'msg'])
         && request.resource.data.a is string && request.resource.data.b is string
+        // 4.9.1: ids de clan solo alfanuméricos (se pintan sin escapar en el cliente; y el id de la relación es «a_b»)
+        && request.resource.data.a.matches('^[A-Za-z0-9]{3,40}$') && request.resource.data.b.matches('^[A-Za-z0-9]{3,40}$')
         && request.resource.data.a < request.resource.data.b
         && rid == request.resource.data.a + '_' + request.resource.data.b
         && request.resource.data.type in ['alianza', 'pique']
@@ -202,11 +265,13 @@ service cloud.firestore {
       // Muro de piques: lo leen todos; escriben los miembros de los dos clanes; borra el autor o cualquiera de los dos jefes
       match /msgs/{mid} {
         allow read: if signed();
-        allow create: if signed() && request.resource.data.uid == me()
+        // 4.9.1: id del mensaje solo a-z0-9 (el cliente lo pinta sin escapar en data-m: XSS en el muro de los dos clanes);
+        // ts creíble (con ts enorme un miembro fijaba sus mensajes arriba y llenaba los 30 de la lista, con ts=0 los enterraba)
+        allow create: if signed() && mid.matches('^[a-z0-9]{6,24}$') && request.resource.data.uid == me()
           && request.resource.data.keys().hasOnly(['uid', 'name', 'clan', 'text', 'ts'])
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 140
           && request.resource.data.name is string && request.resource.data.name.size() <= 60
-          && request.resource.data.ts is int
+          && request.resource.data.ts is int && request.resource.data.ts <= nowMs() + 600000 && request.resource.data.ts >= nowMs() - 600000
           && get(/databases/$(database)/documents/relations/$(rid)).data.status == 'activa'
           && request.resource.data.clan in [get(/databases/$(database)/documents/relations/$(rid)).data.a, get(/databases/$(database)/documents/relations/$(rid)).data.b]
           && me() in get(/databases/$(database)/documents/clans/$(request.resource.data.clan)).data.members
@@ -248,15 +313,25 @@ service cloud.firestore {
 
     // ---------- Moderación 4.9 ----------
     // Denuncias: cualquiera con cuenta crea la suya (id = su uid + '_' + milisegundos); solo el admin las lee y las borra
+    // 4.9.1: el panel del admin lee las 100 más recientes por ts: con ts=9e15 unas denuncias falsas tapaban todas las reales; y el
+    // botón «Borrar contenido» borra el documento de «path» tal cual, así que path tiene que ser del tipo que dice kind.
+    function reportPathOk(k, p) {
+      return (k == 'post' && p.matches('^posts/[^/]{1,300}$'))
+        || (k == 'comment' && p.matches('^posts/[^/]{1,300}/comments/[^/]{1,100}$'))
+        || (k == 'user' && p.matches('^profiles/[^/]{1,128}$'))
+        || (k == 'msg' && p.matches('^relations/[^/]{1,100}/msgs/[^/]{1,100}$'))
+        || (k == 'clan' && p.matches('^clans/[^/]{1,100}$'));
+    }
     match /reports/{rid} {
       allow create: if signed() && rid.matches('^' + me() + '_[0-9]{13}$')
         && request.resource.data.keys().hasOnly(['by', 'kind', 'path', 'tuid', 'reason', 'note', 'snap', 'ts'])
         && request.resource.data.by == me()
         && request.resource.data.kind in ['post', 'comment', 'user', 'msg', 'clan']
-        && request.resource.data.reason in ['acoso', 'odio', 'sexual', 'violencia', 'spam', 'suplanta', 'menor', 'otro']
+        && request.resource.data.reason in ['acoso', 'odio', 'sexual', 'violencia', 'spam', 'suplanta', 'menor', 'copyright', 'otro']
         && request.resource.data.path is string && request.resource.data.path.size() <= 300
+        && reportPathOk(request.resource.data.kind, request.resource.data.path)
         && optStr(request.resource.data, 'tuid', 128) && optStr(request.resource.data, 'note', 300) && optStr(request.resource.data, 'snap', 500)
-        && request.resource.data.ts is int;
+        && request.resource.data.ts is int && request.resource.data.ts <= nowMs() + 600000 && request.resource.data.ts >= nowMs() - 600000;
       allow read, delete: if admin();
     }
     // Bloqueos: los crea y borra quien bloquea; las reglas de arriba los consultan con exists()
@@ -264,6 +339,7 @@ service cloud.firestore {
       allow read, delete: if signed() && resource.data.from == me();
       allow create, update: if signed() && request.resource.data.keys().hasOnly(['from', 'to', 'ts'])
         && request.resource.data.from == me() && request.resource.data.to is string && request.resource.data.to != me()
+        && request.resource.data.to.size() <= 128 && optNum(request.resource.data, 'ts') // 4.9.1
         && id == me() + '_' + request.resource.data.to;
     }
     // Vetos: solo el admin; cada uno puede saber si está vetado
