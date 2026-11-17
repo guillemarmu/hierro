@@ -1111,6 +1111,7 @@ html.rest-up #view{padding-bottom:104px}
 .nreq{display:flex;align-items:center;gap:6px}.nreq .notif{flex:1;min-width:0}
 .dcam .btn:not(.primary){background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.22)}
 .fn-need{border:1px solid var(--peligro,#e5484d)}
+.pill.bd-req{background:var(--pr-soft);color:var(--pr)}#bodyCard .bd-w{gap:10px}#bodyCard .bd-w b{display:block;font-size:22px;line-height:1.2}#bodyCard .bd-w small{font-weight:500}
 </style>
 </head>
 <body>
@@ -2470,7 +2471,7 @@ function streakGrid(weeks = 26){
    ========================================================= */
 let tab = 'home';
 const navStack = {home: [], train: [], social: [], clan: [], me: []};
-const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, calMonth: null, mMetric: 'weight', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false};
+const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, calMonth: null, mMetric: 'waist', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false};
 const cur = () => navStack[tab][navStack[tab].length - 1];
 function go(view){ navTo(() => { navStack[tab].push(view); }); }
 function back(){ navTo(() => { navStack[tab].pop(); }, {keep: true}); }
@@ -2687,7 +2688,7 @@ function viewHome(){
     h += `<div class="empty">${EI('💪')}<h3>${Cloud.session && Cloud.session.name ? 'Hola, ' + esc(Cloud.session.name.split(' ')[0]) : 'Bienvenido a Hierro'}</h3><div>Empieza un entreno, trae tu historial de Hevy o recupera una copia de Hierro.</div><div class="stack" style="width:100%;max-width:320px"><button class="btn primary" data-act="tab" data-tab="train">Empezar a entrenar</button><button class="btn" data-act="import-csv">Importar de Hevy (CSV)</button><button class="btn" data-act="restore-json">Restaurar copia de Hierro</button></div></div>`;
     return h;
   }
-  h += goalCard(thisWeek);
+  h += bodyNagCard() + goalCard(thisWeek);
   const last7 = inRange(now - 7 * 864e5, now + 1), ms7 = muscleSets(last7);
   h += `<div class="card stack"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${weekStreak()}</b> sem. seguidas</span></div>
     <div class="wk" role="img" aria-label="Días entrenados esta semana: ${trained.size}">${days.map((dd, i) => { const on = trained.has(new Date(dd).getDay()); return `<div class="${on ? 'on' : i > todayIdx ? 'fut' : ''} ${i === todayIdx ? 'today' : ''}"><i>${on ? CHECK_SVG : ''}</i><span>${'LMXJVSD'[i]}</span></div>`; }).join('')}</div>
@@ -2867,7 +2868,7 @@ function rkExCardHTML(id){
   const E = rkEx(id);
   if (!E) {
     const why = rkWhy(id);
-    if (why === 'bw') return `<div class="card stack"><div>Apunta tu peso para ver tu rango en este ejercicio.</div><button class="btn" data-act="add-measure">Añadir mi peso</button></div>`;
+    if (why === 'bw') return `<div class="card stack"><div>Apunta tu peso para ver tu rango en este ejercicio.</div><button class="btn" data-act="add-weight">Añadir mi peso</button></div>`;
     if (why === 'std') return `<div class="small muted" style="padding:0 4px">Este ejercicio no tiene rango: no hay un estándar fiable para compararlo.</div>`;
     return '';
   }
@@ -2916,8 +2917,8 @@ function rkChipLive(e){
 function viewRanks(){
   const R = rkAll(), G = R.glob, n = R.n;
   let h = '';
-  if (!R.bw) h += `<div class="card stack"><h3>Falta tu peso</h3><div class="small muted">Los rangos comparan lo que levantas con tu peso corporal. Apúntalo una vez y se calculan solos. No se publica nunca.</div><button class="btn primary" data-act="add-measure">Añadir mi peso</button></div>`;
-  const sexTxt = R.sexSet ? '' : '<div class="small muted">Calculado con el estándar masculino. Si eres mujer, indícalo en Perfil › Ajustes y se ajusta.</div>';
+  if (!R.bw) h += `<div class="card stack"><h3>Falta tu peso</h3><div class="small muted">Los rangos comparan lo que levantas con tu peso corporal. Apúntalo una vez y se calculan solos. No se publica nunca.</div><button class="btn primary" data-act="add-weight">Añadir mi peso</button></div>`;
+  const sexTxt = R.sexSet ? '' : '<div class="small muted">Calculado con el estándar masculino. Si eres mujer, indícalo en Perfil › Tu cuerpo y se ajusta.</div>';
   const hf = R.bw ? rkHf(R.bw, R.sex) : 1, hp = Math.round((hf - 1) * 100);
   const hTxt = !rkHeight() ? '<div class="card row between small"><span>¿Cuánto mides? Con tu altura, los rangos de empuje y pierna se ajustan a tu complexión.</span><button class="linkbtn" data-act="go-height">Añadir</button></div>'
     : `<div class="card small muted">Altura ${rkHeight()} cm: ${hp ? `tu listón en pecho, hombros, tríceps y cuádriceps va un ${Math.abs(hp)} % más ${hp > 0 ? 'bajo' : 'alto'} por tu complexión` : 'tu complexión es la de referencia, sin ajuste'}. <button class="linkbtn" data-act="go-height">Cambiar</button></div>`;
@@ -2959,7 +2960,7 @@ function viewRankHow(){
   const C = (t, ...ps) => `<div class="card stack"><h3>${t}</h3>${ps.map(p => `<div>${p}</div>`).join('')}</div>`;
   return C('Qué es un rango', 'Cada ejercicio de fuerza tiene su rango, de Hierro a Simétrico. Hay 9 rangos y, salvo el último, cada uno tiene tres divisiones: empiezas en la I y subes hasta la III antes de pasar al siguiente.')
     + C('Cómo se calcula', 'Estimamos tu repetición máxima con tus series normales (no hace falta hacer un máximo) y la comparamos con lo que levanta una persona de nivel intermedio de tu mismo peso. Eso da tus puntos de rango: 100 puntos es nivel intermedio. Pesar más o menos no da ventaja: el listón sube y baja con tu peso.', 'En dominadas y fondos cuenta tu peso más el lastre. En flexiones, abdominales y planchas cuentan las repeticiones o el tiempo.')
-    + C('Tu altura', 'Si apuntas cuánto mides (Perfil › Ajustes), los ejercicios de pecho, hombros, tríceps y cuádriceps se ajustan a tu complexión: a igual peso, una persona alta y delgada tiene brazos de palanca más largos y menos músculo por centímetro, así que su listón baja un poco; una baja y ancha lo tiene algo más alto. El ajuste es pequeño (como mucho un 7 %) y no se aplica a tirones ni al peso muerto, donde los estudios no dan una ventaja clara. Sin altura, no hay ajuste.')
+    + C('Tu altura', 'Si apuntas cuánto mides (Perfil › Tu cuerpo), los ejercicios de pecho, hombros, tríceps y cuádriceps se ajustan a tu complexión: a igual peso, una persona alta y delgada tiene brazos de palanca más largos y menos músculo por centímetro, así que su listón baja un poco; una baja y ancha lo tiene algo más alto. El ajuste es pequeño (como mucho un 7 %) y no se aplica a tirones ni al peso muerto, donde los estudios no dan una ventaja clara. Sin altura, no hay ajuste.')
     + C('Constancia, no un día suelto', 'Tu rango sale de tus mejores sesiones recientes de cada ejercicio, no de un pico aislado. Un día flojo no te baja. Descansar unas semanas tampoco. Y aunque pierdas forma, nunca caes por debajo del 85 % de tu mejor momento.')
     + C('Músculos, grupos y global', 'El rango de un músculo es la media de sus ejercicios; los que más series haces pesan más. Con los músculos se forman los seis grupos (espalda, pecho, hombros, brazos, piernas y core). El rango global se desbloquea con 8 ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna. Piernas, espalda y pecho son los que más cuentan.')
     + `<div class="card stack"><h3>La escalera</h3><div class="rk-ladder">${ladder}</div></div>`
@@ -2967,6 +2968,40 @@ function viewRankHow(){
     + C('Privacidad', 'Tu peso, tu altura y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
 }
 
+/* 4.12.4 · Perfil: «Tu cuerpo» (peso, altura y sexo, lo que necesitan los rangos) y «Otras medidas» (opcionales), en tarjetas separadas. */
+const MF_OTHER = [['fat', 'Grasa', '%', 'Grasa corporal (%)'], ['waist', 'Cintura', 'cm', 'Cintura (cm)'], ['chest', 'Pecho', 'cm', 'Pecho (cm)'], ['arm', 'Brazo', 'cm', 'Brazo (cm)'], ['thigh', 'Muslo', 'cm', 'Muslo (cm)']];
+const okW = m => m.weight >= 30 && m.weight <= 300; // pesos creíbles (kg): los demás no cuentan para rangos ni estadísticas
+const lastWeight = () => S.measures.filter(okW).sort((a, b) => b.date - a.date)[0] || null;
+const bodyMissing = () => [!lastWeight() && 'peso', !rkHeight() && 'altura'].filter(Boolean);
+function bodyCardHTML(){
+  const all = S.measures.filter(m => m.weight != null).sort((a, b) => a.date - b.date), ws = all.filter(okW), lw = ws[ws.length - 1], miss = bodyMissing();
+  const req = ok => ok ? '' : ' <span class="pill bd-req">Falta</span>';
+  const sex = S.settings.sex || '';
+  return `<div class="card stack" id="bodyCard"><div class="row between"><h3>Tu cuerpo</h3><span class="pill ${miss.length ? 'bd-req' : 'good'}">${miss.length ? 'Necesario' : 'Completo ✓'}</span></div>
+    <div class="small muted">Peso y altura son necesarios para calcular tus rangos de fuerza. No se publican nunca.</div>
+    <div class="f"><span>Peso${req(lw)}</span><div class="row between bd-w"><div><b class="num">${lw ? fmtN(lw.weight) + ' kg' : '—'}</b><small class="muted">${lw ? fmtDate(lw.date, false) : 'Sin apuntar'}</small></div><button class="btn ${lw ? 'ghost' : 'primary'} sm" data-act="add-weight">${lw ? 'Actualizar' : 'Añadir'}</button></div></div>
+    ${ws.length > 1 ? lineChart(ws.map(x => ({x: x.date, y: x.weight})), ' kg', undefined, {h: 140}) : ''}
+    <label class="f" id="heightF"><span>Altura (cm)${req(rkHeight())}</span><input id="setHeight" type="number" inputmode="numeric" min="120" max="230" step="1" placeholder="Ej.: 178" value="${rkHeight() || ''}"></label>
+    <div class="f" role="group" aria-labelledby="sexLbl"><span id="sexLbl">Sexo</span><div class="seg">${[['', 'Sin indicar'], ['m', 'Hombre'], ['f', 'Mujer']].map(([k, l]) => `<button data-act="set-sex" data-v="${k}" aria-pressed="${sex === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">Ajusta los estándares de fuerza. Sin indicar se usa el masculino.</div></div>
+    ${all.length ? `<details><summary class="small muted">Historial de peso (${all.length})</summary><table class="sets small">${all.slice().reverse().map(x => `<tr><td>${fmtDate(x.date, false)}</td><td>${fmtN(x.weight)} kg</td><td><button class="btn ghost sm danger" data-act="del-measure" data-id="${x.id}" data-k="weight">Borrar</button></td></tr>`).join('')}</table></details>` : ''}
+    ${S.settings.healthOk ? `<div class="row between small hl-row"><span class="muted">Datos corporales: consentimiento dado el ${fmtDate(S.settings.healthOk, false)}.</span><button class="linkbtn danger" data-act="health-off">Retirar</button></div>` : hasHealth() ? `<div class="row between small hl-row"><span class="muted">Datos corporales sin consentimiento.</span><button class="linkbtn" data-act="health-on">Revisar</button></div>` : ''}</div>`;
+}
+function measCardHTML(){
+  const meas = S.measures.filter(m => MF_OTHER.some(([k]) => m[k] != null)).sort((a, b) => a.date - b.date);
+  const mk = MF_OTHER.some(f => f[0] === UI.mMetric) ? UI.mMetric : 'waist';
+  const lastOf = k => { for (let i = meas.length - 1; i >= 0; i--) if (meas[i][k] != null) return meas[i][k]; return null; };
+  return `<div class="card stack"><div class="row between"><h3>Otras medidas <span class="pill">Opcional</span></h3><button class="btn ghost" data-act="add-measure">+ Añadir</button></div>
+    <div class="chips">${MF_OTHER.map(([k, l]) => `<button class="chip" data-act="m-metric" data-k="${k}" aria-pressed="${mk === k}">${l}${lastOf(k) != null ? ' · ' + fmtN(lastOf(k)) : ''}</button>`).join('')}</div>
+    ${meas.length ? lineChart(meas.filter(x => x[mk] != null).map(x => ({x: x.date, y: x[mk]})), ' ' + MF_OTHER.find(f => f[0] === mk)[2]) : '<div class="small muted">Grasa, cintura, pecho, brazo y muslo. Rellena solo lo que quieras.</div>'}
+    ${meas.length ? `<details><summary class="small muted">Ver registros (${meas.length})</summary><table class="sets small">${meas.slice().reverse().map(x => `<tr><td>${fmtDate(x.date, false)}</td><td>${MF_OTHER.filter(([k]) => x[k] != null).map(([k, l, u]) => `${l} ${fmtN(x[k])}${u === '%' ? '%' : ''}`).join(' · ')}</td><td><button class="btn ghost sm danger" data-act="del-measure" data-id="${x.id}" data-k="other">Borrar</button></td></tr>`).join('')}</table></details>` : ''}</div>`;
+}
+function bodyNagCard(){
+  const miss = bodyMissing();
+  if (!miss.length || Date.now() - (S.settings.bodyLater || 0) < 30 * 864e5) return '';
+  return `<div class="card stack"><div><b>Completa tu cuerpo</b><div class="small muted">Falta tu ${miss.join(' y tu ')}. Sin ${miss.length > 1 ? 'esos datos' : 'ese dato'} los rangos no son precisos.</div></div><div class="row"><button class="btn primary sm" data-act="go-body">Completar</button><button class="btn ghost sm" data-act="body-later">Ahora no</button></div></div>`;
+}
+const msDateHTML = () => `<label class="f">Fecha<input type="date" id="msDate" value="${toLocalInput(Date.now()).slice(0, 10)}"></label>`;
+function goBody(sel){ navTo(() => { tab = 'me'; navStack.me = []; }); setTimeout(() => { const i = $(sel); if (i) { i.scrollIntoView({block: 'center'}); i.focus(); } }, 450); }
 function viewMe(){
   const tot = S.workouts.length, vol = S.workouts.reduce((a, w) => a + wVolume(w), 0), ms = S.workouts.reduce((a, w) => a + (w.end - w.start), 0);
   const name = Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : 'Tú';
@@ -2981,19 +3016,10 @@ function viewMe(){
   const cm = UI.calMonth ?? (now.getFullYear() * 12 + now.getMonth()), y = Math.floor(cm / 12), m = cm % 12;
   const nOn = new Set(S.workouts.filter(w => { const d = new Date(w.start); return d.getFullYear() === y && d.getMonth() === m; }).map(w => new Date(w.start).getDate())).size;
   h += `<div class="card stack"><div class="row between"><button class="iconbtn" data-act="cal" data-d="-1" aria-label="Mes anterior">${ICON.back}</button><h3>${monthName(m)} ${y} · <span class="muted num">${nOn} días</span></h3><button class="iconbtn" data-act="cal" data-d="1" aria-label="Mes siguiente" style="transform:scaleX(-1)">${ICON.back}</button></div>${calHTML(y, m)}</div>`;
-  const MF = [['weight', 'Peso', 'kg'], ['fat', 'Grasa', '%'], ['waist', 'Cintura', 'cm'], ['chest', 'Pecho', 'cm'], ['arm', 'Brazo', 'cm'], ['thigh', 'Muslo', 'cm']];
-  const meas = S.measures.slice().sort((a, b) => a.date - b.date);
-  const lastOf = k => { for (let i = meas.length - 1; i >= 0; i--) if (meas[i][k] != null) return meas[i][k]; return null; };
-  h += `<div class="card stack"><div class="row between"><h3>Medidas</h3><button class="btn ghost" data-act="add-measure">+ Añadir</button></div>
-    <div class="chips">${MF.map(([k, l]) => `<button class="chip" data-act="m-metric" data-k="${k}" aria-pressed="${UI.mMetric === k}">${l}${lastOf(k) != null ? ' · ' + fmtN(lastOf(k)) : ''}</button>`).join('')}</div>
-    ${lineChart(meas.filter(x => x[UI.mMetric] != null).map(x => ({x: x.date, y: x[UI.mMetric]})), ' ' + (MF.find(f => f[0] === UI.mMetric) || [, , ''])[2])}
-    ${meas.length ? `<details><summary class="small muted">Ver registros (${meas.length})</summary><table class="sets small">${meas.slice().reverse().map(x => `<tr><td>${fmtDate(x.date, false)}</td><td>${MF.filter(([k]) => x[k] != null).map(([k, l, u]) => `${l} ${fmtN(x[k])}${u === '%' ? '%' : ''}`).join(' · ')}</td><td><button class="btn ghost sm danger" data-act="del-measure" data-id="${x.id}">Borrar</button></td></tr>`).join('')}</table></details>` : ''}</div>`;
+  h += bodyCardHTML() + measCardHTML();
   const tp = Theme.pref();
   h += `<div class="card stack"><h3>Ajustes</h3>
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
-    <div class="f" role="group" aria-labelledby="sexLbl"><span id="sexLbl">Sexo (para los rangos)</span><div class="seg">${[['', 'Sin indicar'], ['m', 'Hombre'], ['f', 'Mujer']].map(([k, l]) => `<button data-act="set-sex" data-v="${k}" aria-pressed="${(S.settings.sex || '') === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">Solo ajusta los estándares de fuerza. No se publica.</div></div>
-    <label class="f" id="heightF">Altura (cm, para los rangos)<input id="setHeight" type="number" inputmode="numeric" min="120" max="230" step="1" placeholder="Ej.: 178" value="${rkHeight() || ''}"><span class="small muted" style="font-weight:500">Opcional. Ajusta un poco los rangos de empuje y pierna a tu complexión. No se publica.</span></label>
-    ${S.settings.healthOk ? `<div class="row between small hl-row"><span class="muted">Datos corporales: consentimiento dado el ${fmtDate(S.settings.healthOk, false)}.</span><button class="linkbtn danger" data-act="health-off">Retirar</button></div>` : hasHealth() ? `<div class="row between small hl-row"><span class="muted">Datos corporales sin consentimiento.</span><button class="linkbtn" data-act="health-on">Revisar</button></div>` : ''}
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
     <label class="row" style="font-weight:600"><input type="checkbox" id="setSound" style="width:auto" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
     <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="setNotif" style="width:auto;margin-top:3px" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}</div>`;
@@ -3018,7 +3044,7 @@ function viewMe(){
 function strengthCard(){
   const head = '<div class="st-h"><h3>Fuerza por grupo muscular</h3><div class="small muted">Tu mejor serie de las últimas 12 semanas en cada grupo. 100 es nivel intermedio.</div></div>';
   const L = myLeague(), W = 7 * 864e5, now = Date.now();
-  if (!L.bw) return `<div class="card stack">${head}<div class="chart-empty">Apunta tu peso en Medidas para calcular tu fuerza relativa.<br><button class="btn" data-act="add-measure" style="margin-top:10px">Añadir mi peso</button></div></div>`;
+  if (!L.bw) return `<div class="card stack">${head}<div class="chart-empty">Apunta tu peso en Perfil › Tu cuerpo para calcular tu fuerza relativa.<br><button class="btn" data-act="add-weight" style="margin-top:10px">Añadir mi peso</button></div></div>`;
   const c = L.fz.r, p = fuerzaOf(now - (CL.relWeeks + 4) * W, now - 4 * W, L.bw).r;
   if (!FZ_GROUPS.some(([g]) => c[g])) return `<div class="card stack">${head}<div class="chart-empty">Aún no hay series con peso en las últimas ${CL.relWeeks} semanas. Entrena pecho, espalda, hombro, brazos o pierna con carga y aparecerá aquí.</div></div>`;
   const tr = (v, pv) => !v ? '<span class="delta flat">–</span>' : !pv ? '<span class="delta flat">nuevo</span>' : v === pv ? '<span class="delta flat">= igual</span>' : `<span class="delta ${v > pv ? 'up' : 'down'}">${v > pv ? '▲' : '▼'} ${Math.abs(v - pv)}</span>`;
@@ -3863,8 +3889,8 @@ async function termsCheck(){
   else termsCheck.open = true; // no se vuelve a preguntar hasta la próxima vez que se abra la app
 }
 /* 4.12.2 · Datos corporales (peso, medidas, sexo y altura): pueden ser datos de salud (art. 9 RGPD), así que piden consentimiento explícito.
-   S.settings.healthOk = fecha del consentimiento. Sin él no se guardan datos nuevos; quien ya los tenía elige al abrir la app. Se retira en Ajustes (y se borran). */
-const HEALTH_TXT = () => `Tu peso, tus medidas, tu sexo y tu altura pueden considerarse <b>datos de salud</b>. Hierro solo los usa para tus estadísticas y para ajustar los rangos de fuerza. Se guardan ${Cloud.session ? 'en tu cuenta privada' : 'en este móvil'} y nunca se publican. Puedes retirar el consentimiento cuando quieras en Ajustes (y se borran). Más en la <a href="${LEGAL}privacidad.html#salud" target="_blank" rel="noopener">política de privacidad</a>.`;
+   S.settings.healthOk = fecha del consentimiento. Sin él no se guardan datos nuevos; quien ya los tenía elige al abrir la app. Se retira en Perfil › Tu cuerpo (y se borran). */
+const HEALTH_TXT = () => `Tu peso, tus medidas, tu sexo y tu altura pueden considerarse <b>datos de salud</b>. Hierro solo los usa para tus estadísticas y para ajustar los rangos de fuerza. Se guardan ${Cloud.session ? 'en tu cuenta privada' : 'en este móvil'} y nunca se publican. Puedes retirar el consentimiento cuando quieras en Perfil › Tu cuerpo (y se borran). Más en la <a href="${LEGAL}privacidad.html#salud" target="_blank" rel="noopener">política de privacidad</a>.`;
 const hasHealth = () => S.measures.length > 0 || !!S.settings.sex || !!S.settings.height;
 function healthOk(){ // una sola pregunta aunque llegue dos veces (p. ej. el change al perder el foco)
   if (S.settings.healthOk) return Promise.resolve(true);
@@ -5550,16 +5576,26 @@ const A = {
   // medidas
   async 'add-measure'(){
     if (!(await healthOk())) return;
-    const fields = [['weight', 'Peso (kg)'], ['fat', 'Grasa corporal (%)'], ['waist', 'Cintura (cm)'], ['chest', 'Pecho (cm)'], ['arm', 'Brazo (cm)'], ['thigh', 'Muslo (cm)']];
-    modal('Nueva medida', `<label class="f">Fecha<input type="date" id="msDate" value="${toLocalInput(Date.now()).slice(0, 10)}"></label><div class="grid2">${fields.map(([k, l]) => `<label class="f">${l}<input inputmode="decimal" id="ms-${k}"></label>`).join('')}</div><div class="small muted">Rellena solo lo que quieras. Sin límite de medidas.</div>`, `<button class="btn primary" data-act="ms-save">Guardar</button>`);
+    modal('Otras medidas', `${msDateHTML()}<div class="grid2">${MF_OTHER.map(([k, , , l]) => `<label class="f">${l}<input inputmode="decimal" id="ms-${k}"></label>`).join('')}</div><div class="small muted">Rellena solo lo que quieras. Sin límite de medidas.</div>`, `<button class="btn primary" data-act="ms-save">Guardar</button>`);
+  },
+  async 'add-weight'(){
+    if (!(await healthOk())) return;
+    const lw = lastWeight();
+    modal('Tu peso', `${msDateHTML()}<label class="f">Peso (kg)<input inputmode="decimal" id="ms-weight" placeholder="${lw ? fmtN(lw.weight) : 'Ej.: 75'}"></label>`, `<button class="btn primary" data-act="ms-save">Guardar</button>`);
+    setTimeout(() => { const i = $('#ms-weight'); if (i) i.focus(); }, 300);
   },
   'ms-save'(){
     const m = {id: rid(), date: new Date($('#msDate').value + 'T12:00').getTime() || Date.now()}; let any = false;
-    ['weight', 'fat', 'waist', 'chest', 'arm', 'thigh'].forEach(k => { const v = num($('#ms-' + k).value); if (v != null) { m[k] = v; any = true; } });
+    ['weight', 'fat', 'waist', 'chest', 'arm', 'thigh'].forEach(k => { const i = $('#ms-' + k), v = i ? num(i.value) : null; if (v != null) { m[k] = v; any = true; } });
     if (!any) { toast('Escribe al menos un valor'); return; }
+    if (m.weight != null && !okW(m)) { toast('Pon tu peso en kg (30-300)'); return; }
     S.measures.push(m); Store.mark('meta'); closeModal(); render();
   },
-  'del-measure'(el){ S.measures = S.measures.filter(m => m.id !== el.dataset.id); Store.mark('meta'); render(); },
+  'del-measure'(el){ // data-k: «weight» borra solo el peso del registro; «other» solo las otras medidas; sin él, el registro entero
+    const k = el.dataset.k, keys = k === 'weight' ? ['weight'] : k === 'other' ? MF_OTHER.map(f => f[0]) : null;
+    S.measures = S.measures.flatMap(m => { if (m.id !== el.dataset.id) return [m]; if (!keys) return []; const r = Object.assign({}, m); keys.forEach(x => delete r[x]); return ['weight', ...MF_OTHER.map(f => f[0])].some(x => r[x] != null) ? [r] : []; });
+    Store.mark('meta'); render();
+  },
   // datos
   'import-csv'(){ $('#fileCsv').value = ''; $('#fileCsv').click(); },
   'restore-json'(){ $('#fileJson').value = ''; $('#fileJson').click(); },
@@ -5619,7 +5655,9 @@ const A = {
     closeModal(); if (r === '1') { healthWipe(); toast('Consentimiento retirado y datos borrados'); }
   },
   'health-on'(){ healthCheck.open = false; healthCheck().then(render); },
-  'go-height'(){ navTo(() => { tab = 'me'; navStack.me = []; }); setTimeout(() => { const i = $('#setHeight'); if (i) { i.scrollIntoView({block: 'center'}); i.focus(); } }, 450); },
+  'go-height'(){ goBody('#setHeight'); },
+  'go-body'(){ goBody(lastWeight() ? '#setHeight' : '#bodyCard [data-act="add-weight"]'); },
+  'body-later'(){ S.settings.bodyLater = Date.now(); Store.mark('meta'); render(); toast('Te lo recordamos más adelante'); },
   async 'set-sex'(el){ const v = el.dataset.v; if ((v === 'm' || v === 'f') && !(await healthOk())) return render(); if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
   'goal-pick'(){ const cur = weekGoal().n; modal('Meta semanal', `<div class="small muted">¿Cuántos entrenos quieres hacer cada semana?</div><div class="seg" role="group" aria-label="Entrenos por semana">${[1,2,3,4,5,6,7].map(k => `<button data-act="goal-set" data-n="${k}" aria-pressed="${k === cur}">${k}</button>`).join('')}</div>`); },
   'goal-set'(el){ const k = +el.dataset.n; if (!(k >= 1 && k <= 7)) return; S.settings.weekGoal = k; Store.mark('meta'); closeModal(); render(); toast('Meta: ' + k + (k === 1 ? ' entreno' : ' entrenos') + ' por semana'); },
@@ -6139,7 +6177,7 @@ function rkAll(){
   if (rkAll.c) return rkAll.c;
   const sex = S.settings.sex === 'f' ? 'f' : 'm';
   // pesos válidos por fecha (mismo criterio que bodyweightNear: 30-300 kg; el último anterior y, si no hay, el primero posterior)
-  const ms = S.measures.filter(m => m.weight >= 30 && m.weight <= 300).sort((a, b) => a.date - b.date);
+  const ms = S.measures.filter(okW).sort((a, b) => a.date - b.date);
   const bwAt = t => { if (!ms.length) return null; let lo = 0, hi = ms.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (ms[mid].date < t) lo = mid + 1; else hi = mid; } return ms[lo ? lo - 1 : 0].weight; };
   const info = new Map(), ex = new Map(), none = new Map(); // none: exId → 'std' | 'bw'
   for (let i = S.workouts.length - 1; i >= 0; i--) {          // S.workouts va de más nuevo a más viejo: se recorre al revés
@@ -6265,8 +6303,8 @@ const CL_MAXPTS = CL.maxDays * CL.day + CL.maxPr * CL.pr + CL.maxImpr * CL.perPc
 // Marca de la sesión para medir la mejora: 1RM estimado (peso y reps), repeticiones (peso corporal) o tiempo
 function exBestScore(sets, type){ let b = 0; for (const s of sets) { if (!isWork(s)) continue; const v = type === 'wr' ? e1rm(s) : type === 'bw' ? (s.reps || 0) : type === 'dur' ? (s.sec || 0) : 0; if (v > b) b = v; } return b; }
 // Peso corporal más cercano a t: el último anterior; si no hay ninguno, la medida más antigua posterior (así las semanas pasadas también tienen nivel de fuerza)
-function bodyweightNear(t){ const ok = m => m.weight >= 30 && m.weight <= 300; return bodyweightAt(t) || (S.measures.filter(m => m.weight > 0 && ok(m) && m.date >= t).sort((a, b) => a.date - b.date)[0] || {}).weight || null; }
-function bodyweightAt(t){ let b = null; for (const m of S.measures) if (m.weight > 0 && m.date < t && (!b || m.date > b.date)) b = m; return b && b.weight >= 30 && b.weight <= 300 ? b.weight : null; }
+function bodyweightNear(t){ return bodyweightAt(t) || (S.measures.filter(m => okW(m) && m.date >= t).sort((a, b) => a.date - b.date)[0] || {}).weight || null; }
+function bodyweightAt(t){ let b = null; for (const m of S.measures) if (m.weight > 0 && m.date < t && (!b || m.date > b.date)) b = m; return b && okW(b) ? b.weight : null; }
 
 /* Mi liga: semanas, fuerza relativa y logros, calculados con mis entrenos (se cachea unos segundos: se usa en cada pintado) */
 function myLeague(){
@@ -6532,7 +6570,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
       const gs = FZ_GROUPS.filter(([g]) => fr[g] > 0).sort((a, b) => fr[b[0]] - fr[a[0]]);
       return gs.map(([g, l]) => `${l} ${Math.round(clamp(fr[g], 0, CL.maxFz))}`).join(' · ');
     }
-    if (r.me) return S.settings.relShare ? (L.bw ? `Sin series con peso de ${gname ? gname.toLowerCase() : 'ningún grupo'} en ${CL.relWeeks} semanas` : 'Apunta tu peso en Medidas') : 'Activa «Compartir» para salir';
+    if (r.me) return S.settings.relShare ? (L.bw ? `Sin series con peso de ${gname ? gname.toLowerCase() : 'ningún grupo'} en ${CL.relWeeks} semanas` : 'Apunta tu peso en Perfil › Tu cuerpo') : 'Activa «Compartir» para salir';
     return fr && !fzNew(fr) ? 'Tiene la app sin actualizar' : 'No comparte su fuerza';
   };
   let pos = 0;
@@ -6610,7 +6648,7 @@ function viewClan(){
     <div class="seg sm" role="group" aria-label="Clasificación">${[['pts', 'Puntos'], ['mip', 'Mejora'], ['rel', 'Fuerza'], ['con', 'Constancia']].map(([k, l]) => `<button data-act="cl-rank" data-k="${k}" aria-pressed="${kind === k}">${l}</button>`).join('')}</div>`;
   if (kind === 'rel') {
     h += `<div class="chips">${REL_TABS.map(([k, l]) => `<button class="chip" data-act="cl-lift" data-k="${k}" aria-pressed="${Clan.lift === k}">${l}</button>`).join('')}</div>
-      <label class="row cl-share"><input type="checkbox" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza</b><br><span class="small muted">Tu mejor serie de las últimas ${CL.relWeeks} semanas en cada grupo, comparada con lo normal para tu peso: 100 es nivel intermedio. El total es la media de los 6 grupos. Solo se publica el nivel, nunca tu peso. ${L.bw ? 'Se calcula con tu último peso de Medidas.' : 'Para activarlo apunta tu peso en Perfil › Medidas.'}</span></span></label>
+      <label class="row cl-share"><input type="checkbox" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza</b><br><span class="small muted">Tu mejor serie de las últimas ${CL.relWeeks} semanas en cada grupo, comparada con lo normal para tu peso: 100 es nivel intermedio. El total es la media de los 6 grupos. Solo se publica el nivel, nunca tu peso. ${L.bw ? 'Se calcula con tu último peso (Perfil › Tu cuerpo).' : 'Para activarlo apunta tu peso en Perfil › Tu cuerpo.'}</span></span></label>
       ${L.bw ? '' : '<button class="btn sm" data-act="cl-weight">Apuntar mi peso</button>'}`;
   }
   h += `${cap}<div class="cl-list">${clanRankRows(Clan.members(c), kind, per)}</div>
@@ -6922,7 +6960,7 @@ Object.assign(A, {
   'cl-rank'(el){ Clan.rank = el.dataset.k; clanRender(); },
   'cl-lift'(el){ Clan.lift = el.dataset.k; clanRender(); },
   'cl-logros'(){ Clan.allLogros = !Clan.allLogros; clanRender(); },
-  'cl-weight'(){ navTo(() => { tab = 'me'; navStack.me = []; }); A['add-measure'](); },
+  'cl-weight'(){ navTo(() => { tab = 'me'; navStack.me = []; }); A['add-weight'](); },
   'cl-new'(){ clanForm(null); },
   'cl-emo'(el){ Clan.emo = el.dataset.e; document.querySelectorAll('.cl-emos button').forEach(b => b.setAttribute('aria-pressed', b.dataset.e === Clan.emo)); },
   async 'cl-save'(el){
@@ -7052,7 +7090,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.12.3';
+const APP_VERSION = '4.12.4';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
