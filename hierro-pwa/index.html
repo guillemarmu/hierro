@@ -2914,6 +2914,9 @@ function viewRanks(){
   let h = '';
   if (!R.bw) h += `<div class="card stack"><h3>Falta tu peso</h3><div class="small muted">Los rangos comparan lo que levantas con tu peso corporal. Apúntalo una vez y se calculan solos. No se publica nunca.</div><button class="btn primary" data-act="add-measure">Añadir mi peso</button></div>`;
   const sexTxt = R.sexSet ? '' : '<div class="small muted">Calculado con el estándar masculino. Si eres mujer, indícalo en Perfil › Ajustes y se ajusta.</div>';
+  const hf = R.bw ? rkHf(R.bw, R.sex) : 1, hp = Math.round((hf - 1) * 100);
+  const hTxt = !rkHeight() ? '<div class="card row between small"><span>¿Cuánto mides? Con tu altura, los rangos de empuje y pierna se ajustan a tu complexión.</span><button class="linkbtn" data-act="go-height">Añadir</button></div>'
+    : `<div class="card small muted">Altura ${rkHeight()} cm: ${hp ? `tu listón en pecho, hombros, tríceps y cuádriceps va un ${Math.abs(hp)} % más ${hp > 0 ? 'bajo' : 'alto'} por tu complexión` : 'tu complexión es la de referencia, sin ajuste'}. <button class="linkbtn" data-act="go-height">Cambiar</button></div>`;
   if (G) {
     const nx = G.idx >= 24 ? 'Has llegado arriba del todo. Ahora, a mantenerlo.' : `Vas al ${Math.min(99, Math.round(G.prog * 100))} % de camino a ${rkName(G.idx + 1)}.`;
     h += `<div class="card stack rk-hero">${rkIcon(G.idx, 84)}<div class="small muted">Rango global</div><h2>${rkName(G.idx)}</h2><div style="width:100%">${rkBar(G.prog, G.idx)}</div><div>${nx}</div>${sexTxt}</div>`;
@@ -2941,6 +2944,7 @@ function viewRanks(){
     h += `<div class="card"><details><summary class="small muted">Sin rango (${nl.length})</summary><div class="rk-list">${nl.map(([nme, why]) => `<div class="rk-none"><b>${esc(nme)}</b><small>${why === 'bw' ? 'Falta tu peso corporal' : 'No hay un estándar fiable para este ejercicio'}</small></div>`).join('')}</div></details></div>`;
   }
   if (Social.ready() && G) h += `<label class="card row" data-act="rk-share" style="font-weight:600;align-items:flex-start"><input type="checkbox" style="width:auto;margin-top:3px" ${(S.settings.rkShare ?? RK.shareDef) ? 'checked' : ''}><span>Enseñar mi rango global a mis amigos<br><span class="small muted" style="font-weight:500">Solo se ve la insignia en tu perfil. Tu peso y tus marcas no salen del móvil.</span></span></label>`;
+  if (R.bw) h += hTxt;
   h += `<button class="btn block" data-act="go-rankhow">Cómo funcionan los rangos</button>`;
   return h;
 }
@@ -2951,11 +2955,12 @@ function viewRankHow(){
   const C = (t, ...ps) => `<div class="card stack"><h3>${t}</h3>${ps.map(p => `<div>${p}</div>`).join('')}</div>`;
   return C('Qué es un rango', 'Cada ejercicio de fuerza tiene su rango, de Hierro a Simétrico. Hay 9 rangos y, salvo el último, cada uno tiene tres divisiones: empiezas en la I y subes hasta la III antes de pasar al siguiente.')
     + C('Cómo se calcula', 'Estimamos tu repetición máxima con tus series normales (no hace falta hacer un máximo) y la comparamos con lo que levanta una persona de nivel intermedio de tu mismo peso. Eso da tus puntos de rango: 100 puntos es nivel intermedio. Pesar más o menos no da ventaja: el listón sube y baja con tu peso.', 'En dominadas y fondos cuenta tu peso más el lastre. En flexiones, abdominales y planchas cuentan las repeticiones o el tiempo.')
+    + C('Tu altura', 'Si apuntas cuánto mides (Perfil › Ajustes), los ejercicios de pecho, hombros, tríceps y cuádriceps se ajustan a tu complexión: a igual peso, una persona alta y delgada tiene brazos de palanca más largos y menos músculo por centímetro, así que su listón baja un poco; una baja y ancha lo tiene algo más alto. El ajuste es pequeño (como mucho un 7 %) y no se aplica a tirones ni al peso muerto, donde los estudios no dan una ventaja clara. Sin altura, no hay ajuste.')
     + C('Constancia, no un día suelto', 'Tu rango sale de tus mejores sesiones recientes de cada ejercicio, no de un pico aislado. Un día flojo no te baja. Descansar unas semanas tampoco. Y aunque pierdas forma, nunca caes por debajo del 85 % de tu mejor momento.')
     + C('Músculos, grupos y global', 'El rango de un músculo es la media de sus ejercicios; los que más series haces pesan más. Con los músculos se forman los seis grupos (espalda, pecho, hombros, brazos, piernas y core). El rango global se desbloquea con 8 ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna. Piernas, espalda y pecho son los que más cuentan.')
     + `<div class="card stack"><h3>La escalera</h3><div class="rk-ladder">${ladder}</div></div>`
     + C('De dónde salen los números', 'No usamos datos de otros usuarios. Los listones vienen de tablas públicas de estándares de fuerza por peso corporal, y son orientativos: una máquina de tu gimnasio puede ser más dura o más blanda que otra. Los ejercicios asistidos, el cardio y los que no tienen un estándar fiable no llevan rango.')
-    + C('Privacidad', 'Tu peso y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
+    + C('Privacidad', 'Tu peso, tu altura y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
 }
 
 function viewMe(){
@@ -2983,6 +2988,7 @@ function viewMe(){
   h += `<div class="card stack"><h3>Ajustes</h3>
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
     <div class="f" role="group" aria-labelledby="sexLbl"><span id="sexLbl">Sexo (para los rangos)</span><div class="seg">${[['', 'Sin indicar'], ['m', 'Hombre'], ['f', 'Mujer']].map(([k, l]) => `<button data-act="set-sex" data-v="${k}" aria-pressed="${(S.settings.sex || '') === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">Solo ajusta los estándares de fuerza. No se publica.</div></div>
+    <label class="f" id="heightF">Altura (cm, para los rangos)<input id="setHeight" type="number" inputmode="numeric" min="120" max="230" step="1" placeholder="Ej.: 178" value="${rkHeight() || ''}"><span class="small muted" style="font-weight:500">Opcional. Ajusta un poco los rangos de empuje y pierna a tu complexión. No se publica.</span></label>
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
     <label class="row" style="font-weight:600"><input type="checkbox" id="setSound" style="width:auto" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
     <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="setNotif" style="width:auto;margin-top:3px" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}</div>`;
@@ -5562,6 +5568,7 @@ const A = {
     modal(`${esc(MUSCLES[k] || k)} · ${rkName(M.idx)}`, `<div class="small muted" style="margin-bottom:6px">Sale de estos ejercicios; los que más series llevan pesan más.</div><div class="rk-list">${M.ex.map(E => `<button class="rk-row" data-act="open-ex" data-id="${esc(E.exId)}"><span>${rkIcon(E.idx, 26)}</span><div><b>${esc(exOf(E.exId).name)}</b><small>${plural(E.sets, 'serie', 'series')}</small></div><em>${rkName(E.idx)}</em></button>`).join('')}</div>`);
   },
   'sum-ranks'(){ A['sum-close'](); go({type: 'ranks'}); },
+  'go-height'(){ navTo(() => { tab = 'me'; navStack.me = []; }); setTimeout(() => { const i = $('#setHeight'); if (i) { i.scrollIntoView({block: 'center'}); i.focus(); } }, 450); },
   'set-sex'(el){ const v = el.dataset.v; if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
   'goal-pick'(){ const cur = weekGoal().n; modal('Meta semanal', `<div class="small muted">¿Cuántos entrenos quieres hacer cada semana?</div><div class="seg" role="group" aria-label="Entrenos por semana">${[1,2,3,4,5,6,7].map(k => `<button data-act="goal-set" data-n="${k}" aria-pressed="${k === cur}">${k}</button>`).join('')}</div>`); },
   'goal-set'(el){ const k = +el.dataset.n; if (!(k >= 1 && k <= 7)) return; S.settings.weekGoal = k; Store.mark('meta'); closeModal(); render(); toast('Meta: ' + k + (k === 1 ? ' entreno' : ' entrenos') + ' por semana'); },
@@ -5902,6 +5909,7 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('change', ev => {
   const el = ev.target;
+  if (el.id === 'setHeight') { const v = Math.round(+el.value); if (el.value === '') { delete S.settings.height; Store.mark('meta'); toast('Altura borrada'); } else if (v >= 120 && v <= 230) { S.settings.height = v; Store.mark('meta'); toast('Altura: ' + v + ' cm'); } else { el.value = rkHeight() || ''; toast('Pon tu altura en centímetros (120-230)'); } }
   if (el.id === 'setRest') { S.settings.rest = +el.value; Store.mark('meta'); toast('Descanso por defecto: ' + (S.settings.rest ? fmtClock(S.settings.rest) : 'sin temporizador')); }
   if (el.id === 'setNotif') { if (el.checked) askNotif().then(ok => { el.checked = ok; }); else { S.settings.notif = false; Store.mark('meta'); } }
   if (el.id === 'setSound') { S.settings.sound = el.checked; Store.mark('meta'); if (el.checked) { unlockAudio(); beep(); } }
@@ -6001,6 +6009,7 @@ const fzName = g => (FZ_GROUPS.find(G => G[0] === g) || [, ''])[1];
 /* Rangos (desde 4.7). Puntos de rango: 1RM estimado ÷ 1RM esperado de un intermedio de tu peso × 100 (100 = intermedio).
    Independiente de fuerzaOf/myLeague (clanes). Los listones vienen de FZ_STD y de RK_STD/RK_REPS/RK_SEXF (ver «Fuentes» abajo). */
 const RK = {ref: {m: 80, f: 65}, exp: 2 / 3, capWr: 12, capBw: 20, max: 300, win: 6, rec: [1, .9, .8, .7, .6, .5], floor: .85,
+  hRef: {m: 25, f: 23}, hExp: 1 / 3, hCap: .07, hMus: ['pecho', 'hombros', 'triceps', 'cuadriceps'],
   idleW: 26, minEx: 8, need: ['Pecho', 'Espalda', 'Piernas'], gw: {Piernas: .25, Espalda: .2, Pecho: .2, Hombros: .125, Brazos: .125, Core: .1}, shareDef: false};
 const RK_TIERS = ['Hierro', 'Bronce', 'Plata', 'Oro', 'Rubí', 'Esmeralda', 'Diamante', 'Campeón', 'Simétrico'];
 const RK_LO = [0, 30, 40, 50, 57, 64, 72, 76, 81, 86, 90, 95, 100, 108, 116, 124, 132, 140, 147, 154, 161, 168, 180, 194, 210];
@@ -6044,10 +6053,16 @@ function rkInfo(id){
     const g = FZ_GROUPS.find(G => G[2].includes(x.muscle));
     k = lift ? FZ_STD.get(lift) : g ? (FZ_FALL[g[0]] || {})[x.equip] : null;
   }
-  return k ? {mode: 'load', k, bw: x.type === 'bw', sf: RK_SEXF_EX[id] || RK_SEXF[x.muscle] || .7, x} : null;
+  return k ? {mode: 'load', k, bw: x.type === 'bw', sf: RK_SEXF_EX[id] || RK_SEXF[x.muscle] || .7, x, hAdj: RK.hMus.includes(x.muscle) && !RK_SEXF_EX[id]} : null;
 }
-// 1RM (kg) que se espera de un intermedio con ese peso corporal
-function rkExpected(f, bw, sex){ const ref = RK.ref[sex === 'f' ? 'f' : 'm']; return f.k * (sex === 'f' ? f.sf : 1) * ref * Math.pow(bw / ref, RK.exp); }
+/* 4.12 · Corrección por altura (opcional, S.settings.height en cm). A igual peso, quien es alto y delgado tiene menos músculo por
+   centímetro y brazos de palanca más largos: en empujes y sentadilla rinde algo menos. Factor = (IMC de referencia ÷ tu IMC)^(1/3),
+   con tope ±7 %: >1 rebaja el listón (alto y delgado), <1 lo sube (bajo y ancho). Solo en pecho, hombros, tríceps y cuádriceps;
+   no en tirones ni en peso muerto (ahí los estudios van en los dos sentidos). Sin altura: 1. */
+const rkHeight = () => { const h = +S.settings.height; return h >= 120 && h <= 230 ? h : 0; };
+function rkHf(bw, sex){ const h = rkHeight(); if (!h || !(bw > 0)) return 1; const bmi = bw / (h / 100) ** 2, k = Math.pow(RK.hRef[sex === 'f' ? 'f' : 'm'] / bmi, RK.hExp); return clamp(k, 1 - RK.hCap, 1 + RK.hCap); }
+// 1RM (kg) que se espera de un intermedio con ese peso corporal (y, en los ejercicios que toca, con tu altura)
+function rkExpected(f, bw, sex){ const ref = RK.ref[sex === 'f' ? 'f' : 'm']; return f.k * (sex === 'f' ? f.sf : 1) * ref * Math.pow(bw / ref, RK.exp) / (f.hAdj ? rkHf(bw, sex) : 1); }
 // Puntos de una serie (0 = no puntúa). bw puede ser null: entonces solo puntúan reps/tiempo.
 function rkSetScore(f, s, bw, sex){
   if (!isWork(s)) return 0;
@@ -6986,7 +7001,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.11.1';
+const APP_VERSION = '4.12.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
