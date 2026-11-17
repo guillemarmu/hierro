@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- 4.9.2: política de seguridad (CSP). Si alguien colara código en la página, no podría enviar datos ni cargar scripts de otros sitios.
      Si cambias de servidor de avisos (pushUrl en config.js) o añades otro servicio, añádelo aquí en connect-src. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://raw.githubusercontent.com; font-src 'self'; media-src 'self' data: blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://hierro-avisos.guillemm2004.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://raw.githubusercontent.com; font-src 'self'; media-src 'self' data: blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com/recaptcha/ https://hierro-avisos.guillemm2004.workers.dev; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#070B1A">
 <script>
@@ -1060,7 +1060,14 @@ html.kb #modal .sheet.tall{height:100%;border-radius:var(--r-xl) var(--r-xl) 0 0
 .rp-why button{text-align:left}
 .mod-snap{background:var(--sup);border-radius:12px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;font-size:14px}
 .ban-card{border:1px solid var(--peligro)}
+.grecaptcha-badge{visibility:hidden!important}
 .au-age a,.legal-l a,.ban-card a,#modal .mb a{color:var(--acc-t);text-decoration:underline}
+.gc{gap:14px}.gc-risk{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:var(--r-m);background:var(--sup-2);border:1px solid var(--peligro)}
+.gc-risk div{min-width:0}.gc-risk b{display:block;font-size:15px}.gc-risk small{display:block;color:var(--apagado);font-size:13.5px}.gc-risk .btn{flex:none}
+.gc-ok{font-size:14px;font-weight:700;color:var(--acc-t)}
+.gc-row{display:flex;flex-direction:column;gap:7px;width:100%;text-align:left;min-height:44px;justify-content:center}
+.gc-row b{font-size:15px}.gc-row small{font-size:13.5px;flex:none}
+.gc-rk{display:flex;align-items:center;gap:10px}.gc-t{flex:1;min-width:0}.gc-t b{display:block}
 </style>
 </head>
 <body>
@@ -1640,12 +1647,65 @@ function authMsg(raw){
   return 'No se ha podido completar. Inténtalo otra vez.';
 }
 const QUOTA_MSG = 'Hierro va a tope hoy y la nube está en pausa. Tus entrenos se guardan en el móvil y se subirán solos en unas horas.';
+/* ---------- App Check (4.10, modo vigilancia) ----------
+   Sin el SDK de Firebase: reCAPTCHA Enterprise (Fraud Defense) da un token que se canjea por REST por uno de App Check,
+   y ese va en la cabecera X-Firebase-AppCheck de Firestore, Authentication y Secure Token.
+   Nunca bloquea: si no hay token (sin red, script bloqueado, error), la petición sale igual sin cabecera.
+   Mientras App Check no se aplique en la consola, Firebase solo cuenta las peticiones verificadas y las que no. */
+const AppCheck = {
+  tok: null, exp: 0, busy: null, fails: 0, next: 0, loading: null, last: '',
+  cfg(){ const c = (window.HIERRO_CONFIG || {}).appCheck; return c && c.siteKey && c.appId ? c : null; },
+  load(){
+    if (this.loading) return this.loading;
+    const c = this.cfg();
+    this.loading = new Promise((ok, ko) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://www.google.com/recaptcha/enterprise.js?render=' + encodeURIComponent(c.siteKey);
+      sc.async = true;
+      sc.onload = () => { try { grecaptcha.enterprise.ready(ok); } catch (e) { ko(e); } };
+      sc.onerror = () => { this.loading = null; sc.remove(); ko(new Error('recaptcha')); };
+      document.head.appendChild(sc);
+    });
+    return this.loading;
+  },
+  async fetchTok(){
+    const c = this.cfg(), cfg = window.HIERRO_CONFIG;
+    await this.load();
+    const rt = await grecaptcha.enterprise.execute(c.siteKey, {action: 'fire_app_check'});
+    const r = await fetch(`https://content-firebaseappcheck.googleapis.com/v1/projects/${encodeURIComponent(cfg.projectId)}/apps/${encodeURIComponent(c.appId)}:exchangeRecaptchaEnterpriseToken?key=${encodeURIComponent(cfg.apiKey)}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({recaptcha_enterprise_token: rt})});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!j.token) throw new Error('sin token');
+    this.tok = j.token; this.exp = Date.now() + (parseFloat(j.ttl) || 3600) * 1000; this.fails = 0; this.last = 'ok';
+    try { localStorage.setItem('hierro.ac', JSON.stringify({t: this.tok, e: this.exp})); } catch (e) {}
+    return this.tok;
+  },
+  // Token válido o null. Si caduca en <5 min se renueva por detrás; si no hay ninguno, espera como mucho `wait` ms.
+  async get(wait = 2500){
+    if (!this.cfg()) return null;
+    if (!this.tok) { try { const v = JSON.parse(localStorage.getItem('hierro.ac') || 'null'); if (v && typeof v.t === 'string' && v.e > Date.now()) { this.tok = v.t; this.exp = v.e; } } catch (e) {} }
+    const now = Date.now();
+    if (this.tok && now < this.exp - 5 * 6e4) return this.tok;
+    if (!this.busy && now >= this.next && navigator.onLine !== false) {
+      this.busy = this.fetchTok().catch(e => {
+        this.fails++; this.last = String(e && e.message || e);
+        this.next = Date.now() + Math.min(30 * 6e4, 15e3 * 2 ** Math.min(this.fails, 7));
+        return null;
+      }).finally(() => { this.busy = null; });
+    }
+    if (this.tok && Date.now() < this.exp - 3e4) return this.tok;
+    if (!this.busy || wait <= 0) return null;
+    return Promise.race([this.busy, new Promise(r => setTimeout(() => r(null), wait))]);
+  },
+  async hdr(h){ try { const t = await this.get(); if (t) h['X-Firebase-AppCheck'] = t; } catch (e) {} return h; }
+};
+if (AppCheck.cfg()) setTimeout(() => AppCheck.get(0), 1500); // precalienta: carga reCAPTCHA y pide el primer token sin frenar el arranque
 const Cloud = {
   cfg: window.HIERRO_CONFIG || null, session: null,
   enabled(){ return !!(this.cfg && this.cfg.apiKey && this.cfg.projectId); },
   async auth(method, body){
     let r;
-    try { r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${method}?key=${encodeURIComponent(this.cfg.apiKey)}`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Firebase-Locale': 'es'}, body: JSON.stringify(body)}); }
+    try { r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${method}?key=${encodeURIComponent(this.cfg.apiKey)}`, {method: 'POST', headers: await AppCheck.hdr({'Content-Type': 'application/json', 'X-Firebase-Locale': 'es'}), body: JSON.stringify(body)}); }
     catch (e) { throw new Error('Sin conexión. Conéctate a internet e inténtalo otra vez.'); }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(authMsg(j.error && j.error.message));
@@ -1664,7 +1724,7 @@ const Cloud = {
   reset(email){ return this.auth('sendOobCode', {requestType: 'PASSWORD_RESET', email}); },
   async refresh(){
     let r;
-    try { r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(this.cfg.apiKey)}`, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(this.session.refreshToken)}); }
+    try { r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(this.cfg.apiKey)}`, {method: 'POST', headers: await AppCheck.hdr({'Content-Type': 'application/x-www-form-urlencoded'}), body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(this.session.refreshToken)}); }
     catch (e) { const err = new Error('offline'); err.offline = true; throw err; }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { const err = new Error('session'); err.session = true; throw err; }
@@ -1676,7 +1736,7 @@ const Cloud = {
   name(...p){ return this.root() + '/' + p.join('/'); },
   async fs(method, path, body, retry = true){
     let r;
-    try { r = await fetch('https://firestore.googleapis.com/v1/' + path, {method, headers: {'Authorization': 'Bearer ' + await this.token(), 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined}); }
+    try { r = await fetch('https://firestore.googleapis.com/v1/' + path, {method, headers: await AppCheck.hdr({'Authorization': 'Bearer ' + await this.token(), 'Content-Type': 'application/json'}), body: body ? JSON.stringify(body) : undefined}); }
     catch (e) { if (e.session || e.offline) throw e; const err = new Error('offline'); err.offline = true; throw err; }
     if (r.status === 401 && retry) { await this.refresh(); return this.fs(method, path, body, false); }
     if (r.status === 404 && method === 'GET') return null;
@@ -1899,7 +1959,7 @@ function syncInfo(){
   const PART = {datos: 'Tus datos', social: 'Social', clan: 'Clan'};
   const errs = Object.entries(Sync.errs).map(([k, e]) => `${PART[k] || k}: ${e.status ? e.status + ' · ' : ''}${e.msg} (${when(e.at)})`);
   return {state: ST[Sync.state] || Sync.state, det, errs, last: when(Sync.last), tries: Sync.tries, v: APP_VERSION,
-    text: [`Hierro ${APP_VERSION} · ${ST[Sync.state] || Sync.state} · última subida ${when(Sync.last)} · intentos ${Sync.tries}`, 'Pendiente: ' + (det.join(', ') || 'nada'), ...errs].join('\n')};
+    text: [`Hierro ${APP_VERSION} · ${ST[Sync.state] || Sync.state} · última subida ${when(Sync.last)} · intentos ${Sync.tries} · App Check ${AppCheck.last || '–'}`, 'Pendiente: ' + (det.join(', ') || 'nada'), ...errs].join('\n')};
 }
 function syncUI(){
   const el = $('#syncState'); if (!el) return;
@@ -2529,6 +2589,37 @@ function tocaCard(label, r, link = ''){
     <div class="ej">${esc(r.exercises.slice(0, 6).map(e => exOf(e.exId).name).join(', '))}${r.exercises.length > 6 ? '…' : ''}</div>
     <button class="btn primary lg block" data-act="start-routine" data-id="${r.id}">${PLAY_SVG} Empezar entreno</button></div>`;
 }
+/* ---------- Tarjeta de Inicio: racha, meta semanal y rango (aversión a la pérdida + gradiente de objetivo) ---------- */
+function weekGoal(){
+  const g = +S.settings.weekGoal; if (g >= 1 && g <= 7) return {n: Math.round(g), auto: false};
+  const cur = weekStart(Date.now()), by = {};
+  S.workouts.forEach(w => { const k = weekStart(w.start); by[k] = (by[k] || 0) + 1; });
+  let ks = Object.keys(by).map(Number).filter(k => k < cur).sort((a, b) => b - a).slice(0, 8);
+  if (!ks.length) ks = Object.keys(by).map(Number).sort((a, b) => b - a).slice(0, 8);
+  if (!ks.length) return {n: 3, auto: true};
+  return {n: clamp(Math.round(ks.reduce((a, k) => a + by[k], 0) / ks.length), 2, 6), auto: true};
+}
+function goalCard(thisWeek){
+  const st = weekStreak(), goal = weekGoal(), n = thisWeek.length, done = n >= goal.n;
+  const pc = v => Math.max(v > 0 ? 3 : 0, Math.min(100, v)).toFixed(1);
+  let top = '';
+  if (!n && st >= 2) {
+    const left = 7 - (new Date().getDay() + 6) % 7;
+    top = `<div class="gc-risk"><div><b>Tu racha de ${st} semanas está en peligro</b><small>${left === 1 ? 'Se pierde esta noche' : 'Se pierde el domingo · quedan ' + left + ' días'}</small></div>${S.active ? '' : '<button class="btn primary sm" data-act="start-empty">Entrenar ahora</button>'}</div>`;
+  } else if (n && st >= 1) top = `<div class="gc-ok">Racha de ${st === 1 ? '1 semana' : st + ' semanas'} a salvo ✓</div>`;
+  let h = top;
+  h += `<button class="gc-row" data-act="goal-pick" aria-label="Meta semanal: ${n} de ${goal.n} entrenos. Cambiar meta"><span class="row between"><b>${done ? 'Meta cumplida 💪' : n + ' de ' + goal.n + ' entrenos esta semana'}</b><small class="muted">${done ? n + ' de ' + goal.n : 'Meta ›'}</small></span><span class="rk-bar" aria-hidden="true" style="--rk:${done ? 'var(--ok, var(--acc))' : 'var(--acc)'}"><i style="width:${pc(n / goal.n * 100)}%"></i></span></button>`;
+  const R = rkAll(), g = R.glob;
+  if (g && g.idx < 24) {
+    const lo = RK_LO[g.idx], hi = RK_LO[g.idx + 1], pts = lo + g.prog * (hi - lo), x = Math.max(1, Math.ceil(hi - pts - 1e-9));
+    h += `<button class="gc-row" data-act="go-ranks"><span class="gc-rk">${rkIcon(g.idx, 28)}<span class="gc-t"><b>Te faltan ${x} ${x === 1 ? 'punto' : 'puntos'} para ${esc(rkName(g.idx + 1))}</b></span><small class="muted">›</small></span><span class="rk-bar" aria-hidden="true" style="--rk:${rkColOf(g.idx)}"><i style="width:${pc(g.prog * 100)}%"></i></span></button>`;
+  } else if (!g) {
+    const k = Math.max(0, RK.minEx - R.n), miss = R.miss.map(m => m.toLowerCase());
+    const t = k ? `Te faltan ${k} ${k === 1 ? 'ejercicio' : 'ejercicios'} para tener rango global` + (miss.length ? ` · falta ${rkYes(miss)}` : '') : `Para tu rango global falta ${rkYes(miss)}`;
+    h += `<button class="gc-row" data-act="go-ranks"><span class="gc-rk">${rkIcon(-1, 28)}<span class="gc-t"><b>${t}</b></span><small class="muted">›</small></span><span class="rk-bar" aria-hidden="true" style="--rk:var(--acc)"><i style="width:${pc(Math.min(R.n, RK.minEx) / RK.minEx * 100)}%"></i></span></button>`;
+  }
+  return `<div class="card stack gc">${h}</div>`;
+}
 function viewHome(){
   const now = Date.now(), ws = weekStart(now);
   const thisWeek = S.workouts.filter(w => w.start >= ws);
@@ -2547,6 +2638,7 @@ function viewHome(){
     h += `<div class="empty">${EI('💪')}<h3>${Cloud.session && Cloud.session.name ? 'Hola, ' + esc(Cloud.session.name.split(' ')[0]) : 'Bienvenido a Hierro'}</h3><div>Empieza un entreno, trae tu historial de Hevy o recupera una copia de Hierro.</div><div class="stack" style="width:100%;max-width:320px"><button class="btn primary" data-act="tab" data-tab="train">Empezar a entrenar</button><button class="btn" data-act="import-csv">Importar de Hevy (CSV)</button><button class="btn" data-act="restore-json">Restaurar copia de Hierro</button></div></div>`;
     return h;
   }
+  h += goalCard(thisWeek);
   const last7 = inRange(now - 7 * 864e5, now + 1), ms7 = muscleSets(last7);
   h += `<div class="card stack"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${weekStreak()}</b> sem. seguidas</span></div>
     <div class="wk" role="img" aria-label="Días entrenados esta semana: ${trained.size}">${days.map((dd, i) => { const on = trained.has(new Date(dd).getDay()); return `<div class="${on ? 'on' : i > todayIdx ? 'fut' : ''} ${i === todayIdx ? 'today' : ''}"><i>${on ? CHECK_SVG : ''}</i><span>${'LMXJVSD'[i]}</span></div>`; }).join('')}</div>
@@ -2860,6 +2952,7 @@ function viewMe(){
     <div class="menu">${Social.ready() ? `<button data-act="tab" data-tab="social">Mi perfil público: @${esc(Social.me().username)}</button>` : ''}<button data-act="acc-name">Cambiar nombre</button><button data-act="acc-pass">Cambiar contraseña</button>${(S.settings.blocked || []).length ? `<button data-act="go-blocked">Personas bloqueadas (${S.settings.blocked.length})</button>` : ''}${Mod.admin ? '<button data-act="go-mod">🛡️ Moderación (admin)</button>' : ''}<button data-act="logout">Cerrar sesión</button><button class="danger" data-act="acc-delete">Eliminar mi cuenta y mis datos</button></div></div>`;
   h += installCard(true);
   h += `<div class="small muted legal-l" style="text-align:center"><a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a></div>`;
+  if (AppCheck.cfg()) h += `<div class="small muted legal-l rc-l" style="text-align:center">Protegido por reCAPTCHA: se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones</a> de Google.</div>`;
   h += `<div class="small muted" style="text-align:center">Hierro · versión ${APP_VERSION}</div><div style="text-align:center"><button class="btn ghost sm" data-act="chk-update">Buscar actualización</button></div>`;
   return h;
 }
@@ -3679,7 +3772,7 @@ function drawAuth(){
       <button class="btn primary lg block" type="submit" id="auGo">${up ? 'Crear cuenta' : 'Entrar'}</button>
     </form>
     ${up ? '' : '<button class="btn ghost" data-act="auth-forgot">He olvidado mi contraseña</button>'}
-    <div class="small muted foot">Funciona sin conexión. Tus entrenos se guardan en tu cuenta y solo los ves tú.</div></div>`;
+    <div class="small muted foot">Funciona sin conexión. Tus entrenos se guardan en tu cuenta y solo los ves tú.</div>${AppCheck.cfg() ? `<div class="small muted foot legal-l rc-l">Protegido por reCAPTCHA: se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones</a> de Google.</div>` : ''}</div>`;
 }
 async function authSubmit(){
   if (AUTHUI.busy) return;
@@ -5191,6 +5284,8 @@ const A = {
   },
   'sum-ranks'(){ A['sum-close'](); go({type: 'ranks'}); },
   'set-sex'(el){ const v = el.dataset.v; if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
+  'goal-pick'(){ const cur = weekGoal().n; modal('Meta semanal', `<div class="small muted">¿Cuántos entrenos quieres hacer cada semana?</div><div class="seg" role="group" aria-label="Entrenos por semana">${[1,2,3,4,5,6,7].map(k => `<button data-act="goal-set" data-n="${k}" aria-pressed="${k === cur}">${k}</button>`).join('')}</div>`); },
+  'goal-set'(el){ const k = +el.dataset.n; if (!(k >= 1 && k <= 7)) return; S.settings.weekGoal = k; Store.mark('meta'); closeModal(); render(); toast('Meta: ' + k + (k === 1 ? ' entreno' : ' entrenos') + ' por semana'); },
   'rk-share'(){ S.settings.rkShare = !(S.settings.rkShare ?? RK.shareDef); Store.mark('meta'); render(); toast(S.settings.rkShare ? 'Tus amigos ven tu rango global' : 'Tu rango ya no se enseña'); },
   'go-plan'(){ go({type: 'plan'}); },
   'plan-day'(el){ const i = +el.dataset.i, cur = (S.settings.plan || {}).days || [];
@@ -5214,7 +5309,7 @@ const A = {
   'share-dl'(){ if (!SHARE) return; const a = document.createElement('a'); a.href = SHARE.url; a.download = SHARE.name; document.body.appendChild(a); a.click(); a.remove(); toast('Imagen guardada'); },
   'auth-tab'(el){ AUTHUI.mode = el.dataset.k; AUTHUI.msg = ''; drawAuth(); },
   'auth-forgot'(){ const email = ($('#auEmail') || {}).value || ''; modal('Recuperar contraseña', `<div class="small muted">Te enviaremos un email con un enlace para poner una contraseña nueva. Si no llega en un par de minutos, mira en spam.</div><label class="f">Email<input id="rsEmail" type="email" inputmode="email" value="${esc(email)}"></label><div id="rsMsg" class="small err"></div>`, `<button class="btn primary" data-act="auth-reset-send">Enviar email</button>`); },
-  async 'auth-reset-send'(){ const e = $('#rsEmail').value.trim(); if (!e) { $('#rsMsg').textContent = 'Escribe tu email.'; return; } try { await Cloud.reset(e); closeModal(); AUTHUI.msg = '✓ Email enviado. Sigue el enlace y luego entra con tu contraseña nueva.'; drawAuth(); } catch (err) { $('#rsMsg').textContent = err.message === AUTH_ERRORS.EMAIL_NOT_FOUND ? 'No hay ninguna cuenta con ese email.' : err.message; } },
+  async 'auth-reset-send'(){ const e = $('#rsEmail').value.trim(); if (!e) { $('#rsMsg').textContent = 'Escribe tu email.'; return; } try { await Cloud.reset(e); closeModal(); AUTHUI.msg = '✓ Si hay una cuenta con ese email, te llegará un enlace. Síguelo y luego entra con tu contraseña nueva.'; drawAuth(); } catch (err) { $('#rsMsg').textContent = err.message === AUTH_ERRORS.EMAIL_NOT_FOUND ? 'No hay ninguna cuenta con ese email.' : err.message; } },
   'acc-name'(){ modal('Cambiar nombre', `<label class="f">Nombre<input id="acName" value="${esc(Cloud.session.name || '')}" maxlength="40"></label>`, `<button class="btn primary" data-act="acc-name-save">Guardar</button>`); },
   async 'acc-name-save'(){ const n = $('#acName').value.trim(); if (!n) return; try { await Cloud.setName(n); Store.synced.prof = null; Store.synced.score = null; Store.mark(); closeModal(); render(); toast('Nombre actualizado'); Sync.run().catch(() => {}); /* republica perfil y resumen del clan al instante */ } catch (e) { toast(e.offline ? 'Necesitas conexión para cambiarlo' : e.message); } },
   'acc-pass'(){ modal('Cambiar contraseña', `<label class="f">Contraseña nueva<input id="acPass" type="password" autocomplete="new-password" minlength="6"></label><label class="f">Repítela<input id="acPass2" type="password" autocomplete="new-password"></label><div id="acMsg" class="small err"></div>`, `<button class="btn primary" data-act="acc-pass-save">Cambiar</button>`); },
@@ -6602,7 +6697,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.9.3';
+const APP_VERSION = '4.10.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
