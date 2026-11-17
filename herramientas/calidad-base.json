@@ -1,0 +1,27 @@
+{
+  "actualizado": "2026-11-17",
+  "version": "4.12.3",
+  "metricas": {
+    "R01 funciones largas (80+ líneas o 4000+ caracteres)": 17,
+    "R02 función más larga (caracteres)": 9704,
+    "R03 líneas de más de 400 caracteres": 86,
+    "R04 catch vacíos sin comentario": 81,
+    "R05 acciones A sin usar": 0,
+    "R06 funciones sin usar": 0,
+    "R07 texto de usuario sin esc()": 0,
+    "R08 bloques copiados (6+ líneas)": 0,
+    "R09 !important en CSS": 18,
+    "R10 selectores CSS repetidos": 52
+  },
+  "forzados": [
+    {
+      "version": "4.12.3",
+      "fecha": "2026-11-17",
+      "motivo": "4.12.2 (otra cuenta, publicada antes de existir el control): viewMe crece con la tarjeta de datos corporales y 3 líneas largas (consentimiento de datos corporales)",
+      "subidas": {
+        "R02 función más larga (caracteres)": 9704,
+        "R03 líneas de más de 400 caracteres": 86
+      }
+    }
+  ]
+}
