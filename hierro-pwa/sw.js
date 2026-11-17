@@ -1,6 +1,6 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-4.12.0';
+const VERSION = 'hierro-4.12.1';
 const PHOTOS = 'hierro-fotos'; // fotos de ejercicios: se guardan al verlas y no se borran al actualizar
 const FONTS = 'hierro-fuentes'; // caché antigua de Google Fonts (hasta 4.9.0); desde 4.9.1 las fuentes van en ./fonts/ dentro de la app
 // 4.9.3: solo lo imprescindible tiene que bajar para instalar la versión nueva; iconos y fuentes se intentan
