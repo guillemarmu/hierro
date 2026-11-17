@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- 4.9.2: política de seguridad (CSP). Si alguien colara código en la página, no podría enviar datos ni cargar scripts de otros sitios.
+     Si cambias de servidor de avisos (pushUrl en config.js) o añades otro servicio, añádelo aquí en connect-src. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://raw.githubusercontent.com; font-src 'self'; media-src 'self' data: blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://hierro-avisos.guillemm2004.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#070B1A">
 <script>
@@ -1690,7 +1693,7 @@ const Cloud = {
   quotaHit(){ const t = Date.now(); if (t - this.quotaAt > 15 * 6e4) { this.quotaAt = t; setTimeout(() => toast(QUOTA_MSG), 0); } },
   commit(writes){ return this.fs('POST', this.root() + ':commit', {writes}); },
   queryRoot(structuredQuery){ return this.fs('POST', this.root() + ':runQuery', {structuredQuery}); },
-  getDoc(...p){ return this.fs('GET', this.name(...p)); },
+  getDoc(...p){ return this.fs('GET', this.name(...p.map(x => encodeURIComponent(x)))); }, // 4.9.2: ids codificados en la URL
   query(parent, structuredQuery){ return this.fs('POST', this.name(...parent) + ':runQuery', {structuredQuery}); },
   write(path, obj){
     const fields = {};
@@ -3807,7 +3810,7 @@ const Social = {
   async fetchPhoto(pid){ // → data URL segura o null (sin foto)
     const idx = await this.phIndex();
     if (idx.includes(pid)) { const c = await KV.get('socph:' + pid); if (c && Date.now() - (c.at || 0) < 7 * 864e5 && safePhoto(c.u)) { this.phTouch(pid); return c.u; } }
-    const d = await Cloud.fs('GET', Cloud.name('posts', pid) + '?mask.fieldPaths=photo');
+    const d = await Cloud.fs('GET', Cloud.name('posts', encodeURIComponent(pid)) + '?mask.fieldPaths=photo');
     const u = safePhoto(d && d.fields && d.fields.photo ? d.fields.photo.stringValue : null);
     if (u) this.phTouch(pid, u);
     return u || null;
@@ -4075,7 +4078,7 @@ const Social = {
   },
   async loadPost(pid){
     try {
-      const d = await Cloud.fs('GET', Cloud.name('posts', pid) + '?' + POST_FIELDS.fields.map(f => 'mask.fieldPaths=' + f.fieldPath).join('&'));
+      const d = await Cloud.fs('GET', Cloud.name('posts', encodeURIComponent(pid)) + '?' + POST_FIELDS.fields.map(f => 'mask.fieldPaths=' + f.fieldPath).join('&'));
       if (!d) return null;
       const old = this.posts.get(pid), p = this.parsePost(d); if (old && old !== p) Object.assign(old, p), this.posts.set(pid, old);
       socRender(); return this.posts.get(pid) || null;
@@ -4087,7 +4090,7 @@ const Social = {
     u = u || {}; u.loading = true; this.users.set(uid, u); const g = this.gen;
     try {
       const [pd, posts, fr, fg] = await Promise.all([
-        Cloud.fs('GET', Cloud.name('profiles', uid)),
+        Cloud.fs('GET', Cloud.name('profiles', encodeURIComponent(uid))),
         Cloud.queryRoot({from: [{collectionId: 'posts'}], select: POST_FIELDS, where: ff('uid', 'EQUAL', uid), orderBy: [{field: {fieldPath: '__name__'}, direction: 'ASCENDING'}], limit: 20}),
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid), select: {fields: [{fieldPath: 'from'}]}}),
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: {fields: [{fieldPath: 'to'}]}})
@@ -4116,11 +4119,12 @@ const Social = {
     u.loadingMore = false; socRepaint();
   },
   async profilesOf(uids){
+    uids = (uids || []).filter(id => typeof id === 'string' && /^[A-Za-z0-9_.-]{1,128}$/.test(id)); // 4.9.2: un id raro hacía fallar el lote entero
     const now = Date.now(), need = [...new Set(uids)].filter(id => { const u = this.users.get(id); return !(u && u.profile) || now - (u.profileAt || 0) > this.PROFILE_TTL; }).slice(0, 100);
     if (need.length) {
       try {
         const res = await Cloud.fs('POST', Cloud.root() + ':batchGet', {documents: need.map(id => Cloud.name('profiles', id))});
-        (res || []).forEach(r => { if (r.found) { const p = docData(r.found); try { p.stats = JSON.parse(p.stats || '{}'); } catch (e) { p.stats = {}; } if (!p.stats || typeof p.stats !== 'object') p.stats = {}; const u = this.users.get(p.uid) || {}; u.profile = p; u.profileAt = Date.now(); this.users.set(p.uid, u); } });
+        (res || []).forEach(r => { if (r.missing) { const id = String(r.missing).split('/').pop(), u = this.users.get(id) || {}; u.gone = true; u.profileAt = now; this.users.set(id, u); } if (r.found) { const p = docData(r.found); try { p.stats = JSON.parse(p.stats || '{}'); } catch (e) { p.stats = {}; } if (!p.stats || typeof p.stats !== 'object') p.stats = {}; const u = this.users.get(p.uid) || {}; u.profile = p; u.profileAt = Date.now(); this.users.set(p.uid, u); } });
       } catch (e) {}
     }
     return uids.map(id => (this.users.get(id) || {}).profile).filter(Boolean);
@@ -4150,7 +4154,7 @@ const Social = {
       if (!liked) this.notify(p.uid, 'like', `${me}_like_${p.id}`, {pid: p.id, title: p.title || ''});
     } catch (e) {
       p.likes = liked ? [...p.likes, me] : p.likes.filter(x => x !== me); socRender(); toast(e.offline ? 'Sin conexión' : 'No se ha podido. Revisa la conexión.');
-      document.querySelectorAll(`[data-act="soc-like"][data-id="${p.id}"]`).forEach(b => { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); });
+      document.querySelectorAll(`[data-act="soc-like"][data-id="${CSS.escape(p.id)}"]`).forEach(b => { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); });
     } finally { lk.delete(p.id); }
   },
   async loadComments(pid){
@@ -4410,8 +4414,10 @@ function fnPhotoHTML(){
 const SOC_HIDE = new Set(); // publicaciones propias que acabo de dejar de publicar (se ocultan hasta que Sync las borre)
 const SOC_ASKED = new Set(); // uids de quienes dan me gusta cuyo perfil ya se ha pedido
 const SOC_REFRESH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.5L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.5l1.7-2M20 20v-4.5h-4.5"/></svg>';
-const nameOfPost = p => String(Social.nameOf(p.uid, p.name) || p.name || 'Alguien');
-const userNameOfPost = p => { const u = Social.userOf(p.uid); return String((u && u.username) || (p.uid === Social.myUid() && Social.me() && Social.me().username) || p.username || ''); };
+// 4.9.2: si el autor no tiene perfil (lo borró), no se usa el nombre del cuerpo del post: podía hacerse pasar por otro
+const goneUser = uid => { const u = Social.users.get(uid); return !!(u && u.gone && !u.profile); };
+const nameOfPost = p => goneUser(p.uid) ? 'Alguien' : String(Social.nameOf(p.uid, p.name) || p.name || 'Alguien');
+const userNameOfPost = p => { const u = Social.userOf(p.uid); return String((u && u.username) || (p.uid === Social.myUid() && Social.me() && Social.me().username) || (goneUser(p.uid) ? '' : p.username) || ''); };
 function postLikeLine(p){
   const me = Social.myUid(), likes = (Array.isArray(p.likes) ? p.likes : []).filter(x => typeof x === 'string'), mine = likes.includes(me), others = likes.filter(x => x !== me);
   const names = others.map(u => Social.userOf(u)).filter(Boolean).map(u => shortName(u.name || u.username || '')).filter(Boolean), B = n => `<b>${esc(n)}</b>`, N = others.length;
@@ -4534,7 +4540,16 @@ const Mod = {
     // Seguridad: la ruta de una denuncia la escribe el denunciante; solo se borra si es del tipo que dice ser (si no, se descarta la denuncia)
     const okP = {post: /^posts\/[^/]+$/, comment: /^posts\/[^/]+\/comments\/[^/]+$/, user: /^profiles\/[^/]+$/, msg: /^relations\/[^/]+\/msgs\/[^/]+$/, clan: /^clans\/[^/]+$/}[rep.kind];
     if (!okP || !okP.test(p)) { toast('Denuncia con ruta no válida: descártala'); return false; }
-    const ok = await ask('Borrar contenido', `Se borrará este ${esc(REPORT_KIND[rep.kind] || 'contenido')} para todos. No se puede deshacer.`, [['0', 'Cancelar'], ['1', 'Borrar', 'danger']]); closeModal();
+    // 4.9.2: el texto de la denuncia lo escribe quien denuncia; antes de borrar se enseña lo que hay de verdad en esa ruta
+    let real = '';
+    try {
+      const d = await Cloud.getDoc(...seg); if (!d) { toast('Ese contenido ya no existe: descarta la denuncia'); return false; }
+      const x = docData(d), pp = rep.kind === 'post' ? Social.parsePost(d) : null;
+      const au = rep.kind === 'user' ? seg[1] : rep.kind === 'clan' ? x.owner : x.uid;
+      const txt = rep.kind === 'post' ? (pp ? [pp.title, pp.notes].filter(Boolean).join(' · ') : '') : rep.kind === 'user' ? [x.name, x.username ? '@' + x.username : '', x.bio].filter(Boolean).join(' · ') : rep.kind === 'clan' ? [x.name, x.desc].filter(Boolean).join(' · ') : String(x.text || '');
+      real = `<div class="card small" style="margin-top:8px"><b>${esc(Social.nameOf(String(au || ''), '?'))}</b>: ${esc(String(txt).slice(0, 300)) || '<span class="muted">(sin texto)</span>'}${rep.kind === 'post' && x.hasPhoto ? ' · 📷' : ''}</div>`;
+    } catch (e) { if (e.offline) { toast('Sin conexión'); return false; } }
+    const ok = await ask('Borrar contenido', `Se borrará este ${esc(REPORT_KIND[rep.kind] || 'contenido')} para todos. No se puede deshacer.${real ? '<div class="small muted" style="margin-top:8px">Contenido real:</div>' + real : ''}`, [['0', 'Cancelar'], ['1', 'Borrar', 'danger']]); closeModal();
     if (ok !== '1') return false;
     try {
       if (rep.kind === 'comment' && seg[0] === 'posts' && seg[2] === 'comments') {
@@ -4830,7 +4845,7 @@ function viewNotifs(){
   const since = n.since != null ? n.since : n.seen;
   const T = {'rel-alianza': 'os propone una alianza 🤝', 'rel-pique': 'os lanza un pique ⚔️', 'rel-ok-alianza': 'ha aceptado vuestra alianza 🤝', 'rel-ok-pique': 'ha aceptado el pique. ¡Que empiece la guerra! ⚔️', 'rel-no': 'ha rechazado vuestra propuesta'};
   const cut = (t, k) => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); return t.length > k ? t.slice(0, k - 1).trimEnd() + '…' : t; };
-  const nameB = x => `<b>${esc(shortName(Social.nameOf(x.from, x.name)) || 'Alguien')}</b>`;
+  const nameB = x => `<b>${esc(shortName(goneUser(x.from) ? 'Alguien' : Social.nameOf(x.from, x.name)) || 'Alguien')}</b>`;
   const group = list => { // me gusta y comentarios por publicación; seguimientos y clanes sueltos
     const out = [], idx = new Map();
     for (const x of list) {
@@ -4883,9 +4898,9 @@ function viewCompare(uid){
   const bestThem = {}; u.posts.forEach(x => x.ex.forEach(e => { const sc = exScore(e.sets, e.type); if (sc > ((bestThem[e.id] || {}).v || 0)) bestThem[e.id] = {v: sc, name: e.name, type: e.type}; }));
   const common = Object.keys(bestThem).filter(id => bestMine[id]);
   return `<div class="row between"><div class="row">${avatar(Social.myName(), 'sm')}<b>Tú</b></div><span class="muted">vs</span><div class="row"><b>${esc(p.name)}</b>${avatar(p.name, 'sm')}</div></div>
-    <div class="card"><h3>Últimos 30 días</h3><table class="sets"><tr><th></th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(p.name.split(' ')[0])}</th></tr>${row('Entrenos', a.n, b.n, v => v)}${row('Tiempo', a.ms, b.ms, v => fmtDur(v))}${row('Volumen', a.vol, b.vol, v => fmtKg(v))}${row('Series', a.sets, b.sets, v => v)}</table>${partial ? `<div class="small muted">Tiene ${plural(b.n, 'entreno', 'entrenos')} en estos 30 días, pero su app aún no comparte el resumen: tiempo, volumen y series solo cuentan ${theirs.length ? 'lo que ha publicado' : 'lo publicado (nada)'}. Se completará cuando actualice Hierro.</div>` : ''}</div>
-    <div class="card stack"><h3>Reparto muscular</h3><div class="small muted">Relleno: tú · discontinuo: ${esc(p.name.split(' ')[0])}</div>${radar(gm, gt)}</div>
-    <div class="card stack"><h3>Ejercicios en común</h3>${common.length ? `<table class="sets"><tr><th>Ejercicio</th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(p.name.split(' ')[0])}</th></tr>${common.map(id => { const t = bestThem[id].type; const f = v => fmtN(v) + scoreUnit(t); return `<tr><td>${esc(bestThem[id].name)}</td><td class="num" style="text-align:right"><b${bestMine[id] >= bestThem[id].v ? ' class="pr"' : ''}>${f(bestMine[id])}</b></td><td class="num" style="text-align:right"><b${bestThem[id].v > bestMine[id] ? ' class="pr"' : ''}>${f(bestThem[id].v)}</b></td></tr>`; }).join('')}</table><div class="small muted">Para peso y repeticiones se compara el 1RM estimado de la mejor serie.</div>` : '<div class="small muted">Todavía no tenéis ejercicios en común en sus entrenos publicados.</div>'}</div>`;
+    <div class="card"><h3>Últimos 30 días</h3><table class="sets"><tr><th></th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(String(p.name || '').split(' ')[0])}</th></tr>${row('Entrenos', a.n, b.n, v => v)}${row('Tiempo', a.ms, b.ms, v => fmtDur(v))}${row('Volumen', a.vol, b.vol, v => fmtKg(v))}${row('Series', a.sets, b.sets, v => v)}</table>${partial ? `<div class="small muted">Tiene ${plural(b.n, 'entreno', 'entrenos')} en estos 30 días, pero su app aún no comparte el resumen: tiempo, volumen y series solo cuentan ${theirs.length ? 'lo que ha publicado' : 'lo publicado (nada)'}. Se completará cuando actualice Hierro.</div>` : ''}</div>
+    <div class="card stack"><h3>Reparto muscular</h3><div class="small muted">Relleno: tú · discontinuo: ${esc(String(p.name || '').split(' ')[0])}</div>${radar(gm, gt)}</div>
+    <div class="card stack"><h3>Ejercicios en común</h3>${common.length ? `<table class="sets"><tr><th>Ejercicio</th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(String(p.name || '').split(' ')[0])}</th></tr>${common.map(id => { const t = bestThem[id].type; const f = v => fmtN(v) + scoreUnit(t); return `<tr><td>${esc(bestThem[id].name)}</td><td class="num" style="text-align:right"><b${bestMine[id] >= bestThem[id].v ? ' class="pr"' : ''}>${f(bestMine[id])}</b></td><td class="num" style="text-align:right"><b${bestThem[id].v > bestMine[id] ? ' class="pr"' : ''}>${f(bestThem[id].v)}</b></td></tr>`; }).join('')}</table><div class="small muted">Para peso y repeticiones se compara el 1RM estimado de la mejor serie.</div>` : '<div class="small muted">Todavía no tenéis ejercicios en común en sus entrenos publicados.</div>'}</div>`;
 }
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'cmtForm') return;
@@ -6065,7 +6080,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
     const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : fmtN(r.v, 0);
     const medal = has && r.v > 0 ? ['🥇', '🥈', '🥉'][pos - 1] : null;
     const tag = opts.badge && r.c ? ` <span class="rl-tag" aria-label="${esc(r.c.name)}">${esc(r.c.emoji)}</span>` : '';
-    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${r.uid}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${sub}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has && unit ? `<small>${unit}</small>` : ''}</span></button>`;
+    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(r.uid)}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${esc(sub)}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has && unit ? `<small>${unit}</small>` : ''}</span></button>`;
   }).join('');
 }
 function clanAwardsHTML(c){
@@ -6343,7 +6358,7 @@ function viewPique(id){
   const cats = [['🔥 Días', A.days, B.days, v => fmtN(v)], ['✨ Chiquipuntos', A.prs, B.prs, v => fmtN(v)], ['📈 Mejora', A.impr, B.impr, v => '+' + fmtN(v) + ' %'], ['Puntos', A.avg, B.avg, v => fmtN(v)]];
   h += `<div class="card stack"><div class="row between"><h3>Por categorías</h3><span class="small muted">media por activo</span></div><div class="cmp pq-cmp"><div class="a hd">${esc(mine.emoji)} ${esc(mine.name)}</div><span></span><div class="b hd">${esc(o.name)} ${esc(o.emoji)}</div>${cats.map(([l, x, y, f]) => { const mx = Math.max(x, y, 1e-9); return `<div class="a${x > y ? ' w' : ''}">${f(x)}<i style="width:${Math.round(56 * x / mx)}px"></i></div><span>${l}</span><div class="b${y > x ? ' w' : ''}"><i style="width:${Math.round(56 * y / mx)}px"></i>${f(y)}</div>`; }).join('')}</div></div>`;
   // cara a cara: 1.º contra 1.º…
-  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}" data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${m.uid}">${avatar(m.name, 'xs')}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
+  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}" data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(m.uid)}">${avatar(m.name, 'xs')}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
   const pairs = [...Array(n)].map((_, i) => { const x = A.rows[i], y = B.rows[i], t = x.v.pts + y.v.pts, p = t ? Math.round(x.v.pts / t * 100) : 50;
     return `<div class="pq-pair">${side(x, 'l', x.v.pts > y.v.pts)}<span class="pq-pos num">${i + 1}.º</span>${side(y, 'r', y.v.pts > x.v.pts)}<i class="pq-mini${t ? '' : ' none'}"><span style="width:${p}%"></span></i></div>`; }).join('');
   const rest = [...A.rows.slice(n), ...B.rows.slice(n)];
@@ -6400,13 +6415,13 @@ function clanCmpHTML(uid){
   if (fzNew(fa) && fzNew(fb)) { rows.push(['Fuerza', fzTotal(fa), fzTotal(fb), v => fmtN(v, 0)]); FZ_GROUPS.forEach(([g, l]) => { const p = Math.round(clamp(fa[g], 0, CL.maxFz)), q = Math.round(clamp(fb[g], 0, CL.maxFz)); if (p || q) rows.push([l, p, q, v => v ? fmtN(v, 0) : '–']); }); }
   const d = x.pts - y.pts;
   const verdict = !b ? `${first} todavía no compite en la liga.` : d > 0 ? `💪 Le sacas <b>${plural(d, 'punto', 'puntos')}</b> ${perThis(per)}` : d < 0 ? `😤 Te saca <b>${plural(-d, 'punto', 'puntos')}</b> ${perThis(per)}. ¡A por ${first}!` : `🤝 Empate ${perThis(per)}: el próximo entreno decide`;
-  return `<div id="clCmp" class="stack" data-id="${uid}">
+  return `<div id="clCmp" class="stack" data-id="${esc(uid)}">
     <div class="rl-cmph"><div class="row">${avatar(Social.myName(), 'sm')}<b>Tú</b></div><span class="pq-vs sm">VS</span><div class="row" style="justify-content:flex-end"><b>${first}</b>${avatar(name, 'sm')}</div></div>
     ${perSeg(per)}
     <div class="cmp pq-cmp">${rows.map(([l, p, q, f]) => { const mx = Math.max(p, q, 1e-9); return `<div class="a${p > q ? ' w' : ''}">${f(p)}<i style="width:${Math.round(56 * p / mx)}px"></i></div><span>${l}</span><div class="b${q > p ? ' w' : ''}"><i style="width:${Math.round(56 * q / mx)}px"></i>${f(q)}</div>`; }).join('')}</div>
     ${y.partial ? '<div class="small muted">Su app no está actualizada: del año solo cuentan sus 8 últimas semanas.</div>' : ''}
     <div class="rl-verdict">${verdict}</div>
-    <div class="grid2"><button class="btn" data-act="cl-prof" data-id="${uid}">Ver perfil</button><button class="btn" data-act="cl-cmp-full" data-id="${uid}">Comparar entrenos</button></div></div>`;
+    <div class="grid2"><button class="btn" data-act="cl-prof" data-id="${esc(uid)}">Ver perfil</button><button class="btn" data-act="cl-cmp-full" data-id="${esc(uid)}">Comparar entrenos</button></div></div>`;
 }
 // Logros en el perfil público
 function clanProfileHTML(uid){
@@ -6482,7 +6497,7 @@ Object.assign(A, {
   'cl-people'(){
     closeModal(); const c = Clan.mine(); if (!c) return;
     const ms = Clan.members(c).filter(m => !m.me);
-    modal('Miembros', ms.length ? `<div class="cl-people">${ms.map(m => `<div class="person"><div class="row who">${avatar(m.name, 'sm')}<span><b>${esc(m.name)}</b><small>${m.s && m.s.username ? '@' + esc(m.s.username) : ''}</small></span></div><button class="btn sm danger" data-act="cl-kick" data-id="${m.uid}">Expulsar</button></div>`).join('')}</div><div class="small muted">Quien expulses no podrá volver a unirse.</div>` : '<div class="small muted">Todavía estás tú solo. Invita a tus amigos.</div>');
+    modal('Miembros', ms.length ? `<div class="cl-people">${ms.map(m => `<div class="person"><div class="row who">${avatar(m.name, 'sm')}<span><b>${esc(m.name)}</b><small>${m.s && m.s.username ? '@' + esc(m.s.username) : ''}</small></span></div><button class="btn sm danger" data-act="cl-kick" data-id="${esc(m.uid)}">Expulsar</button></div>`).join('')}</div><div class="small muted">Quien expulses no podrá volver a unirse.</div>` : '<div class="small muted">Todavía estás tú solo. Invita a tus amigos.</div>');
   },
   async 'cl-kick'(el){
     const c = Clan.mine(), uid = el.dataset.id; if (!c) return;
@@ -6570,7 +6585,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.9.1';
+const APP_VERSION = '4.9.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
