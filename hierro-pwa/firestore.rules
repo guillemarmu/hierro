@@ -67,7 +67,7 @@ service cloud.firestore {
       // 4.9.1: lista cerrada de campos (antes: hasta 10 campos cualquiera). likes/commentCount/lastC se admiten aquí porque
       // el dueño edita un post que ya los tiene; en create se prohíben aparte y en update el dueño no puede tocarlos.
       return d.keys().hasOnly(['uid', 'start', 'body', 'hasPhoto', 'photo', 'likes', 'commentCount', 'lastC'])
-        && d.start is number && d.start > 0 && d.start <= nowMs() + 86400000
+        && d.start is number && d.start > 0 && d.start <= nowMs() + 600000 // 4.9.2: antes +1 día (un post del futuro se quedaba el primero en Descubrir)
         && d.body is string && d.body.size() <= 100000
         && optBool(d, 'hasPhoto')
         && (!('photo' in d) || d.photo == null || (d.photo is string && d.photo.size() <= 400000
@@ -152,6 +152,8 @@ service cloud.firestore {
       let rl = d.type in ['rel-alianza', 'rel-pique', 'rel-ok-alianza', 'rel-ok-pique', 'rel-no']
         && relIdOk(d.get('rel', null)) && !('pid' in d)
         && nid == me() + '_' + relPrefix(d.type) + '_' + d.rel
+        // 4.9.2: la relación tiene que existir (salvo el rechazo, que se manda después de borrarla); antes se podía llenar el buzón de un jefe
+        && (d.type == 'rel-no' || exists(/databases/$(database)/documents/relations/$(d.rel)))
         && ((clanOwner(d.rel.split('_')[0]) == me() && clanOwner(d.rel.split('_')[1]) == uid)
             || (clanOwner(d.rel.split('_')[1]) == me() && clanOwner(d.rel.split('_')[0]) == uid));
       return d.from == me()
@@ -177,7 +179,8 @@ service cloud.firestore {
         && d.owner is string
         && d.members is list && d.members.size() <= 30
         && d.members.toSet().size() == d.members.size() // 4.9.1: sin duplicados (rellenaban los 30 huecos y el clan quedaba «lleno»)
-        && d.get('kicked', []) is list && d.get('kicked', []).size() <= 100;
+        && d.get('kicked', []) is list && d.get('kicked', []).size() <= 100
+        && d.get('kicked', []).join(',').size() <= 13000; // 4.9.2: 100 uids; antes cada elemento podía ser enorme (clan de 1 MiB)
     }
     match /clans/{cid} {
       allow read: if signed();
@@ -222,6 +225,7 @@ service cloud.firestore {
         && (!('streak' in request.resource.data) || (request.resource.data.streak is number && request.resource.data.streak >= 0 && request.resource.data.streak <= 1000))
         && request.resource.data.weeks is map && request.resource.data.weeks.size() <= 10
         && request.resource.data.ach is list && request.resource.data.ach.size() <= 60
+        && request.resource.data.ach.join(',').size() <= 2000 && request.resource.data.weeks.keys().join(',').size() <= 300 // 4.9.2
         && (!('months' in request.resource.data) || (request.resource.data.months is map && request.resource.data.months.size() <= 14))
         && (!('rel' in request.resource.data) || (request.resource.data.rel is map && request.resource.data.rel.size() <= 6));
       allow delete: if signed() && me() == uid;
@@ -302,7 +306,7 @@ service cloud.firestore {
       allow read: if signed();
       allow create, update: if signed()
         && request.resource.data.keys().hasOnly(['allies', 'rivals', 'last'])
-        && request.resource.data.last is string
+        && request.resource.data.last is string && request.resource.data.last.size() <= 40 // 4.9.2
         && request.resource.data.get('allies', []) is list && request.resource.data.get('allies', []).size() <= 5
         && request.resource.data.get('rivals', []) is list && request.resource.data.get('rivals', []).size() <= 5
         && (clanOwner(cid) == me() || clanOwner(request.resource.data.last) == me())
@@ -331,7 +335,7 @@ service cloud.firestore {
         && request.resource.data.path is string && request.resource.data.path.size() <= 300
         && reportPathOk(request.resource.data.kind, request.resource.data.path)
         && optStr(request.resource.data, 'tuid', 128) && optStr(request.resource.data, 'note', 300) && optStr(request.resource.data, 'snap', 500)
-        && request.resource.data.ts is int && request.resource.data.ts <= nowMs() + 600000 && request.resource.data.ts >= nowMs() - 600000;
+        && request.resource.data.ts is int && request.resource.data.ts <= nowMs() + 60000 && request.resource.data.ts >= nowMs() - 600000; // 4.9.2: +1 min (antes +10)
       allow read, delete: if admin();
     }
     // Bloqueos: los crea y borra quien bloquea; las reglas de arriba los consultan con exists()
