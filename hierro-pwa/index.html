@@ -2470,7 +2470,7 @@ function streakGrid(weeks = 26){
    ========================================================= */
 let tab = 'home';
 const navStack = {home: [], train: [], social: [], clan: [], me: []};
-const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, weekMetric: 'vol', calMonth: null, mMetric: 'weight', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false};
+const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, calMonth: null, mMetric: 'weight', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false};
 const cur = () => navStack[tab][navStack[tab].length - 1];
 function go(view){ navTo(() => { navStack[tab].push(view); }); }
 function back(){ navTo(() => { navStack[tab].pop(); }, {keep: true}); }
@@ -3310,7 +3310,6 @@ function nextSetInfo(){
   return null;
 }
 const nextSetText = nx => nx ? `${nx.name} · Serie ${nx.n} de ${nx.total}${nx.val ? ' · ' + nx.val : ''}` : '';
-const hhmmss = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
 // El aviso fijo al bloquear el móvil («Descanso · termina a las…», 4.5.6) se quitó en 4.5.11 a petición de Guillermo.
 // Esto solo cierra el que pudiera quedar de una versión anterior; el aviso de fin de descanso sigue igual.
 function restLockNotif(){
@@ -3877,7 +3876,7 @@ async function healthAsk(){
   if (r !== '1') { toast('Sin tu consentimiento no guardamos datos corporales'); return false; }
   S.settings.healthOk = Date.now(); Store.mark('meta'); return true;
 }
-function healthWipe(){ S.measures = []; delete S.settings.sex; delete S.settings.height; delete S.settings.healthOk; Store.mark('meta'); try { rkReset(); } catch (e) {} render(); }
+function healthWipe(){ S.measures = []; delete S.settings.sex; delete S.settings.height; delete S.settings.healthOk; Store.mark('meta'); try { rkReset(); } catch (e) { /* si los rangos aún no se han calculado no hay caché que borrar */ } render(); }
 async function healthCheck(){
   if (S.settings.healthOk || !hasHealth() || healthCheck.open || ED || $('#modal').classList.contains('open') || $('#auth').classList.contains('open')) return;
   healthCheck.open = true;
@@ -4685,20 +4684,6 @@ function renderTabs(){
 /* ---------- Vistas sociales ---------- */
 const n7Of = uid => uid === Social.myUid() ? inRange(Date.now() - 7 * 864e5, Date.now() + 1).length : (((Social.users.get(uid) || {}).profile || {}).stats || {}).n7;
 const avatar = (name, cls = '', n7) => `<span class="avatar ${cls}${n7 >= 3 ? ' hot' : ''}" aria-hidden="true"${n7 > 0 ? ` style="--aro:${heat(Math.min(1, .1 + n7 * .2))}"` : ''}>${esc((name || '?').slice(0, 1).toUpperCase())}</span>`;
-async function compressPhoto(file){
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image(); img.src = url; await img.decode();
-    let max = 1080, q = .74, out = '';
-    for (let k = 0; k < 6; k++) {
-      const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
-      c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); out = c.toDataURL('image/jpeg', q);
-      if (out.length < 260000) break; max = Math.round(max * .82); q = Math.max(.5, q - .06);
-    }
-    return out;
-  } finally { URL.revokeObjectURL(url); }
-}
 /* 4.10.3 · Foto doble al estilo BeReal, obligatoria para publicar. Siempre en el momento: sin galería.
    En iPhone el navegador no deja abrir las dos cámaras a la vez (BeReal tampoco): la trasera al pulsar y, al momento, la frontal con cuenta atrás.
    Resultado: un solo JPEG 3:4 (≤260 KB, cabe en posts.photo sin tocar las reglas) con la frontal en miniatura arriba a la izquierda.
@@ -4725,7 +4710,6 @@ function dcamCover(g, src, x, y, w, h){
   const sw = src.width, sh = src.height, k = Math.max(w / sw, h / sh), cw = w / k, ch = h / k;
   g.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, x, y, w, h);
 }
-function dcamRR(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 // 4.11: cada foto por separado, 3:4 (la trasera 1080×1440 ≤260 KB y el selfie 600×800 ≤110 KB), para poder intercambiarlas al verlas
 function dcamEnc(src, W0, H0, max){
   let sc = 1, q = .8, out = '';
@@ -5372,7 +5356,6 @@ const A = {
   'open-ex'(el){ if (el.closest('#modal')) closeModal(); UI.exTab = 'prog'; go({type: 'exercise', id: el.dataset.id}); },
   'ex-tab'(el){ UI.exTab = el.dataset.k; render(); },
   'ex-metric'(el){ UI.exMetric = el.dataset.k; render(); },
-  'week-metric'(el){ UI.weekMetric = el.dataset.k; render(); },
   'm-metric'(el){ UI.mMetric = el.dataset.k; render(); },
   cal(el){ const d = new Date(); UI.calMonth = (UI.calMonth ?? d.getFullYear() * 12 + d.getMonth()) + +el.dataset.d; render(); },
   'start-empty'(){ startWorkout(null); },
@@ -5529,7 +5512,6 @@ const A = {
     else { const g = a.ss || 's' + rid(); a.ss = g; b.ss = g; }
     closeModal(); renderEditor(); edTouch();
   },
-  'ex-move'(el){ const d = ED.data, i = +el.dataset.ei, j = i + +el.dataset.d; [d.exercises[i], d.exercises[j]] = [d.exercises[j], d.exercises[i]]; closeModal(); renderEditor(); edTouch(); },
   'ex-remove'(el){ ED.data.exercises.splice(+el.dataset.ei, 1); closeModal(); renderEditor(); edTouch(); },
   'ex-rest'(el){
     const ei = +el.dataset.ei;
@@ -7070,7 +7052,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.12.2';
+const APP_VERSION = '4.12.3';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
