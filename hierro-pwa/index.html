@@ -2019,7 +2019,7 @@ setInterval(() => { if (document.visibilityState === 'visible') Sync.schedule(10
 const isWork = s => s.t !== 'w';
 function setVol(s){ return (s.kg || 0) * (s.reps || 0); }
 function e1rm(s){ if (!s.kg || !s.reps) return 0; return s.reps === 1 ? s.kg : s.kg * (1 + s.reps / 30); }
-function wVolume(w){ let v = 0; w.exercises.forEach(e => e.sets.forEach(s => { if (isWork(s)) v += setVol(s); })); return v; }
+function wVolume(w){ let v = 0; w.exercises.forEach(e => e.sets.forEach(s => { v += setVol(s); })); return v; } // 4.11.1: el calentamiento también suma volumen (como en Hevy); récords y rangos siguen sin contarlo
 function wSets(w){ let n = 0; w.exercises.forEach(e => n += e.sets.length); return n; }
 function hasData(s, type){
   if (type === 'dur') return s.sec > 0;
@@ -2581,7 +2581,7 @@ function render(){
 }
 
 /* ---------- Agregados para estadísticas ---------- */
-function wReps(w){ let n = 0; w.exercises.forEach(e => e.sets.forEach(s => { if (isWork(s)) n += s.reps || 0; })); return n; }
+function wReps(w){ let n = 0; w.exercises.forEach(e => e.sets.forEach(s => { n += s.reps || 0; })); return n; }
 function muscleSets(ws){ const m = {}; ws.forEach(w => w.exercises.forEach(e => { const k = exOf(e.exId).muscle, n = e.sets.filter(isWork).length; if (n) m[k] = (m[k] || 0) + n; })); return m; }
 const groupSets = ms => GROUPS.map(([, ks]) => ks.reduce((a, k) => a + (ms[k] || 0), 0));
 function agg(ws){ return {n: ws.length, ms: ws.reduce((a, w) => a + (w.end - w.start), 0), vol: ws.reduce((a, w) => a + wVolume(w), 0), sets: ws.reduce((a, w) => a + wSets(w), 0), reps: ws.reduce((a, w) => a + wReps(w), 0)}; }
@@ -3196,7 +3196,7 @@ function closeEditor(){
 function tick(){ const el = $('#edClock'); if (el && S.active) el.textContent = fmtClock((Date.now() - S.active.start) / 1000); const bar = $('#abClock'); if (bar && S.active) bar.textContent = fmtClock((Date.now() - S.active.start) / 1000); }
 function edStats(){
   const d = ED.data; let vol = 0, n = 0;
-  d.exercises.forEach(e => e.sets.forEach(s => { if (s.done) { n++; if (isWork(s)) vol += setVol(s); } }));
+  d.exercises.forEach(e => e.sets.forEach(s => { if (s.done) { n++; vol += setVol(s); } }));
   return {vol, n};
 }
 function renderEditor(keepScroll = true){
@@ -6986,7 +6986,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.11.0';
+const APP_VERSION = '4.11.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
