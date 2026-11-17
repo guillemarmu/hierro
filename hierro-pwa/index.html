@@ -1073,6 +1073,31 @@ html.rest-up #view{padding-bottom:104px}
 .gc-row{display:flex;flex-direction:column;gap:7px;width:100%;text-align:left;min-height:44px;justify-content:center}
 .gc-row b{font-size:15px}.gc-row small{font-size:13.5px;flex:none}
 .gc-rk{display:flex;align-items:center;gap:10px}.gc-t{flex:1;min-width:0}.gc-t b{display:block}
+/* 4.10.3 · Foto doble (estilo BeReal) */
+.dcam{position:fixed;inset:0;z-index:45;background:#000;color:#fff;display:flex;flex-direction:column;padding:calc(8px + var(--sat,0px)) 0 calc(12px + var(--sab,0px));touch-action:none;-webkit-user-select:none;user-select:none}
+.dcam-top{display:flex;align-items:center;gap:10px;padding:4px 14px 10px}
+.dcam-top b{font-size:17px;letter-spacing:-.01em}
+.dcam-step{margin-left:auto;font-size:13px;opacity:.75;font-weight:600}
+.dcam-x{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14);color:#fff;border:0;padding:0}
+.dcam-x svg{width:20px;height:20px}
+.dcam-stage{position:relative;flex:1;min-height:0;margin:0 10px;border-radius:22px;overflow:hidden;background:#111}
+.dcam-stage>video,.dcam-back,.dcam-res{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.dcam-res{object-fit:contain;background:#000}
+.dcam-v.mir{transform:scaleX(-1)}
+.dcam-v.ins{inset:auto;left:3.5%;top:3.5%;width:30%;height:auto;aspect-ratio:3/4;border-radius:14px;border:3px solid #000;z-index:2;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.dcam-cd{position:absolute;left:3.5%;top:3.5%;width:30%;aspect-ratio:3/4;display:grid;place-items:center;font-size:54px;font-weight:800;line-height:1;z-index:3;text-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none}
+.dcam-cd:empty{display:none}
+.dcam-msg{position:absolute;left:14px;right:14px;bottom:14px;z-index:4;background:rgba(0,0,0,.72);border-radius:16px;padding:14px;font-size:15px;line-height:1.4;text-align:center}
+.dcam-bar{display:flex;justify-content:center;align-items:center;gap:10px;min-height:96px;padding:12px 16px 0}
+.dcam-bar .btn{flex:1;max-width:230px}
+.dcam-shut{width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.18);padding:0;transition:transform .12s}
+.dcam-shut:active{transform:scale(.92);background:#fff}
+.dcam-shut:disabled{opacity:.35}
+.dcam-stage.flash::after{content:"";position:absolute;inset:0;background:#fff;z-index:5;animation:dcflash .35s ease-out forwards;pointer-events:none}
+@keyframes dcflash{from{opacity:.9}to{opacity:0}}
+.dcam [hidden]{display:none!important}
+.dcam .btn:not(.primary){background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.22)}
+.fn-need{border:1px solid var(--peligro,#e5484d)}
 </style>
 </head>
 <body>
@@ -2689,7 +2714,7 @@ function viewWorkout(w){
   <div class="card stats"><div class="stat"><b>${fmtDur(w.end - w.start)}</b><span>Duración</span></div><div class="stat"><b>${fmtKg(wVolume(w))}</b><span>Volumen</span></div><div class="stat"><b>${(w.prs || []).length}</b><span>Chiquipuntos</span></div></div>
   <div class="grid2"><button class="btn primary" data-act="open-summary" data-id="${w.id}">Ver resumen</button><button class="btn" data-act="share-img" data-id="${w.id}">Compartir imagen</button></div>
   <button class="btn ghost block" data-act="w-copytext" data-id="${w.id}">Copiar como texto</button>
-  ${Social.ready() ? `<button class="btn ghost block" data-act="w-share" data-id="${w.id}">${w.shared ? '✓ Publicado en el feed · quitar' : 'Publicar en el feed de tus amigos'}</button>` : ''}`;
+  ${Social.ready() ? `<button class="btn ghost block" data-act="w-share" data-id="${w.id}">${w.shared ? '✓ Publicado en el feed · quitar' : '📸 Publicar en el feed (con foto doble)'}</button>` : ''}`;
   for (const e of w.exercises) {
     const x = exOf(e.exId); let n = 0;
     h += `<div class="card stack"><button class="row between" data-act="open-ex" data-id="${x.id}" style="text-align:left"><h3>${esc(x.name)}</h3>${e.ss ? '<span class="pill accent">Superserie</span>' : ''}</button>
@@ -3947,9 +3972,9 @@ const Social = {
   pending(){ try { return JSON.parse(localStorage.getItem(this.ppKey()) || '{}'); } catch (e) { return {}; } },
   queuePhoto(w, url){
     const pp = this.pending(); pp[w.id] = url || '';
-    try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) { toast('No hay espacio para guardar la foto'); return; }
+    try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) { toast('No hay espacio para guardar la foto'); return false; }
     const id = this.postId(w); this.photos.set(id, url || null); const p = this.posts.get(id); if (p) p.hasPhoto = !!url;
-    Sync.schedule(200);
+    Sync.schedule(200); return true;
   },
   unpend(wid, val){ const pp = this.pending(); if (pp[wid] === val) { delete pp[wid]; try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) {} } },
   photoOf(p){ const u = this.photos.get(p.id); if (u) return u; return p.hasPhoto ? '' : null; }, // nunca descarga: de eso se encarga mountPhotos (perezoso)
@@ -4547,24 +4572,136 @@ async function compressPhoto(file){
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
-/* En Android 14+ Chrome abre el selector de fotos del sistema, que no ofrece la cámara: allí se pregunta antes (desde 4.5.10).
-   En iPhone el propio menú ya ofrece «Hacer foto» y «Fototeca». */
-async function pickPhoto(){
-  let cam = false;
-  if (IS_ANDROID) {
-    const r = await ask('Añadir foto', 'Haz una foto ahora o elige una de tu galería.', [['cam', 'Hacer foto', 'primary'], ['gal', 'Elegir de la galería'], ['0', 'Cancelar']]); closeModal();
-    if (r !== 'cam' && r !== 'gal') return null; cam = r === 'cam';
+/* 4.10.3 · Foto doble al estilo BeReal, obligatoria para publicar. Siempre en el momento: sin galería.
+   En iPhone el navegador no deja abrir las dos cámaras a la vez (BeReal tampoco): la trasera al pulsar y, al momento, la frontal con cuenta atrás.
+   Resultado: un solo JPEG 3:4 (≤260 KB, cabe en posts.photo sin tocar las reglas) con la frontal en miniatura arriba a la izquierda.
+   Sin getUserMedia o sin permiso: respaldo con la cámara del sistema (<input capture>), dos fotos seguidas. */
+const DCAM = {W: 1080, H: 1440, ins: .3, cd: 2, tick: 700};
+const dcamNap = ms => new Promise(r => setTimeout(r, ms));
+function dcamStop(st){ try { if (st) st.getTracks().forEach(t => t.stop()); } catch (e) {} }
+async function dcamOpen(face){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw Object.assign(new Error('sin getUserMedia'), {name: 'NoGum'});
+  let err = null;
+  for (const v of [{facingMode: {exact: face}, width: {ideal: 1920}}, {facingMode: face}, true]) {
+    try { return await navigator.mediaDevices.getUserMedia({video: v, audio: false}); }
+    catch (e) { err = e; if (e && /NotAllowed|Security/.test(e.name)) break; }
   }
-  return new Promise(res => {
-    const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; if (cam) i.setAttribute('capture', 'environment'); i.style.display = 'none'; document.body.appendChild(i);
-    i.addEventListener('change', async () => { const f = i.files[0]; i.remove(); if (!f) return res(null); try { res(await compressPhoto(f)); } catch (e) { toast('No se ha podido leer la foto'); res(null); } });
-    i.click();
+  throw err;
+}
+function dcamGrab(v, mirror){
+  const w = v.videoWidth, h = v.videoHeight; if (!w || !h) return null;
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  if (mirror) { g.translate(w, 0); g.scale(-1, 1); }
+  g.drawImage(v, 0, 0, w, h); return c;
+}
+function dcamCover(g, src, x, y, w, h){
+  const sw = src.width, sh = src.height, k = Math.max(w / sw, h / sh), cw = w / k, ch = h / k;
+  g.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, x, y, w, h);
+}
+function dcamRR(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function dcamCompose(back, front){
+  let sc = 1, q = .8, out = '';
+  for (let k = 0; k < 8; k++) {
+    const W = Math.round(DCAM.W * sc), H = Math.round(DCAM.H * sc), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dcamCover(g, back, 0, 0, W, H);
+    const iw = Math.round(W * DCAM.ins), ih = Math.round(iw * 4 / 3), m = Math.round(W * .035), r = Math.round(iw * .1), b = Math.max(2, Math.round(W * .006));
+    dcamRR(g, m - b, m - b, iw + 2 * b, ih + 2 * b, r + b); g.fillStyle = '#000'; g.fill();
+    g.save(); dcamRR(g, m, m, iw, ih, r); g.clip(); dcamCover(g, front, m, m, iw, ih); g.restore();
+    out = c.toDataURL('image/jpeg', q); if (out.length < 260000) break;
+    if (q > .62) q -= .06; else sc *= .85;
+  }
+  return out;
+}
+function dcamFile(face, cb){ // respaldo: cámara del sistema (capture = sin galería); llamar dentro de un toque
+  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.setAttribute('capture', face); i.style.display = 'none'; document.body.appendChild(i);
+  let fired = false; const end = c => { if (fired) return; fired = true; i.remove(); cb(c); };
+  i.addEventListener('cancel', () => end(null));
+  i.addEventListener('change', async () => {
+    const f = i.files && i.files[0]; if (!f) return end(null);
+    const u = URL.createObjectURL(f);
+    try {
+      const img = new Image(); img.src = u; await img.decode();
+      const k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); end(c);
+    } catch (e) { toast('No se ha podido leer la foto'); end(null); } finally { URL.revokeObjectURL(u); }
+  });
+  i.click();
+}
+function dualCam(){ // → Promise<data URL | null>
+  return new Promise(done => {
+    document.querySelectorAll('.dcam').forEach(n => n.remove());
+    const el = document.createElement('div'); el.className = 'dcam'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Foto doble');
+    el.innerHTML = `<div class="dcam-top"><button class="dcam-x" data-dc="x" aria-label="Cerrar">${ICON.x}</button><b>Foto doble</b><span class="dcam-step"></span></div>
+      <div class="dcam-stage"><img class="dcam-back" alt="" hidden><video class="dcam-v" playsinline muted autoplay></video><img class="dcam-res" alt="Tu foto doble" hidden><div class="dcam-cd" aria-live="assertive"></div><div class="dcam-msg" hidden></div></div>
+      <div class="dcam-bar"></div>`;
+    document.body.appendChild(el);
+    const q = c => el.querySelector(c), v = q('video'), bk = q('.dcam-back'), res = q('.dcam-res'), cd = q('.dcam-cd'), msg = q('.dcam-msg'), bar = q('.dcam-bar'), step = q('.dcam-step'), stage = q('.dcam-stage');
+    let st = null, phase = '', back = null, front = null, out = '', gen = 0, closed = false;
+    const set = (ph, txt, html) => { phase = ph; el.dataset.ph = ph; step.textContent = txt || ''; bar.innerHTML = html || ''; };
+    const say = html => { msg.hidden = !html; msg.innerHTML = html || ''; };
+    const stop = () => { dcamStop(st); st = null; try { v.srcObject = null; } catch (e) {} };
+    const showBack = c => { bk.src = c.toDataURL('image/jpeg', .85); bk.hidden = false; };
+    const live = async face => { // abre la cámara y espera a que haya imagen; false si otra acción la ha dejado vieja
+      const g = ++gen; stop();
+      const s = await dcamOpen(face); if (g !== gen || closed) { dcamStop(s); return false; }
+      st = s; v.srcObject = s; v.classList.toggle('mir', face === 'user'); v.hidden = false;
+      try { await v.play(); } catch (e) {}
+      const t0 = Date.now();
+      while (!(v.videoWidth > 0 && v.readyState >= 2)) { if (g !== gen || closed) return false; if (Date.now() - t0 > 8000) throw Object.assign(new Error('la cámara no da imagen'), {name: 'Timeout'}); await dcamNap(60); }
+      return g === gen && !closed;
+    };
+    const fail = e => {
+      if (closed) return; gen++; stop(); console.warn('dualCam', e && e.name, e);
+      const n = (e && e.name) || '', denied = /NotAllowed|Security/.test(n), none = /NotFound|Overconstrained|NoGum/.test(n);
+      cd.textContent = ''; v.hidden = true;
+      say(denied ? '<b>Hierro no tiene permiso para usar la cámara.</b><br>Dale permiso en los ajustes del navegador o hazlas con la cámara del sistema.'
+        : none ? '<b>No se ha podido abrir la cámara aquí.</b><br>Hazlas con la cámara del sistema: primero la trasera y después un selfie.'
+        : '<b>La cámara no ha arrancado.</b><br>Vuelve a intentarlo o usa la cámara del sistema.');
+      set('err', '', `<button class="btn" data-dc="retry">Reintentar</button><button class="btn primary" data-dc="sys">Cámara del sistema</button>`);
+    };
+    const showResult = () => {
+      out = dcamCompose(back, front); res.src = out; res.hidden = false; v.hidden = true; bk.hidden = true; cd.textContent = ''; say('');
+      set('done', '', `<button class="btn" data-dc="again">Repetir</button><button class="btn primary" data-dc="ok">Usar foto</button>`);
+    };
+    const startBack = async () => {
+      back = front = null; out = ''; bk.hidden = true; res.hidden = true; v.className = 'dcam-v'; cd.textContent = ''; say('');
+      set('back', '1/2 · Trasera', `<button class="dcam-shut" data-dc="shot" aria-label="Hacer la foto" disabled></button>`);
+      try { if (await live('environment')) { const b = q('[data-dc=shot]'); if (b) b.disabled = false; } } catch (e) { fail(e); }
+    };
+    const shot = async () => {
+      if (phase !== 'back') return; const c = dcamGrab(v, false); if (!c) return;
+      back = c; showBack(c); stage.classList.remove('flash'); void stage.offsetWidth; stage.classList.add('flash');
+      v.classList.add('ins'); set('front', '2/2 · ¡Ahora tú!', '');
+      try {
+        if (!await live('user')) return; const g = gen;
+        for (let n = DCAM.cd; n > 0; n--) { cd.textContent = n; await dcamNap(DCAM.tick); if (g !== gen || closed) return; }
+        cd.textContent = ''; front = dcamGrab(v, true); if (!front) throw Object.assign(new Error('sin imagen'), {name: 'Timeout'});
+        stop(); stage.classList.remove('flash'); void stage.offsetWidth; stage.classList.add('flash'); showResult();
+      } catch (e) { fail(e); }
+    };
+    const sys = face => dcamFile(face, c => {
+      if (closed) return;
+      if (face === 'environment') {
+        if (!c) { say('<b>1/2 · Foto con la cámara trasera</b><br>Después, un selfie.'); set('sys', '1/2 · Trasera', `<button class="btn primary" data-dc="sys">Hacer la foto trasera</button>`); return; }
+        back = c; showBack(c); say('<b>2/2 · ¡Ahora tú!</b><br>Haz un selfie con la cámara frontal.'); set('sys2', '2/2 · Frontal', `<button class="btn primary" data-dc="sys-f">Hacer el selfie</button>`);
+      } else if (c) { front = c; showResult(); }
+    });
+    const onVis = () => { if (document.hidden) { if (phase === 'back' || phase === 'front') { gen++; stop(); } } else if (phase === 'back' || phase === 'front') startBack(); };
+    const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); finish(null); } };
+    const finish = val => { if (closed) return; closed = true; gen++; stop(); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('keydown', onKey, true); el.remove(); done(val || null); };
+    el.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-dc]'); ev.stopPropagation(); if (!b || b.disabled) return; const a = b.dataset.dc;
+      if (a === 'x') finish(null); else if (a === 'shot') shot(); else if (a === 'again' || a === 'retry') startBack(); else if (a === 'ok') finish(out);
+      else if (a === 'sys') { gen++; stop(); sys('environment'); } else if (a === 'sys-f') sys('user');
+    });
+    document.addEventListener('visibilitychange', onVis); document.addEventListener('keydown', onKey, true);
+    startBack();
   });
 }
 function fnPhotoHTML(){
   const u = A._pendingPhoto;
-  return u ? `<div class="fnphoto"><img src="${u}" alt="Foto elegida"><div class="stack" style="gap:6px"><button class="btn sm" data-act="fn-photo">Cambiar foto</button><button class="btn sm ghost danger" data-act="fn-photo-del">Quitar</button></div></div>`
-    : `<button class="btn block" data-act="fn-photo">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} Añadir foto a la publicación</button>`;
+  return u ? `<div class="fnphoto"><img src="${u}" alt="Tu foto doble"><div class="stack" style="gap:6px"><button class="btn sm" data-act="fn-photo">Repetir foto</button><button class="btn sm ghost danger" data-act="fn-photo-del">Quitar</button></div></div>`
+    : `<button class="btn block" data-act="fn-photo">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} Hacer la foto doble</button><div class="small muted" style="margin-top:6px">Obligatoria para publicar: cámara trasera y, al momento, la frontal. Sin galería.</div>`;
 }
 /* Social 4.8 · tarjeta del feed (P2). Solo usa el contrato de Social; cada tarjeta se genera en try/catch */
 const SOC_HIDE = new Set(); // publicaciones propias que acabo de dejar de publicar (se ocultan hasta que Sync las borre)
@@ -4899,7 +5036,7 @@ function viewPost(pid){
     <div class="row"><button class="row who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(detName(p.uid), 'sm', n7Of(p.uid))}<span><b>${esc(detName(p.uid))}</b><small>${pr && pr.username ? '@' + esc(pr.username) + ' · ' : ''}${esc(when)}</small></span></button></div>
     <h2 class="det-title">${esc(p.title)}</h2>${p.notes ? `<p class="det-notes">${esc(p.notes)}</p>` : ''}`;
   if (p.hasPhoto) { h += `<div class="det-photo" data-dp="${esc(p.id)}"></div>`; setTimeout(() => detPhotoLoad(p), 0); }
-  if (mine && S.workouts.some(w => w.id === p.wid)) h += `<div class="grid2"><button class="btn sm" data-act="soc-photo" data-id="${esc(p.id)}">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} ${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.hasPhoto ? `<button class="btn sm" data-act="soc-photo-del" data-id="${esc(p.id)}">Quitar foto</button>` : ''}</div>`;
+  if (mine && S.workouts.some(w => w.id === p.wid)) h += `<div class="stack"><button class="btn sm" data-act="soc-photo" data-id="${esc(p.id)}">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} ${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}</button></div>`;
   h += `</div>
     <div class="card det-stats"><div class="stat"><b>${fmtDur(num(p.end) - num(p.start))}</b><span>Duración</span></div><div class="stat"><b>${fmtKg(num(p.vol))}</b><span>Volumen</span></div><div class="stat"><b>${fmtN(num(p.sets), 0)}</b><span>Series</span></div><div class="stat"><b>${fmtN(num(p.reps), 0)}</b><span>Reps</span></div></div>`;
   if (m7.length) h += `<div class="card stack"><h3>Músculos</h3><div class="bm-row"><div class="bm-sm">${bodyMap(mc)}</div><div class="mlist">${m7.slice(0, 4).map(([k, n]) => `<div><i style="background:${heat(n / m7[0][1])}"></i><span>${esc(MUSCLES[k])}</span><b class="num">${n}</b></div>`).join('')}</div></div></div>`;
@@ -5171,13 +5308,19 @@ const A = {
   },
   'fn-save'(){
     const out = A._pendingFinish; if (!out) return;
+    const shBox = $('#fnShare');
+    if (shBox && shBox.checked && !A._pendingPhoto) { // 4.10.3: la foto doble es obligatoria para publicar
+      const fb = $('#fnPhotoBox');
+      if (fb) { fb.innerHTML = `<div class="card small fn-need"><b>Para publicar hace falta la foto doble.</b> Sin ella, el entreno se guarda solo para ti.</div><div class="grid2" style="margin-top:8px"><button class="btn primary" data-act="fn-photo">Hacer la foto</button><button class="btn" data-act="fn-nopub">Guardar sin publicar</button></div>`; try { fb.scrollIntoView({block: 'nearest'}); } catch (e) {} return; }
+      shBox.checked = false;
+    }
     out.title = $('#fnTitle').value.trim() || 'Entreno'; out.notes = $('#fnNotes').value.trim(); out.shared = !!($('#fnShare') && $('#fnShare').checked);
     const st = new Date($('#fnStart').value).getTime(); if (st) out.start = st;
     out.end = out.start + Math.max(1, num($('#fnDur').value) || 1) * 60000;
     const rk0 = rkAll();
     S.workouts.push(out); sortW(); out.prs = computePRs(out);
     rkReset(); const rkUp = rkDiff(rk0, rkAll()); if (rkUp.length) out.rk = rkUp; // ascensos de rango de este entreno
-    if (out.shared && A._pendingPhoto) Social.queuePhoto(out, A._pendingPhoto); A._pendingPhoto = null;
+    if (out.shared && !(A._pendingPhoto && Social.queuePhoto(out, A._pendingPhoto))) out.shared = false; A._pendingPhoto = null;
     Social.onPublished(out);
     const routine = out.routineId && S.routines.find(r => r.id === out.routineId);
     S.active = null; A._pendingFinish = null;
@@ -5187,18 +5330,14 @@ const A = {
     navTo(() => { tab = 'home'; navStack.home = []; });
     openSummary(out, true);
   },
-  async 'fn-photo'(){ const u = await pickPhoto(); if (!u) return; A._pendingPhoto = u; const fb = $('#fnPhotoBox'); if (fb) fb.innerHTML = fnPhotoHTML(); const sh = $('#fnShare'); if (sh) sh.checked = true; },
+  'fn-nopub'(){ const sh = $('#fnShare'); if (sh) sh.checked = false; A['fn-save'](); },
+  async 'fn-photo'(){ const u = await dualCam(); if (!u) return; A._pendingPhoto = u; const fb = $('#fnPhotoBox'); if (fb) fb.innerHTML = fnPhotoHTML(); const sh = $('#fnShare'); if (sh) sh.checked = true; },
   'fn-photo-del'(){ A._pendingPhoto = null; const fb = $('#fnPhotoBox'); if (fb) fb.innerHTML = fnPhotoHTML(); },
   async 'soc-photo'(el){
     const p = Social.posts.get(el.dataset.id), w = p && S.workouts.find(x => x.id === p.wid);
     if (!w) { toast('Ese entreno no está en este móvil'); return; }
-    const u = await pickPhoto(); if (!u) return;
-    Social.queuePhoto(w, u); socRender(); toast('Foto añadida: se sube en un momento');
-  },
-  async 'soc-photo-del'(el){
-    const p = Social.posts.get(el.dataset.id), w = p && S.workouts.find(x => x.id === p.wid); if (!w) return;
-    const ok = await ask('Quitar foto', 'La foto dejará de verse en la publicación.', [['0', 'Cancelar'], ['1', 'Quitar', 'danger']]); closeModal();
-    if (ok === '1') { Social.queuePhoto(w, null); socRender(); }
+    const u = await dualCam(); if (!u) return;
+    if (!Social.queuePhoto(w, u)) return; socRender(); toast('Foto puesta: se sube en un momento');
   },
   'rt-update'(el){
     const w = S.workouts.find(x => x.id === el.dataset.w), r = S.routines.find(x => x.id === el.dataset.r);
@@ -5409,7 +5548,7 @@ const A = {
     const p = Social.posts.get(el.dataset.id); if (!p) return;
     const id = esc(p.id), mine = p.uid === Social.myUid(), u = Social.userOf(p.uid), B = (act, label, cls) => `<button${cls ? ` class="${cls}"` : ''} data-act="${act}" data-id="${act === 'soc-compare' ? esc(p.uid) : id}">${label}</button>`;
     const items = mine
-      ? [B('soc-photo', p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'), p.hasPhoto ? B('soc-photo-del', 'Quitar foto') : '', B('soc-copytext', 'Copiar como texto'), B('soc-unpublish', 'Dejar de publicar', 'danger')]
+      ? [B('soc-photo', p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'), B('soc-copytext', 'Copiar como texto'), B('soc-unpublish', 'Dejar de publicar', 'danger')]
       : [B('soc-copy', 'Hacer este entreno'), B('soc-copy-routine', 'Guardar como rutina'), u && u.private ? '' : B('soc-compare', 'Comparar con ' + esc(shortName(nameOfPost(p)))), B('soc-copytext', 'Copiar como texto'), ...(Mod.off ? [] : [B('soc-report', 'Denunciar publicación', 'danger'), `<button class="danger" data-act="soc-block" data-id="${esc(p.uid)}">Bloquear a ${esc(shortName(nameOfPost(p)))}</button>`])];
     if (Mod.admin && !mine) items.push(B('soc-admin-del', 'Borrar publicación (admin)', 'danger'));
     modal(esc(p.title || 'Entreno'), `<div class="menu">${items.join('')}</div>`);
@@ -5491,7 +5630,13 @@ const A = {
   async 'soc-invite'(){ const url = location.href.split('#')[0]; try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: 'Apúntate a Hierro y entrenamos juntos 💪', url}); else { await navigator.clipboard.writeText(url); toast('Enlace copiado'); } } catch (e) {} },
   'w-copytext'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (w) copyText(workoutTextW(w), 'Entreno copiado'); },
   'soc-copytext'(el){ const p = Social.posts.get(el.dataset.id); if (p) copyText(workoutText(p), 'Entreno copiado'); },
-  'w-share'(el){ const w = S.workouts.find(x => x.id === el.dataset.id); if (!w) return; if (!w.shared && !Social.canPublish()) { toast(Social.ready() ? 'Tu perfil es privado' : 'Crea tu perfil en la pestaña Social'); return; } w.shared = !w.shared; Store.mark(); render(); toast(w.shared ? 'Publicado en Social' : 'Quitado de Social'); },
+  async 'w-share'(el){
+    const w = S.workouts.find(x => x.id === el.dataset.id); if (!w) return;
+    if (w.shared) { w.shared = false; Store.mark(); render(); toast('Quitado de Social'); return; }
+    if (!Social.canPublish()) { toast(Social.ready() ? 'Tu perfil es privado' : 'Crea tu perfil en la pestaña Social'); return; }
+    const u = await dualCam(); if (!u) { toast('Sin foto doble no se publica'); return; }
+    if (!Social.queuePhoto(w, u)) return; w.shared = true; Store.mark(); render(); toast('Publicado en Social');
+  },
   'm-close'(){ if (modalCb) { const cb = modalCb; modalCb = null; cb(null); } closeModal(); },
   'm-answer'(el){ const cb = modalCb; modalCb = null; if (cb) cb(el.dataset.v); },
   // estado de la sincronización: qué falta por subir y el último error
@@ -6771,7 +6916,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.10.2';
+const APP_VERSION = '4.10.3';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
