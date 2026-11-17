@@ -936,13 +936,13 @@ html[data-mo=push]{--mo-in:mo-push-in;--mo-out:mo-push-out}
 html[data-mo=pop]{--mo-in:mo-pop-in;--mo-out:mo-pop-out}
 html[data-mo=tab-f]{--mo-in:mo-tf-in;--mo-out:mo-tf-out}
 html[data-mo=tab-b]{--mo-in:mo-tb-in;--mo-out:mo-tb-out}
-@keyframes mo-push-in{from{transform:translateX(100%);opacity:0}45%{opacity:1}to{transform:none;opacity:1}}
+@keyframes mo-push-in{from{transform:translateX(24%);opacity:0}to{transform:none;opacity:1}}
 @keyframes mo-push-out{from{transform:none;opacity:1}to{transform:translateX(-26%);opacity:0}}
 @keyframes mo-pop-in{from{transform:translateX(-26%);opacity:0}to{transform:none;opacity:1}}
 @keyframes mo-pop-out{from{transform:none;opacity:1}55%{opacity:1}to{transform:translateX(100%);opacity:0}}
-@keyframes mo-tf-in{from{transform:translateX(30%);opacity:0}60%{opacity:1}to{transform:none;opacity:1}}
+@keyframes mo-tf-in{from{transform:translateX(18px);opacity:0}to{transform:none;opacity:1}}
 @keyframes mo-tf-out{from{transform:none;opacity:1}to{transform:translateX(-14%) scale(.97);opacity:0}}
-@keyframes mo-tb-in{from{transform:translateX(-30%);opacity:0}60%{opacity:1}to{transform:none;opacity:1}}
+@keyframes mo-tb-in{from{transform:translateX(-18px);opacity:0}to{transform:none;opacity:1}}
 @keyframes mo-tb-out{from{transform:none;opacity:1}to{transform:translateX(14%) scale(.97);opacity:0}}
 @keyframes mo-fade-in{from{opacity:0}}
 @keyframes mo-fade-out{to{opacity:0}}
@@ -956,13 +956,17 @@ html[data-mo]::view-transition-old(mo-top),html[data-mo]::view-transition-new(mo
 html[data-mo]::view-transition-old(mo-view){animation:var(--mo-out) var(--mo-dur) var(--mo-ease) both}
 html[data-mo]::view-transition-new(mo-view){animation:var(--mo-in) var(--mo-dur) var(--mo-ease) both}
 html[data-mo=pop]::view-transition-old(mo-view){z-index:2}
+/* 4.10.1: sin «pantallazo» de la pantalla anterior. Al cambiar de pestaña o abrir una subpantalla la vista vieja desaparece al instante
+   (antes se fundía por debajo de la nueva) y el título cambia sin fundido. Solo «atrás» desliza la pantalla que se cierra. */
+html[data-mo=tab-f]::view-transition-old(mo-view),html[data-mo=tab-b]::view-transition-old(mo-view),html[data-mo=push]::view-transition-old(mo-view),html[data-mo]::view-transition-old(mo-top){display:none;animation:none}
+html[data-mo]::view-transition-new(mo-top){animation:none}
 .mo-ghost{position:absolute;left:0;right:0;z-index:2;overflow:hidden;pointer-events:none}
 .mo-gt{position:absolute;inset:0;display:flex;align-items:center;gap:8px;pointer-events:none}
 html[data-mo=pop] .mo-ghost{z-index:4}
 html[data-mo] .mo-ghost{animation:var(--mo-out) var(--mo-dur) var(--mo-ease) both;will-change:transform,opacity}
 html[data-mo] #view.mo-new{animation:var(--mo-in) var(--mo-dur) var(--mo-ease) both;z-index:3;will-change:transform,opacity}
 html[data-mo] #top.mo-new{animation:mo-fade-in var(--mo-dur-fast) ease both}
-html[data-mo] .mo-gt{animation:mo-fade-out var(--mo-dur-fast) ease both}
+html[data-mo] .mo-gt{display:none}
 /* Microanimaciones: pulsación, ventanas, barras al entrar y estados de control */
 .btn,.iconbtn,.chip,.seg button,.cl-per button,.cl-row,.cl-item-main,.person .who,.notif,.navlist button,.card.tap,.post-actions button,.restline,.addset,.cl-emos button{transition:scale .45s var(--mo-ease-spring),background-color .2s}
 .btn:not(:disabled):active,.chip:active,.seg button:active,.cl-per button:active,.cl-row:active,.cl-item-main:active,.person .who:active,.notif:active,.navlist button:active,.card.tap:active,.restline:active,.addset:active{scale:.97;transition-duration:.07s,.2s;transition-timing-function:ease-out}
@@ -1061,6 +1065,7 @@ html.kb #modal .sheet.tall{height:100%;border-radius:var(--r-xl) var(--r-xl) 0 0
 .mod-snap{background:var(--sup);border-radius:12px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;font-size:14px}
 .ban-card{border:1px solid var(--peligro)}
 .grecaptcha-badge{visibility:hidden!important}
+html.rest-up #view{padding-bottom:104px}
 .au-age a,.legal-l a,.ban-card a,#modal .mb a{color:var(--acc-t);text-decoration:underline}
 .gc{gap:14px}.gc-risk{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:var(--r-m);background:var(--sup-2);border:1px solid var(--peligro)}
 .gc-risk div{min-width:0}.gc-risk b{display:block;font-size:15px}.gc-risk small{display:block;color:var(--apagado);font-size:13.5px}.gc-risk .btn{flex:none}
@@ -2479,7 +2484,13 @@ function navTo(mutate, o){
     MO.timer = setTimeout(() => { if (MO.id === id) moEnd(); }, 1500); // seguro: nunca queda bloqueada
     return;
   }
-  // respaldo: copia 'fantasma' de la vista y del título anteriores + animaciones CSS
+  // respaldo: copia 'fantasma' de la vista anterior solo al volver atrás (4.10.1: en el resto, sin pantallazo) + animaciones CSS
+  if (kind !== 'pop') {
+    fin(); root.setAttribute('data-mo', kind); $('#view').classList.add('mo-new'); moStagger();
+    const end0 = () => { if (MO.id === id) moEnd(); };
+    $('#view').onanimationend = e => { if (e.target === e.currentTarget) end0(); };
+    MO.timer = setTimeout(end0, 700); return;
+  }
   const ghost = view.cloneNode(true), app = $('#app');
   ghost.removeAttribute('id'); ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
   ghost.classList.add('mo-ghost'); ghost.setAttribute('aria-hidden', 'true'); ghost.inert = true;
@@ -3357,10 +3368,10 @@ function startRest(sec, name){
 function drawRest(){
   Push.sync();
   const el = $('#rest');
-  if (!REST) { el.classList.remove('show', 'done'); clearInterval(restTimer); return; }
+  if (!REST) { el.classList.remove('show', 'done'); clearInterval(restTimer); restPlace(); return; }
   const left = (REST.end - Date.now()) / 1000;
   if (left <= 0 && !REST.fired) { REST.fired = true; beep(); if (Push.okAt !== REST.end) notifyRestEnd(REST.name); setTimeout(() => { if (REST && REST.fired) { REST = null; drawRest(); } }, 4000); }
-  el.classList.add('show'); el.classList.toggle('done', left <= 0); el.classList.toggle('up', !(ED && ED.mode === 'active'));
+  el.classList.add('show'); el.classList.toggle('done', left <= 0); el.classList.toggle('up', !(ED && ED.mode === 'active')); restPlace();
   const C = 150.8, frac = Math.max(0, Math.min(1, left / REST.total));
   el.innerHTML = `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="7"/><circle cx="30" cy="30" r="24" fill="none" stroke="${left > 0 ? 'url(#gforja)' : '#fff'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${left > 0 ? (C * (1 - frac)).toFixed(1) : 0}" transform="rotate(-90 30 30)"/></svg>
     <div class="tm num">${left > 0 ? fmtClock(Math.ceil(left)) : '¡A por la siguiente!'}<small>Descanso · ${esc(REST.name || '')}</small></div>
@@ -3370,6 +3381,17 @@ let wlock = null;
 async function wakeLock(on){ try { if (on && navigator.wakeLock && !wlock) { wlock = await navigator.wakeLock.request('screen'); wlock.addEventListener('release', () => wlock = null); } else if (!on && wlock) { await wlock.release(); wlock = null; } } catch (e) {} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.active) wakeLock(true); });
 
+/* 4.10.1: con el editor cerrado, el aviso de descanso se coloca justo encima de la barra «Entreno en curso» (o del menú),
+   para que el menú siga accesible. Con el editor abierto (o sin menú visible) va abajo del todo, como antes. */
+function restPlace(){
+  const el = $('#rest'), up = !!REST && el.classList.contains('show') && !(ED && ED.mode === 'active');
+  const ab = $('#activeBar'), tabs = $('#tabs');
+  const anchor = !up ? null : ab && ab.classList.contains('show') && ab.offsetHeight ? ab : tabs && tabs.offsetHeight ? tabs : null;
+  const r = anchor && anchor.getBoundingClientRect();
+  if (r && r.top > 80) { el.style.top = Math.round(r.top - 8) + 'px'; el.style.bottom = 'auto'; el.style.transform = 'translate(-50%,-100%)'; }
+  else { el.style.top = el.style.bottom = el.style.transform = ''; }
+  document.documentElement.classList.toggle('rest-up', !!(r && r.top > 80));
+}
 function restoreActiveBar(){
   const b = $('#activeBar');
   if (S.active && !(ED && ED.mode === 'active')) {
@@ -3377,6 +3399,7 @@ function restoreActiveBar(){
     b.innerHTML = `<span class="grow">${esc(S.active.title || 'Entreno')}<small>Entreno en curso · toca para volver</small></span><b id="abClock" class="num">${fmtClock((Date.now() - S.active.start) / 1000)}</b>`;
     if (!tickTimer) tickTimer = setInterval(tick, 1000);
   } else { b.classList.remove('show'); }
+  restPlace();
 }
 
 /* =========================================================
@@ -6697,7 +6720,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.10.0';
+const APP_VERSION = '4.10.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
