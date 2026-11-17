@@ -1742,7 +1742,7 @@ const AppCheck = {
   },
   async hdr(h){ try { const t = await this.get(); if (t) h['X-Firebase-AppCheck'] = t; } catch (e) {} return h; }
 };
-if (AppCheck.cfg()) setTimeout(() => AppCheck.get(0), 1500); // precalienta: carga reCAPTCHA y pide el primer token sin frenar el arranque
+if (AppCheck.cfg()) setTimeout(() => { if (Cloud.session) AppCheck.get(0); }, 1500); // precalienta con la sesión iniciada (4.12.2: sin cuenta no se carga reCAPTCHA; al entrar o registrarse lo carga Cloud.auth)
 const Cloud = {
   cfg: window.HIERRO_CONFIG || null, session: null,
   enabled(){ return !!(this.cfg && this.cfg.apiKey && this.cfg.projectId); },
@@ -2993,6 +2993,7 @@ function viewMe(){
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
     <div class="f" role="group" aria-labelledby="sexLbl"><span id="sexLbl">Sexo (para los rangos)</span><div class="seg">${[['', 'Sin indicar'], ['m', 'Hombre'], ['f', 'Mujer']].map(([k, l]) => `<button data-act="set-sex" data-v="${k}" aria-pressed="${(S.settings.sex || '') === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">Solo ajusta los estándares de fuerza. No se publica.</div></div>
     <label class="f" id="heightF">Altura (cm, para los rangos)<input id="setHeight" type="number" inputmode="numeric" min="120" max="230" step="1" placeholder="Ej.: 178" value="${rkHeight() || ''}"><span class="small muted" style="font-weight:500">Opcional. Ajusta un poco los rangos de empuje y pierna a tu complexión. No se publica.</span></label>
+    ${S.settings.healthOk ? `<div class="row between small hl-row"><span class="muted">Datos corporales: consentimiento dado el ${fmtDate(S.settings.healthOk, false)}.</span><button class="linkbtn danger" data-act="health-off">Retirar</button></div>` : hasHealth() ? `<div class="row between small hl-row"><span class="muted">Datos corporales sin consentimiento.</span><button class="linkbtn" data-act="health-on">Revisar</button></div>` : ''}
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
     <label class="row" style="font-weight:600"><input type="checkbox" id="setSound" style="width:auto" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
     <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="setNotif" style="width:auto;margin-top:3px" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}</div>`;
@@ -3862,6 +3863,32 @@ async function termsCheck(){
   if (r === '1') { S.settings.terms = TERMS_V; Store.mark('meta'); toast('¡Gracias!'); }
   else termsCheck.open = true; // no se vuelve a preguntar hasta la próxima vez que se abra la app
 }
+/* 4.12.2 · Datos corporales (peso, medidas, sexo y altura): pueden ser datos de salud (art. 9 RGPD), así que piden consentimiento explícito.
+   S.settings.healthOk = fecha del consentimiento. Sin él no se guardan datos nuevos; quien ya los tenía elige al abrir la app. Se retira en Ajustes (y se borran). */
+const HEALTH_TXT = () => `Tu peso, tus medidas, tu sexo y tu altura pueden considerarse <b>datos de salud</b>. Hierro solo los usa para tus estadísticas y para ajustar los rangos de fuerza. Se guardan ${Cloud.session ? 'en tu cuenta privada' : 'en este móvil'} y nunca se publican. Puedes retirar el consentimiento cuando quieras en Ajustes (y se borran). Más en la <a href="${LEGAL}privacidad.html#salud" target="_blank" rel="noopener">política de privacidad</a>.`;
+const hasHealth = () => S.measures.length > 0 || !!S.settings.sex || !!S.settings.height;
+function healthOk(){ // una sola pregunta aunque llegue dos veces (p. ej. el change al perder el foco)
+  if (S.settings.healthOk) return Promise.resolve(true);
+  return healthOk.p || (healthOk.p = healthAsk().finally(() => { healthOk.p = null; }));
+}
+async function healthAsk(){
+  const r = await ask('Datos corporales', HEALTH_TXT(), [['0', 'No'], ['1', 'Doy mi consentimiento', 'primary']]);
+  closeModal();
+  if (r !== '1') { toast('Sin tu consentimiento no guardamos datos corporales'); return false; }
+  S.settings.healthOk = Date.now(); Store.mark('meta'); return true;
+}
+function healthWipe(){ S.measures = []; delete S.settings.sex; delete S.settings.height; delete S.settings.healthOk; Store.mark('meta'); try { rkReset(); } catch (e) {} render(); }
+async function healthCheck(){
+  if (S.settings.healthOk || !hasHealth() || healthCheck.open || ED || $('#modal').classList.contains('open') || $('#auth').classList.contains('open')) return;
+  healthCheck.open = true;
+  const r = await ask('Datos corporales', HEALTH_TXT() + '<br><br>Ya tienes datos corporales guardados. ¿Qué hacemos con ellos?', [['0', 'Ahora no'], ['del', 'Borrarlos', 'danger'], ['1', 'Doy mi consentimiento', 'primary']]);
+  closeModal();
+  if (r === '1') { S.settings.healthOk = Date.now(); Store.mark('meta'); healthCheck.open = false; toast('¡Gracias!'); }
+  else if (r === 'del') {
+    const ok = await ask('Borrar datos corporales', 'Se borran tus medidas y tu peso, tu sexo y tu altura, aquí y en tu cuenta. Los rangos que dependen del peso dejarán de calcularse hasta que vuelvas a ponerlo. No se puede deshacer.', [['0', 'Cancelar'], ['1', 'Borrar', 'danger']]);
+    closeModal(); if (ok === '1') { healthWipe(); toast('Datos corporales borrados'); }
+  } // 'Ahora no': no se vuelve a preguntar hasta la próxima vez que se abra la app
+}
 const AUTHUI = {mode: 'in', msg: '', busy: false};
 function showAuth(msg){ AUTHUI.msg = msg || ''; AUTHUI.busy = false; $('#auth').classList.add('open'); drawAuth(); }
 function drawAuth(){
@@ -3902,7 +3929,7 @@ async function afterLogin(isNew){
   if (isNew) { S.settings.terms = TERMS_V; Store.mark('meta'); }
   if (S.active) restoreActiveBar();
   if (Social.ready()) Social.pollNotifs();
-  if (!isNew) setTimeout(termsCheck, 1500);
+  if (!isNew) setTimeout(async () => { await termsCheck(); healthCheck(); }, 1500);
   toast(isNew ? `¡Bienvenido, ${Cloud.session.name || 'campeón'}!` : `Hola de nuevo${Cloud.session.name ? ', ' + Cloud.session.name.split(' ')[0] : ''}`);
   // datos guardados en este móvil antes de tener cuenta
   let legacy = await KV.get('state'); if (legacy && legacy.state) legacy = legacy.state;
@@ -5539,7 +5566,8 @@ const A = {
     if (ok !== '1') return; S.customEx = S.customEx.filter(c => c.id !== x.id); rebuildEx(); Store.mark('meta'); back();
   },
   // medidas
-  'add-measure'(){
+  async 'add-measure'(){
+    if (!(await healthOk())) return;
     const fields = [['weight', 'Peso (kg)'], ['fat', 'Grasa corporal (%)'], ['waist', 'Cintura (cm)'], ['chest', 'Pecho (cm)'], ['arm', 'Brazo (cm)'], ['thigh', 'Muslo (cm)']];
     modal('Nueva medida', `<label class="f">Fecha<input type="date" id="msDate" value="${toLocalInput(Date.now()).slice(0, 10)}"></label><div class="grid2">${fields.map(([k, l]) => `<label class="f">${l}<input inputmode="decimal" id="ms-${k}"></label>`).join('')}</div><div class="small muted">Rellena solo lo que quieras. Sin límite de medidas.</div>`, `<button class="btn primary" data-act="ms-save">Guardar</button>`);
   },
@@ -5604,8 +5632,13 @@ const A = {
     modal(`${esc(MUSCLES[k] || k)} · ${rkName(M.idx)}`, `<div class="small muted" style="margin-bottom:6px">Sale de estos ejercicios; los que más series llevan pesan más.</div><div class="rk-list">${M.ex.map(E => `<button class="rk-row" data-act="open-ex" data-id="${esc(E.exId)}"><span>${rkIcon(E.idx, 26)}</span><div><b>${esc(exOf(E.exId).name)}</b><small>${plural(E.sets, 'serie', 'series')}</small></div><em>${rkName(E.idx)}</em></button>`).join('')}</div>`);
   },
   'sum-ranks'(){ A['sum-close'](); go({type: 'ranks'}); },
+  async 'health-off'(){
+    const r = await ask('Retirar consentimiento', 'Se borran tus medidas y tu peso, tu sexo y tu altura, aquí y en tu cuenta, y no se guardarán más hasta que vuelvas a dar tu consentimiento. Los rangos que dependen del peso dejarán de calcularse. No se puede deshacer.', [['0', 'Cancelar'], ['1', 'Retirar y borrar', 'danger']]);
+    closeModal(); if (r === '1') { healthWipe(); toast('Consentimiento retirado y datos borrados'); }
+  },
+  'health-on'(){ healthCheck.open = false; healthCheck().then(render); },
   'go-height'(){ navTo(() => { tab = 'me'; navStack.me = []; }); setTimeout(() => { const i = $('#setHeight'); if (i) { i.scrollIntoView({block: 'center'}); i.focus(); } }, 450); },
-  'set-sex'(el){ const v = el.dataset.v; if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
+  async 'set-sex'(el){ const v = el.dataset.v; if ((v === 'm' || v === 'f') && !(await healthOk())) return render(); if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
   'goal-pick'(){ const cur = weekGoal().n; modal('Meta semanal', `<div class="small muted">¿Cuántos entrenos quieres hacer cada semana?</div><div class="seg" role="group" aria-label="Entrenos por semana">${[1,2,3,4,5,6,7].map(k => `<button data-act="goal-set" data-n="${k}" aria-pressed="${k === cur}">${k}</button>`).join('')}</div>`); },
   'goal-set'(el){ const k = +el.dataset.n; if (!(k >= 1 && k <= 7)) return; S.settings.weekGoal = k; Store.mark('meta'); closeModal(); render(); toast('Meta: ' + k + (k === 1 ? ' entreno' : ' entrenos') + ' por semana'); },
   'rk-share'(){ S.settings.rkShare = !(S.settings.rkShare ?? RK.shareDef); Store.mark('meta'); render(); toast(S.settings.rkShare ? 'Tus amigos ven tu rango global' : 'Tu rango ya no se enseña'); },
@@ -5945,7 +5978,7 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('change', ev => {
   const el = ev.target;
-  if (el.id === 'setHeight') { const v = Math.round(+el.value); if (el.value === '') { delete S.settings.height; Store.mark('meta'); toast('Altura borrada'); } else if (v >= 120 && v <= 230) { S.settings.height = v; Store.mark('meta'); toast('Altura: ' + v + ' cm'); } else { el.value = rkHeight() || ''; toast('Pon tu altura en centímetros (120-230)'); } }
+  if (el.id === 'setHeight') { const v = Math.round(+el.value); if (el.value !== '' && !S.settings.healthOk) { const val = el.value; healthOk().then(ok => { const i = $('#setHeight') || el; if (ok) { if (S.settings.height === Math.round(+val)) return; i.value = val; i.dispatchEvent(new Event('change', {bubbles: true})); } else i.value = rkHeight() || ''; }); return; } if (el.value === '') { delete S.settings.height; Store.mark('meta'); toast('Altura borrada'); } else if (v >= 120 && v <= 230) { S.settings.height = v; Store.mark('meta'); toast('Altura: ' + v + ' cm'); } else { el.value = rkHeight() || ''; toast('Pon tu altura en centímetros (120-230)'); } }
   if (el.id === 'setRest') { S.settings.rest = +el.value; Store.mark('meta'); toast('Descanso por defecto: ' + (S.settings.rest ? fmtClock(S.settings.rest) : 'sin temporizador')); }
   if (el.id === 'setNotif') { if (el.checked) askNotif().then(ok => { el.checked = ok; }); else { S.settings.notif = false; Store.mark('meta'); } }
   if (el.id === 'setSound') { S.settings.sound = el.checked; Store.mark('meta'); if (el.checked) { unlockAudio(); beep(); } }
@@ -7037,7 +7070,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.12.1';
+const APP_VERSION = '4.12.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -7262,7 +7295,7 @@ rebuildEx();
   autoUpdate();
   // si se actualizó con el entreno abierto, se vuelve a abrir donde estaba
   try { if (sessionStorage.getItem('hierro.reopen') === '1') { sessionStorage.removeItem('hierro.reopen'); if (S.active && !ED) openEditor('active'); } } catch (e) {}
-  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() + mergeImportedEx() : 0)) render(); if (Social.ready()) Social.pollNotifs(); setTimeout(termsCheck, 1200); });
+  Sync.run().then(() => { if (fixDurations() + (Sync.state === 'ok' ? fixImportedMuscles() + mergeImportedEx() : 0)) render(); if (Social.ready()) Social.pollNotifs(); setTimeout(async () => { await termsCheck(); healthCheck(); }, 1200); });
 })();
 /* Desvanecido en el borde de los carriles de chips que hacen scroll (solo estética) */
 (function(){
