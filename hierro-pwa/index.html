@@ -3134,9 +3134,9 @@ function startWorkout(from){
   if (S.active) { openEditor('active'); toast('Ya tienes un entreno en marcha'); return; }
   const now = Date.now();
   const w = {id: rid(), title: from ? from.name || from.title : 'Entreno', start: now, notes: '', routineId: from && from.name ? from.id : null, exercises: []};
-  if (from) w.exercises = from.exercises.map(e => {
+  if (from) w.exercises = from.exercises.map((e, ri) => {
     const prev = prevSets(e.exId);
-    return {uid: rid(), exId: e.exId, notes: '', rest: e.rest ?? null, ss: e.ss || null, sets: e.sets.map((s, i) => {
+    return {uid: rid(), ...(w.routineId ? {ri} : {}), exId: e.exId, notes: '', rest: e.rest ?? null, ss: e.ss || null, sets: e.sets.map((s, i) => {
       const hasTarget = s.kg != null || s.reps != null || s.sec != null || s.km != null;
       const ph = hasTarget ? {kg: s.kg, reps: s.reps, sec: s.sec, km: s.km, min: s.min} : (prev[i] || null);
       return {...blankSet(s.t || 'n'), ph};
@@ -3629,6 +3629,46 @@ function offerRoutinesFromHistory(){
     `<button class="btn" data-act="m-close">Ahora no</button><button class="btn primary" data-act="rt-create">Crear rutinas</button>`);
   return true;
 }
+/* 4.10.2: «Actualizar la rutina con lo de hoy» como en Hevy. Los ejercicios (y las series) de la rutina que no hiciste se quedan
+   como estaban; lo que hiciste actualiza sus series; lo que añadiste entra en su sitio; lo que quitaste del entreno sale de la rutina.
+   w = entreno en curso (con las series sin marcar y `ri` = posición en la rutina), r = rutina de origen. */
+function routineMerge(w, r){
+  const used = new Set(), out = [];
+  const setOf = s => ({t: s.t || 'n', kg: s.kg ?? null, reps: s.reps ?? null, sec: s.sec ?? null, km: s.km ?? null, min: s.min ?? null});
+  w.exercises.forEach(e => {
+    let bi = Number.isInteger(e.ri) && !used.has(e.ri) && r.exercises[e.ri] && r.exercises[e.ri].exId === e.exId ? e.ri : -1;
+    if (bi < 0) bi = r.exercises.findIndex((x, i) => !used.has(i) && x.exId === e.exId);
+    const base = bi >= 0 ? r.exercises[bi] : null; if (base) used.add(bi);
+    const type = exOf(e.exId).type, isDone = s => s.done && hasData(s, type);
+    if (!e.sets.some(isDone)) { if (base) out.push(clone(base)); return; } // no lo hiciste: se queda como estaba
+    const sets = e.sets.map((s, i) => isDone(s) ? setOf(s) : base && base.sets[i] ? clone(base.sets[i]) : null).filter(Boolean);
+    out.push({exId: e.exId, rest: e.rest ?? (base ? base.rest ?? null : null), notes: base ? base.notes || '' : '', ss: e.ss || null, sets});
+  });
+  fixSS(out);
+  return {id: r.id, name: r.name, notes: r.notes || '', exercises: out, kept: out.length - w.exercises.filter(e => e.sets.some(s => s.done && hasData(s, exOf(e.exId).type))).length};
+}
+// Respaldo (sin el entreno en curso): se parte de la rutina, se actualizan los ejercicios hechos y se añaden los nuevos al final
+function routineMergeSaved(w, r){
+  const ex = w.exercises.map(e => ({...e, sets: e.sets.map(s => ({...s, done: true}))}));
+  const used = new Set(), act = {exercises: []};
+  r.exercises.forEach((x, ri) => { const j = ex.findIndex((e, k) => !used.has(k) && e.exId === x.exId); if (j >= 0) { used.add(j); act.exercises.push({...ex[j], ri}); } else act.exercises.push({exId: x.exId, ri, sets: []}); });
+  ex.forEach((e, k) => { if (!used.has(k)) act.exercises.push(e); });
+  return routineMerge(act, r);
+}
+/* 4.10.2: rutina a partir de varios entrenos con el mismo nombre (el más reciente primero). Parte del último y añade, en su sitio,
+   los ejercicios que salieron en los anteriores y ese día no hiciste (en Hevy la rutina los conservaba). */
+function routineFromWorkouts(ws, name){
+  const base = routineFromWorkout(ws[0], name), have = new Set(base.exercises.map(e => e.exId));
+  ws.slice(1).forEach(w => w.exercises.forEach((e, i) => {
+    if (have.has(e.exId)) return;
+    const one = routineFromWorkout({exercises: [e]}).exercises[0]; one.ss = null;
+    let at = base.exercises.length;
+    for (let k = i - 1; k >= 0; k--) { const j = base.exercises.findIndex(x => x.exId === w.exercises[k].exId); if (j >= 0) { at = j + 1; break; } }
+    base.exercises.splice(at, 0, one); have.add(e.exId);
+  }));
+  fixSS(base.exercises);
+  return base;
+}
 function routineFromWorkout(w, name){
   return {id: rid(), name: name || w.title || 'Rutina', notes: '', exercises: w.exercises.map(e => ({exId: e.exId, rest: e.rest ?? null, notes: '', ss: e.ss || null, sets: e.sets.map(s => ({t: s.t, kg: s.kg ?? null, reps: s.reps ?? null, sec: s.sec ?? null, km: s.km ?? null, min: s.min ?? null}))}))};
 }
@@ -3692,7 +3732,7 @@ function openSummary(w, fresh){
   h += `<div class="card stack"><h3>Ejercicios</h3>${D.exs.map(o => `<div class="sx"><div class="row between"><button class="nm" data-act="sum-ex" data-id="${o.x.id}">${esc(o.x.name)}</button><span class="small muted">${o.n} ${o.n === 1 ? 'serie' : 'series'}${o.w ? ` + ${o.w} cal.` : ''}</span></div>
       <div class="row between"><div class="small">${o.best ? `Mejor: <b>${setText(o.best, o.x.type)}</b>` : ''}${o.x.type === 'wr' && o.score ? ` · 1RM <b>${fmtN(o.score)}</b>` : ''} ${o.prevScore ? delta(o.score, o.prevScore, 'vs. anterior') : '<span class="delta flat">primera vez</span>'}</div>${spark(o.series)}</div>
       ${o.vol ? `<div class="vbar" title="Volumen"><div><i style="width:${o.vol / maxVol * 100}%;background:${heat(o.vol / maxVol)}"></i></div><span>${fmtKg(o.vol)}</span></div>` : ''}</div>`).join('')}</div>`;
-  h += `<div class="stack">${routine ? `<button class="btn" data-act="rt-update" data-w="${w.id}" data-r="${routine.id}">Actualizar la rutina «${esc(routine.name)}» con lo de hoy</button>` : ''}<button class="btn primary lg block" data-act="sum-close">Hecho</button></div></div></div>`;
+  h += `<div class="stack">${routine ? `<button class="btn" data-act="rt-update" data-w="${w.id}" data-r="${routine.id}">Actualizar la rutina «${esc(routine.name)}» con lo de hoy</button><div class="small muted" style="text-align:center">Los ejercicios que no hayas hecho se quedan en la rutina.</div>` : ''}<button class="btn primary lg block" data-act="sum-close">Hecho</button></div></div></div>`;
   const el = $('#summary'); el.innerHTML = h; el.classList.add('open'); el.querySelector('.ebody').scrollTop = 0;
 }
 
@@ -5117,6 +5157,8 @@ const A = {
       if (r === 'back' || r == null) return;
       if (r === 'fill') w.exercises.forEach(e => e.sets.forEach((s, si) => { if (!s.done) fillFromPh(e, si); }));
     }
+    const rt0 = w.routineId && S.routines.find(r => r.id === w.routineId);
+    A._rtMerge = rt0 ? {wid: w.id, rid: rt0.id, r: routineMerge(w, rt0)} : null;
     const out = {id: w.id, title: w.title, start: w.start, end: Date.now(), notes: '', routineId: w.routineId || null,
       exercises: w.exercises.map(e => ({exId: e.exId, notes: e.notes || '', rest: e.rest ?? null, ss: e.ss || null, sets: e.sets.filter(s => s.done && hasData(s, exOf(e.exId).type)).map(({done, ph, ...s}) => s)})).filter(e => e.sets.length)};
     if (!out.exercises.length) { toast('Marca al menos una serie hecha para guardar'); return; }
@@ -5158,7 +5200,16 @@ const A = {
     const ok = await ask('Quitar foto', 'La foto dejará de verse en la publicación.', [['0', 'Cancelar'], ['1', 'Quitar', 'danger']]); closeModal();
     if (ok === '1') { Social.queuePhoto(w, null); socRender(); }
   },
-  'rt-update'(el){ const w = S.workouts.find(x => x.id === el.dataset.w), r = S.routines.find(x => x.id === el.dataset.r); if (w && r) { const n = routineFromWorkout(w, r.name); n.id = r.id; S.routines[S.routines.indexOf(r)] = n; Store.mark('meta'); toast('Rutina actualizada con lo de hoy'); } closeModal(); },
+  'rt-update'(el){
+    const w = S.workouts.find(x => x.id === el.dataset.w), r = S.routines.find(x => x.id === el.dataset.r);
+    if (w && r) {
+      const M = A._rtMerge && A._rtMerge.wid === w.id && A._rtMerge.rid === r.id ? A._rtMerge.r : routineMergeSaved(w, r);
+      const {kept, ...n} = M; S.routines[S.routines.indexOf(r)] = clone(n); A._rtMerge = null; Store.mark('meta');
+      toast(kept > 0 ? `Rutina actualizada. Se mantienen ${kept} ${kept === 1 ? 'ejercicio que no hiciste' : 'ejercicios que no hiciste'}` : 'Rutina actualizada con lo de hoy');
+      const b = $('#summary [data-act="rt-update"]'); if (b) b.remove();
+    }
+    closeModal();
+  },
   'ed-add-ex'(){ syncTitle(); openPicker('add'); },
   'ed-ex-info'(el){ if (ED.mode === 'active') { A['ed-min'](); UI.exTab = 'hist'; go({type: 'exercise', id: el.dataset.id}); } },
   'set-menu'(el){
@@ -5284,7 +5335,7 @@ const A = {
   },
   'rt-create'(){
     const names = [...document.querySelectorAll('[data-rt]')].filter(c => c.checked).map(c => c.dataset.rt);
-    names.forEach(n => { const w = S.workouts.find(x => x.title === n); if (w) S.routines.push(routineFromWorkout(w, n)); });
+    names.forEach(n => { const ws = S.workouts.filter(x => x.title === n).slice(0, 8); if (ws.length) S.routines.push(routineFromWorkouts(ws, n)); });
     // enlaza los entrenos con su rutina para saber cuál toca
     S.workouts.forEach(w => { if (!w.routineId) { const r = S.routines.find(r => r.name === w.title); if (r) w.routineId = r.id; } });
     Store.mark('meta', ...new Set(S.workouts.filter(w => w.routineId).map(w => monthKey(w.start))));
@@ -6720,7 +6771,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.10.1';
+const APP_VERSION = '4.10.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
