@@ -1,12 +1,17 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-4.9.2';
+const VERSION = 'hierro-4.9.3';
 const PHOTOS = 'hierro-fotos'; // fotos de ejercicios: se guardan al verlas y no se borran al actualizar
 const FONTS = 'hierro-fuentes'; // caché antigua de Google Fonts (hasta 4.9.0); desde 4.9.1 las fuentes van en ./fonts/ dentro de la app
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './config.js', './fonts/Sora-wght.ttf', './fonts/PlusJakartaSans-wght.ttf'];
+// 4.9.3: solo lo imprescindible tiene que bajar para instalar la versión nueva; iconos y fuentes se intentan
+// y, si fallan (mala cobertura), se guardan la próxima vez que se pidan. Antes un fallo en cualquiera atascaba la actualización.
+const CORE = ['./', './index.html', './manifest.webmanifest', './config.js'];
+const EXTRA = ['./icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.svg', './fonts/Sora-wght.ttf', './fonts/PlusJakartaSans-wght.ttf'];
+const EXTRA_URLS = new Set(EXTRA.map(u => new URL(u, self.location.href).href));
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, {cache: 'reload'})))));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))
+    .then(() => Promise.all(EXTRA.map(u => c.add(new Request(u, {cache: 'reload'})).catch(() => {}))))));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -53,5 +58,8 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.match('./index.html').then(hit => hit || fetch(req)));
     return;
   }
-  e.respondWith(caches.match(req, {ignoreSearch: true}).then(hit => hit || fetch(req)));
+  e.respondWith(caches.match(req, {ignoreSearch: true}).then(hit => hit || fetch(req).then(res => {
+    if (res.ok && EXTRA_URLS.has(url.origin + url.pathname)) { const cp = res.clone(); caches.open(VERSION).then(c => c.put(url.origin + url.pathname, cp)).catch(() => {}); }
+    return res;
+  })));
 });
