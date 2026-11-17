@@ -1099,7 +1099,11 @@ html.rest-up #view{padding-bottom:104px}
 .dph{position:relative;display:block;width:100%;max-width:min(100%,380px);margin:0 auto;aspect-ratio:3/4;background:#000;border-radius:inherit;overflow:hidden}
 .dph img.dph-a{position:absolute;inset:0;width:100%!important;height:100%!important;max-height:none!important;object-fit:cover!important;display:block}
 .dph img.dph-b{position:absolute;left:3.5%;top:3.5%;width:30%!important;height:auto!important;max-height:none!important;aspect-ratio:3/4;object-fit:cover!important;border-radius:12px;border:3px solid #000;box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.dph img.dph-b:active{transform:scale(.96)}
+.dph img.dph-b{touch-action:none;transition:box-shadow .15s;-webkit-user-drag:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.dph img.dph-b.drag{transition:none;box-shadow:0 12px 30px rgba(0,0,0,.55);z-index:3}
+.dph img.dph-b.snap{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.dph[data-c="tr"] img.dph-b{left:auto;right:3.5%}.dph[data-c="bl"] img.dph-b{top:auto;bottom:3.5%}.dph[data-c="br"] img.dph-b{left:auto;right:3.5%;top:auto;bottom:3.5%}
+.dph img.dph-a{transform-origin:0 0}.dph img.dph-b{transform-origin:0 0}
 .det-photo .dph.big{max-width:min(100%,52.5vh)}
 .dcam-res .dph{max-width:none;width:auto;height:100%;max-height:100%;border-radius:0}
 .dcam-res{display:flex;align-items:center;justify-content:center}
@@ -3976,10 +3980,42 @@ function phNode(v, cls){
   const d = document.createElement('div'); d.className = 'dph' + (cls ? ' ' + cls : '');
   const a = document.createElement('img'); a.className = 'dph-a'; a.alt = 'Foto del entreno'; a.decoding = 'sync'; a.src = v.a;
   const b = document.createElement('img'); b.className = 'dph-b'; b.alt = 'Selfie (toca para intercambiar)'; b.decoding = 'sync'; b.src = v.b;
-  b.dataset.act = 'ph-swap'; b.setAttribute('role', 'button'); b.tabIndex = 0; b.setAttribute('aria-label', 'Intercambiar las fotos');
+  b.draggable = false; a.draggable = false; b.dataset.act = 'ph-swap'; b.setAttribute('role', 'button'); b.tabIndex = 0; b.setAttribute('aria-label', 'Intercambiar las fotos');
   d.append(a, b); return d;
 }
-function phSwap(el){ const d = el && el.closest('.dph'); if (!d) return; const a = d.querySelector('.dph-a'), b = d.querySelector('.dph-b'); if (!a || !b) return; const t = a.src; a.src = b.src; b.src = t; d.classList.toggle('sw'); }
+/* 4.12.1 · Intercambio animado (FLIP: la pequeña crece hasta ocupar la grande y la grande se encoge a la esquina) y miniatura arrastrable a
+   cualquiera de las 4 esquinas, como en BeReal. Tocar = intercambiar; arrastrar = mover (el toque que acaba un arrastre no intercambia). */
+const PH = {drag: null, until: 0};
+function phSwap(el){
+  const d = el && el.closest('.dph'); if (!d || Date.now() < PH.until) return; const a = d.querySelector('.dph-a'), b = d.querySelector('.dph-b'); if (!a || !b) return;
+  const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(), t = a.src; a.src = b.src; b.src = t; d.classList.toggle('sw');
+  if (moReduce() || !a.animate || !ra.width || !rb.width) return;
+  const o = {duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)'};
+  a.animate([{transform: `translate(${rb.left - ra.left}px,${rb.top - ra.top}px) scale(${rb.width / ra.width},${rb.height / ra.height})`, borderRadius: '30px'}, {transform: 'none', borderRadius: '0'}], o);
+  b.animate([{transform: `translate(${ra.left - rb.left}px,${ra.top - rb.top}px) scale(${ra.width / rb.width},${ra.height / rb.height})`, opacity: .6}, {transform: 'none', opacity: 1}], o);
+  try { navigator.vibrate && navigator.vibrate(8); } catch (e) {}
+}
+document.addEventListener('pointerdown', ev => {
+  const b = ev.target.closest && ev.target.closest('.dph-b'); if (!b || ev.button > 0) return;
+  PH.drag = {b, d: b.closest('.dph'), id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, on: false};
+}, true);
+document.addEventListener('pointermove', ev => {
+  const g = PH.drag; if (!g || g.id !== ev.pointerId) return;
+  const dx = ev.clientX - g.x0, dy = ev.clientY - g.y0;
+  if (!g.on) { if (Math.hypot(dx, dy) < 8) return; g.on = true; g.b.classList.remove('snap'); g.b.classList.add('drag'); try { g.b.setPointerCapture(ev.pointerId); } catch (e) {} }
+  ev.preventDefault(); g.b.style.transform = `translate(${dx}px,${dy}px)`;
+}, {passive: false});
+const phEnd = ev => {
+  const g = PH.drag; if (!g || g.id !== ev.pointerId) return; PH.drag = null; if (!g.on) return;
+  PH.until = Date.now() + 350; // el click que viene detrás del arrastre no intercambia
+  const rd = g.d.getBoundingClientRect(), r0 = g.b.getBoundingClientRect(), cx = r0.left + r0.width / 2 - rd.left, cy = r0.top + r0.height / 2 - rd.top;
+  const c = (cy > rd.height / 2 ? 'b' : 't') + (cx > rd.width / 2 ? 'r' : 'l');
+  g.b.classList.remove('drag'); g.b.style.transform = ''; if (c === 'tl') delete g.d.dataset.c; else g.d.dataset.c = c;
+  const r1 = g.b.getBoundingClientRect(); // FLIP hasta la esquina nueva
+  if (!moReduce() && g.b.animate) g.b.animate([{transform: `translate(${r0.left - r1.left}px,${r0.top - r1.top}px)`}, {transform: 'none'}], {duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)'});
+};
+document.addEventListener('dragstart', ev => { if (ev.target.closest && ev.target.closest('.dph')) ev.preventDefault(); }, true);
+document.addEventListener('pointerup', phEnd, true); document.addEventListener('pointercancel', phEnd, true);
 const nrm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const cleanUser = v => String(v || '').trim().replace(/^@/, '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_.]/g, '').slice(0, 20);
 
@@ -7001,7 +7037,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.12.0';
+const APP_VERSION = '4.12.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
