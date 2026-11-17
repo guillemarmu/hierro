@@ -2860,7 +2860,7 @@ function viewMe(){
     <div class="menu">${Social.ready() ? `<button data-act="tab" data-tab="social">Mi perfil público: @${esc(Social.me().username)}</button>` : ''}<button data-act="acc-name">Cambiar nombre</button><button data-act="acc-pass">Cambiar contraseña</button>${(S.settings.blocked || []).length ? `<button data-act="go-blocked">Personas bloqueadas (${S.settings.blocked.length})</button>` : ''}${Mod.admin ? '<button data-act="go-mod">🛡️ Moderación (admin)</button>' : ''}<button data-act="logout">Cerrar sesión</button><button class="danger" data-act="acc-delete">Eliminar mi cuenta y mis datos</button></div></div>`;
   h += installCard(true);
   h += `<div class="small muted legal-l" style="text-align:center"><a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a></div>`;
-  h += `<div class="small muted" style="text-align:center">Hierro · versión ${APP_VERSION}</div>`;
+  h += `<div class="small muted" style="text-align:center">Hierro · versión ${APP_VERSION}</div><div style="text-align:center"><button class="btn ghost sm" data-act="chk-update">Buscar actualización</button></div>`;
   return h;
 }
 
@@ -5148,7 +5148,24 @@ const A = {
   async install(){ if (!deferredPrompt) return; deferredPrompt.prompt(); try { await deferredPrompt.userChoice; } catch (e) {} deferredPrompt = null; render(); },
   'set-theme'(el){ Theme.set(el.dataset.v); },
   'hide-install'(){ S.settings.hideInstall = true; Store.mark(); render(); },
-  async 'do-update'(){ await safeReload(() => { if (UPDATE) UPDATE.postMessage('skip'); else location.reload(); }); },
+  async 'do-update'(){
+    const w = (SWREG && SWREG.waiting) || (UPDATE && UPDATE.state !== 'redundant' ? UPDATE : null);
+    if (!w && STUCK) return repairApp();
+    await safeReload(() => {
+      if (!w) return location.reload();
+      w.postMessage('skip');
+      setTimeout(() => location.reload(), 4000); // 4.9.3: si el cambio de worker no llega a avisar, se recarga igual
+    });
+  },
+  async 'chk-update'(){
+    toast('Buscando versión nueva…');
+    if (!SWREG) { location.reload(); return; }
+    const st = await checkUpdate(true);
+    if (st === 'ok') toast(`Ya tienes la última versión (${APP_VERSION})`);
+    else if (st === 'offline') toast('Sin conexión: prueba más tarde');
+    else if (st === 'busy') toast('Descargando la versión nueva…');
+    else A['do-update']();
+  },
   'rt-create'(){
     const names = [...document.querySelectorAll('[data-rt]')].filter(c => c.checked).map(c => c.dataset.rt);
     names.forEach(n => { const w = S.workouts.find(x => x.title === n); if (w) S.routines.push(routineFromWorkout(w, n)); });
@@ -6585,13 +6602,13 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.9.2';
+const APP_VERSION = '4.9.3';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
 const IS_MOBILE = IS_IOS || IS_ANDROID;
 const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-let deferredPrompt = null, UPDATE = null;
+let deferredPrompt = null, UPDATE = null, STUCK = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; render(); });
 window.addEventListener('appinstalled', () => { deferredPrompt = null; toast('Hierro instalada'); render(); });
 function backupStale(){ return S.workouts.length >= 5 && (!S.settings.lastBackup || Date.now() - S.settings.lastBackup > 30 * 864e5); }
@@ -6615,16 +6632,53 @@ async function safeReload(go){
 }
 let SWREG = null;
 /* Con versión nueva esperando y sin entreno en curso (ni editor ni ventana abiertos) se aplica sola; con entreno, solo queda el aviso */
-function autoUpdate(){
-  if (!UPDATE || !Store.loaded || S.active || ED || $('#modal').classList.contains('open') || autoUpdate.done) return;
-  autoUpdate.done = true; A['do-update']();
+function autoUpdate(force){
+  if (!(UPDATE || STUCK) || !Store.loaded || S.active || ED || $('#modal').classList.contains('open')) return;
+  if (!force) {
+    if (autoUpdate.done) return;
+    try { if (Date.now() - (+sessionStorage.getItem('hierro.updTry') || 0) < 60000) return; } catch (e) {} // sin bucles de recarga
+  }
+  autoUpdate.done = true; try { sessionStorage.setItem('hierro.updTry', Date.now()); } catch (e) {}
+  A['do-update']();
 }
+/* 4.9.3: buscar versión nueva en el momento (tirar para actualizar, botón de Ajustes y al abrir).
+   Si el servidor tiene una versión más nueva y el móvil no la consigue instalar, queda STUCK y se repara
+   (se borra la app guardada, nunca los datos, y se carga de la red). Devuelve 'ok' | 'update' | 'busy' | 'stuck' | 'offline'. */
+const verNum = v => String(v || '').replace(/^hierro-/, '').split('.').reduce((a, n) => a * 1000 + (parseInt(n, 10) || 0), 0);
+async function serverVersion(){
+  try { const r = await fetch('sw.js?t=' + Date.now(), {cache: 'no-store'}); if (!r.ok) return null; const m = (await r.text()).match(/VERSION\s*=\s*'hierro-([\d.]+)'/); return m ? m[1] : null; } catch (e) { return null; }
+}
+async function checkUpdate(manual){
+  if (SWREG) {
+    try { await SWREG.update(); } catch (e) {}
+    const t0 = Date.now();
+    while (!UPDATE && SWREG.installing && Date.now() - t0 < (manual ? 8000 : 20000)) await new Promise(r => setTimeout(r, 150));
+    if (!UPDATE && SWREG.waiting) UPDATE = SWREG.waiting;
+  }
+  if (UPDATE) { render(); return 'update'; }
+  if (SWREG && SWREG.installing) return 'busy'; // sigue bajando: al terminar sale el aviso o se aplica sola
+  const sv = await serverVersion();
+  if (!sv) return 'offline';
+  if (verNum(sv) > verNum(APP_VERSION)) { STUCK = sv; render(); return 'stuck'; }
+  return 'ok';
+}
+async function repairApp(){
+  // antes de borrar nada, comprueba que la red trae la app (si no, se queda como está y funciona sin conexión)
+  try { const r = await fetch('index.html?r=' + Date.now(), {cache: 'no-store'}); if (!r.ok) throw 0; await r.text(); } catch (e) { toast('Sin conexión: prueba más tarde'); return; }
+  toast('Actualizando…');
+  await safeReload(async () => {
+    try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } catch (e) {}
+    try { const ks = await caches.keys(); await Promise.all(ks.filter(k => /^hierro-\d/.test(k)).map(k => caches.delete(k))); } catch (e) {}
+    location.replace(location.pathname + '?r=' + Date.now() + location.hash);
+  });
+}
+try { if (/[?&]r=\d/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
 // al volver a la app (desde el fondo o el bloqueo) se busca si hay versión nueva; antes solo se miraba al abrir y cada hora
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !SWREG) return;
   if (UPDATE) autoUpdate(); else SWREG.update().catch(() => {});
 });
-function updateCard(){ return UPDATE ? `<div class="card next row between"><div><b>Hay una versión nueva</b><div class="small muted">Tus datos se mantienen.</div></div><button class="btn primary sm" data-act="do-update">Actualizar</button></div>` : ''; }
+function updateCard(){ return UPDATE || STUCK ? `<div class="card next row between"><div><b>Hay una versión nueva</b><div class="small muted">Tus datos se mantienen.</div></div><button class="btn primary sm" data-act="do-update">Actualizar</button></div>` : ''; }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
@@ -6633,6 +6687,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if (reg.waiting && navigator.serviceWorker.controller) { UPDATE = reg.waiting; render(); autoUpdate(); }
       reg.addEventListener('updatefound', () => watch(reg.installing));
       setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+      setTimeout(() => { if (!UPDATE) checkUpdate(false).then(st => { if (st === 'update' || st === 'stuck') autoUpdate(); }); }, 20000);
     }).catch(() => {});
     let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; safeReload(() => location.reload()); });
@@ -6645,6 +6700,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 function pullRefresh(){
   const wait = async (ok, ms) => { const t0 = Date.now(); while (!ok() && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 120)); };
   const root = !cur();
+  // 4.9.3: tirar hacia abajo también busca versión nueva y la aplica (si no hay entreno en curso)
+  const upd = checkUpdate(true).then(st => {
+    if (st === 'busy') { toast('Descargando la versión nueva…'); return; }
+    if (st !== 'update' && st !== 'stuck') return;
+    if (S.active) { toast('Hay una versión nueva: toca «Actualizar»'); return; }
+    toast('Actualizando a la versión nueva…'); autoUpdate(true);
+  }).catch(() => {});
   const job = (async () => {
     if (root && tab === 'clan' && Cloud.enabled() && Cloud.session && Social.ready()) {
       Clan.err = null;
@@ -6664,7 +6726,7 @@ function pullRefresh(){
       render();
     }
   })().catch(e => { console.warn('pull', e); });
-  return Promise.race([job, new Promise(r => setTimeout(r, 8000))]);
+  return Promise.race([Promise.all([job, upd]), new Promise(r => setTimeout(r, 8000))]);
 }
 const PTR = {THR: 60, REF: 56, st: null, busy: false};
 function ptrOff(d){ return d <= 2 * PTR.THR ? d * .5 : PTR.THR + 56 * (1 - Math.exp(-(d - 2 * PTR.THR) / 110)); }
