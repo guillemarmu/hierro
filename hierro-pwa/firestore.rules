@@ -49,29 +49,49 @@ service cloud.firestore {
       allow delete: if signed() && (me() == uid || admin());
     }
 
+    // 4.11: perfil privado (a un privado no se le sigue directamente: se le pide con freqs y él acepta)
+    function privOf(uid) { let p = /databases/$(database)/documents/profiles/$(uid); return exists(p) && get(p).data.get('private', false) == true; }
     match /follows/{id} {
       allow read: if signed();
       // 4.9.1: solo from/to/ts (antes: hasta 4 campos cualquiera)
-      allow create: if signed() && request.resource.data.from == me()
-        && request.resource.data.to is string && request.resource.data.to.size() <= 128 && request.resource.data.to != me()
-        && id == me() + '_' + request.resource.data.to
-        && request.resource.data.keys().hasOnly(['from', 'to', 'ts']) && optNum(request.resource.data, 'ts')
-        && !banned() && !blockedBy(request.resource.data.to);
+      allow create: if signed() && request.resource.data.keys().hasOnly(['from', 'to', 'ts']) && optNum(request.resource.data, 'ts') && (
+        (request.resource.data.from == me()
+          && request.resource.data.to is string && request.resource.data.to.size() <= 128 && request.resource.data.to != me()
+          && id == me() + '_' + request.resource.data.to
+          && !banned() && !blockedBy(request.resource.data.to) && !privOf(request.resource.data.to))
+        // 4.11: aceptar una solicitud: la crea el seguido, solo si hay solicitud y se borra en el mismo lote
+        || (request.resource.data.to == me() && request.resource.data.from is string && request.resource.data.from != me()
+          && id == request.resource.data.from + '_' + me()
+          && exists(/databases/$(database)/documents/freqs/$(id)) && !existsAfter(/databases/$(database)/documents/freqs/$(id))));
       allow update: if signed() && resource.data.from == me() && request.resource.data.from == me()
         && request.resource.data.to == resource.data.to
         && request.resource.data.keys().hasOnly(['from', 'to', 'ts']) && optNum(request.resource.data, 'ts');
       allow delete: if signed() && (resource.data.from == me() || resource.data.to == me());
     }
 
+    // 4.11: solicitudes de seguimiento freqs/{de_a}: las ven las dos partes; las borra cualquiera de las dos
+    match /freqs/{id} {
+      allow read: if signed() && (resource.data.from == me() || resource.data.to == me());
+      allow create: if signed() && request.resource.data.keys().hasOnly(['from', 'to', 'ts'])
+        && request.resource.data.from == me() && request.resource.data.to is string && request.resource.data.to.size() <= 128
+        && request.resource.data.to != me() && id == me() + '_' + request.resource.data.to && optNum(request.resource.data, 'ts')
+        && !banned() && !blockedBy(request.resource.data.to)
+        && !exists(/databases/$(database)/documents/follows/$(id));
+      allow delete: if signed() && (resource.data.from == me() || resource.data.to == me());
+    }
+
+    // 4.11: aud = 'pub' (todos) o 'fol' (solo seguidores, perfil privado). Los posts viejos no lo tienen: son públicos.
+    function canSee(d) { return d.get('aud', 'pub') != 'fol' || d.uid == me() || exists(/databases/$(database)/documents/follows/$(me() + '_' + d.uid)); }
+    function photoOk(d, k, max) { return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max && (d[k].size() == 0 || d[k].matches('data:image/(jpeg|png|webp);base64,.*'))); }
     function validPost(d) {
       // 4.9.1: lista cerrada de campos (antes: hasta 10 campos cualquiera). likes/commentCount/lastC se admiten aquí porque
       // el dueño edita un post que ya los tiene; en create se prohíben aparte y en update el dueño no puede tocarlos.
-      return d.keys().hasOnly(['uid', 'start', 'body', 'hasPhoto', 'photo', 'likes', 'commentCount', 'lastC'])
+      return d.keys().hasOnly(['uid', 'start', 'body', 'hasPhoto', 'photo', 'photo2', 'aud', 'likes', 'commentCount', 'lastC'])
         && d.start is number && d.start > 0 && d.start <= nowMs() + 600000 // 4.9.2: antes +1 día (un post del futuro se quedaba el primero en Descubrir)
         && d.body is string && d.body.size() <= 100000
         && optBool(d, 'hasPhoto')
-        && (!('photo' in d) || d.photo == null || (d.photo is string && d.photo.size() <= 400000
-             && (d.photo.size() == 0 || d.photo.matches('data:image/(jpeg|png|webp);base64,.*'))));
+        && (!('aud' in d) || d.aud in ['pub', 'fol'])
+        && photoOk(d, 'photo', 400000) && photoOk(d, 'photo2', 200000); // 4.11: photo2 = el selfie de la foto doble
     }
     // vista previa del último comentario: solo quien acaba de comentar la pone; se quita al borrar un comentario
     // 4.9.1: antes cualquiera podía sumar +1 al contador y poner «último comentario» (hasta 140 car.) en CUALQUIER post sin
@@ -92,7 +112,11 @@ service cloud.firestore {
         || (dc == -1 && (same || !('lastC' in a)));
     }
     match /posts/{pid} {
-      allow read: if signed();
+      // 4.11: leer un post de solo seguidores exige seguir a su dueño. En las consultas: Descubrir filtra aud == 'pub';
+      // un perfil que no sigues, uid == X y aud == 'pub'; tu feed, uid == X (alguien a quien sigues) o tú.
+      allow get: if signed() && canSee(resource.data);
+      allow list: if signed() && (resource.data.aud == 'pub' || resource.data.uid == me()
+        || exists(/databases/$(database)/documents/follows/$(me() + '_' + resource.data.uid)));
       // el id empieza por tu uid y la fecha invertida; nace sin me gusta ni contador
       allow create: if signed() && request.resource.data.uid == me() && validPost(request.resource.data) && !banned()
         && pid.matches('^' + me() + '_[0-9]{14}_.{1,80}$')
@@ -103,7 +127,7 @@ service cloud.firestore {
         (resource.data.uid == me() && request.resource.data.uid == me() && validPost(request.resource.data) && !banned()
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['likes', 'commentCount', 'lastC']))
         // cualquiera (también el dueño): su propio me gusta, ±1 comentario y la vista previa
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount', 'lastC'])
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount', 'lastC']) && canSee(resource.data)
             && request.resource.data.get('likes', []).toSet().difference(resource.data.get('likes', []).toSet()).hasOnly([me()])
             && resource.data.get('likes', []).toSet().difference(request.resource.data.get('likes', []).toSet()).hasOnly([me()])
             && request.resource.data.get('likes', []).size() <= 500
@@ -117,14 +141,15 @@ service cloud.firestore {
             && lastCOk(pid)));
 
       match /comments/{cid} {
-        allow read: if signed();
+        allow read: if signed() && canSee(get(/databases/$(database)/documents/posts/$(pid)).data);
         allow create: if signed() && request.resource.data.uid == me()
           && request.resource.data.keys().hasOnly(['uid', 'name', 'username', 'text', 'ts'])
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
           // 4.9.1: hora creíble por los dos lados (con ts=0 se colaban los primeros 200 de la lista y tapaban los comentarios reales)
           && request.resource.data.ts is number && request.resource.data.ts <= nowMs() + 600000 && request.resource.data.ts >= nowMs() - 600000
           && optStr(request.resource.data, 'name', 80) && optStr(request.resource.data, 'username', 20)
-          && !banned() && !blockedBy(get(/databases/$(database)/documents/posts/$(pid)).data.uid);
+          && !banned() && !blockedBy(get(/databases/$(database)/documents/posts/$(pid)).data.uid)
+          && canSee(get(/databases/$(database)/documents/posts/$(pid)).data);
         allow delete: if signed() && (resource.data.uid == me() || get(/databases/$(database)/documents/posts/$(pid)).data.uid == me() || admin());
       }
     }
@@ -148,6 +173,13 @@ service cloud.firestore {
       let fol = d.type == 'follow' && !d.keys().hasAny(['pid', 'rel', 'cname', 'cemoji'])
         && nid == me() + '_follow'
         && exists(/databases/$(database)/documents/follows/$(me() + '_' + uid));
+      // 4.11: solicitud de seguimiento (con la solicitud viva) y aceptación (con el seguimiento ya creado)
+      let frq = d.type == 'freq' && !d.keys().hasAny(['pid', 'rel', 'cname', 'cemoji'])
+        && nid == me() + '_freq'
+        && exists(/databases/$(database)/documents/freqs/$(me() + '_' + uid));
+      let fok = d.type == 'fok' && !d.keys().hasAny(['pid', 'rel', 'cname', 'cemoji'])
+        && nid == me() + '_fok'
+        && exists(/databases/$(database)/documents/follows/$(uid + '_' + me()));
       // alianzas y piques: de jefe de un clan a jefe del otro clan de esa relación (el id de la relación es «clanA_clanB»)
       let rl = d.type in ['rel-alianza', 'rel-pique', 'rel-ok-alianza', 'rel-ok-pique', 'rel-no']
         && relIdOk(d.get('rel', null)) && !('pid' in d)
@@ -161,7 +193,7 @@ service cloud.firestore {
         && d.type is string && d.ts is number && d.ts >= nowMs() - 600000 && d.ts <= nowMs() + 600000
         && optStr(d, 'name', 80) && optStr(d, 'username', 20) && optStr(d, 'title', 300) && optStr(d, 'text', 300)
         && optStr(d, 'cname', 40) && optStr(d, 'cemoji', 16)
-        && (like || cmt || fol || rl);
+        && (like || cmt || fol || frq || fok || rl);
     }
     match /notifs/{uid}/items/{nid} {
       allow read, delete: if signed() && me() == uid;
