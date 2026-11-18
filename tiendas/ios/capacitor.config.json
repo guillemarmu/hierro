@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.guillemarmu.hierro",
+  "appName": "Hierro",
+  "webDir": "www",
+  "appendUserAgent": "HierroiOS",
+  "server": {
+    "url": "https://guillemarmu.github.io/hierro/hierro-pwa/",
+    "allowNavigation": [
+      "guillemarmu.github.io"
+    ],
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": true,
+    "scheme": "Hierro"
+  }
+}
