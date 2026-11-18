@@ -173,7 +173,15 @@ const dupBlocks = [...win.values()].filter(n => n > 1).length;
 const css = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
 const important = (css.match(/!important/g) || []).length;
 const selCount = {};
-for (const m of css.replace(/@media[^{]*\{/g, '').matchAll(/([^{}]+)\{[^{}]*\}/g)) { const s = m[1].trim().replace(/\s+/g, ' '); if (s) selCount[s] = (selCount[s] || 0) + 1; }
+{ // la misma regla dentro de un @media distinto es otra cosa (ajuste responsive), no una repetición
+  const stack = []; let buf = '';
+  for (const ch of css) {
+    if (ch === '{') { stack.push(buf.trim().replace(/\s+/g, ' ')); buf = ''; }
+    else if (ch === '}') { const sel = stack.pop(); if (sel && !sel.startsWith('@') && !stack.some(x => /^@(keyframes|font-face)/.test(x))) { const k = [...stack, sel].join(' » '); selCount[k] = (selCount[k] || 0) + 1; } buf = ''; }
+    else if (ch === ';' && !stack.length) buf = '';
+    else buf += ch;
+  }
+}
 const cssRepeat = Object.values(selCount).filter(n => n > 1).length;
 
 const longFns = fns.filter(f => f.lines > LONG_FN || f.chars > LONG_CH).sort((a, b) => b.chars - a.chars);
