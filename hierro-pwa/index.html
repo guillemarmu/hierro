@@ -4094,7 +4094,8 @@ const Social = {
     const id = this.postId(w); this.photos.set(id, url || null); const p = this.posts.get(id); if (p) p.hasPhoto = !!url;
     Sync.schedule(200); return true;
   },
-  unpend(wid, val){ const pp = this.pending(); if (pp[wid] === val) { delete pp[wid]; try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) {} } },
+  // 4.12.5: la foto doble es {a, b}; con === nunca coincidía, se quedaba «Pendiente de subir» y se resubía en cada sincronización
+  unpend(wid, val){ const pp = this.pending(); if (wid in pp && JSON.stringify(pp[wid]) === JSON.stringify(val)) { delete pp[wid]; try { localStorage.setItem(this.ppKey(), JSON.stringify(pp)); } catch (e) {} } },
   photoOf(p){ const u = this.photos.get(p.id); if (u) return u; return p.hasPhoto ? '' : null; }, // nunca descarga: de eso se encarga mountPhotos (perezoso)
   /* Descarga perezosa (IntersectionObserver, margen 300 px), 2 a la vez, caché en el móvil (socph:{pid}, LRU de 30) y sin reintento en bucle */
   rej: new Set(), photoFail: new Set(), photoQ: [], photoRun: 0, phIO: null, phIdx: null,
@@ -7090,7 +7091,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.12.4';
+const APP_VERSION = '4.12.5';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
