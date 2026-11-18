@@ -1,9 +1,9 @@
 {
   "actualizado": "2026-11-18",
-  "version": "4.12.5",
+  "version": "4.13.1",
   "metricas": {
     "R01 funciones largas (80+ líneas o 4000+ caracteres)": 17,
-    "R02 función más larga (caracteres)": 8807,
+    "R02 función más larga (caracteres)": 7971,
     "R03 líneas de más de 400 caracteres": 85,
     "R04 catch vacíos sin comentario": 81,
     "R05 acciones A sin usar": 0,
