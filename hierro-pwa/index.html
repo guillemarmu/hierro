@@ -1182,6 +1182,7 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 <input type="file" id="fileJson" accept=".json,application/json" hidden>
 
 <script src="config.js"></script>
+<script src="native.js"></script>
 <script>
 /* Alto real de pantalla en la app instalada de iPhone */
 (function fixIOSHeight(){
@@ -1859,22 +1860,62 @@ const Cloud = {
     Object.assign(this.session, {idToken: j.idToken, refreshToken: j.refreshToken, exp: Date.now() + (+j.expiresIn || 3600) * 1000});
     await KV.set('session', this.session);
   },
-  async deleteEverything(){
-    const uid = this.session.uid;
-    const res = await this.query(['users', uid], {from: [{collectionId: 'workouts'}], select: {fields: [{fieldPath: 'start'}]}});
-    const names = (res || []).filter(x => x.document).map(x => x.document.name);
-    names.push(this.name('users', uid, 'state', 'active'), this.name('users', uid));
+  // 4.13.2: borrar la cuenta del todo (lo piden Apple y Google). Primero lo tuyo que vive en documentos ajenos, mientras aún
+  // sigues a la gente (las reglas lo exigen en los posts de solo seguidores). Si algo falla se para antes de borrar la cuenta,
+  // para poder reintentarlo sin dejar restos huérfanos.
+  async purgeTraces(uid, following, myPosts){
+    const docs = r => (r || []).filter(x => x.document).map(x => x.document);
+    const grp = (col, f) => this.queryRoot({from: [{collectionId: col, allDescendants: true}], where: ff(f, 'EQUAL', uid), select: {fields: [{fieldPath: f}]}});
+    const mine = uid + '_';
+    // Comentarios en posts ajenos: bajar el contador y quitar la vista previa si era la tuya. Los de tus posts vivos se van con
+    // ellos; los de tus posts ya borrados (despublicados) se borran aquí sin más.
+    const cms = docs(await grp('comments', 'uid')).map(d => { const pp = d.name.split('/'); return {name: d.name, pid: pp[pp.length - 3], cid: pp[pp.length - 1]}; })
+      .filter(c => !myPosts.has(c.pid));
+    const own = cms.filter(c => c.pid.startsWith(mine)), other = cms.filter(c => !c.pid.startsWith(mine));
+    for (let i = 0; i < own.length; i += 400) await this.commit(own.slice(i, i + 400).map(c => ({delete: c.name})));
+    const lastCs = await Promise.all(other.map(c => this.getDoc('posts', c.pid).then(pd => pd ? docData(pd).lastC : null, () => null)));
+    for (const [i, c] of other.entries()) {
+      try { await Social.delComment({id: c.pid, lastC: lastCs[i], commentCount: 1}, c.cid); }
+      catch (e) { if (e.offline || e.quota) throw e; await this.commit([{delete: c.name}]); } // post borrado o que ya no puedes ver
+    }
+    // Me gusta: en posts públicos y en los de la gente a la que sigues (los privados que ya no ves no se pueden encontrar)
+    const liked = q => this.queryRoot({from: [{collectionId: 'posts'}], where: {compositeFilter: {op: 'AND', filters: [q, ff('likes', 'ARRAY_CONTAINS', uid)]}}, select: {fields: [{fieldPath: 'uid'}]}});
+    const lists = await Promise.all([liked(ff('aud', 'EQUAL', 'pub')), ...[...following].map(x => liked(ff('uid', 'EQUAL', x)))]);
+    const posts = new Set(lists.flatMap(docs).map(d => d.name).filter(n => !n.split('/').pop().startsWith(mine)));
+    for (const n of posts) await this.commit([{transform: {document: n, fieldTransforms: [{fieldPath: 'likes', removeAllFromArray: {values: [fsv(uid)]}}]}, currentDocument: {exists: true}}]);
+    // Mensajes de los muros de piques y alianzas, y avisos que mandaste a otros (llevan tu nombre)
+    const rest = (await Promise.all([grp('msgs', 'uid'), grp('items', 'from')])).flatMap(docs).map(d => d.name);
+    for (let i = 0; i < rest.length; i += 400) await this.commit(rest.slice(i, i + 400).map(n => ({delete: n})));
+  },
+  // force: si no se pudo borrar el rastro en documentos ajenos (e.traces), el usuario puede pedir borrar la cuenta igualmente
+  async deleteEverything(force = false){
+    const uid = this.session.uid, names = [];
+    const q = (col, f) => this.queryRoot({from: [{collectionId: col}], where: ff(f, 'EQUAL', uid), select: {fields: [{fieldPath: f}]}});
+    const add = r => (r || []).forEach(x => { if (x.document) names.push(x.document.name); });
+    const sub = (col, f) => this.query(['users', uid], {from: [{collectionId: col}], select: {fields: [{fieldPath: f}]}});
     try {
-      const q = (col, f) => this.queryRoot({from: [{collectionId: col}], where: {fieldFilter: {field: {fieldPath: f}, op: 'EQUAL', value: {stringValue: uid}}}, select: {fields: [{fieldPath: f}]}});
-      const rs = await Promise.all([q('posts', 'uid'), q('follows', 'from'), q('follows', 'to'), this.query(['notifs', uid], {from: [{collectionId: 'items'}], select: {fields: [{fieldPath: 'ts'}]}})]);
-      rs.forEach(r => (r || []).forEach(x => { if (x.document) names.push(x.document.name); }));
-      const myPosts = (rs[0] || []).filter(x => x.document).map(x => x.document.name.split('/').pop());
-      const cs = await Promise.all(myPosts.map(pid => this.query(['posts', pid], {from: [{collectionId: 'comments'}], select: {fields: [{fieldPath: 'ts'}]}}).catch(() => [])));
+      const [ws, st, posts, fFrom, fTo, nt, rqFrom, rqTo, bl] = await Promise.all([sub('workouts', 'start'), sub('state', 'srv'), q('posts', 'uid'), q('follows', 'from'), q('follows', 'to'),
+        this.query(['notifs', uid], {from: [{collectionId: 'items'}], select: {fields: [{fieldPath: 'ts'}]}}), q('freqs', 'from'), q('freqs', 'to'), q('blocks', 'from')]);
+      const following = new Set((fFrom || []).filter(x => x.document).map(x => docData(x.document).to).filter(x => typeof x === 'string'));
+      const myPosts = (posts || []).filter(x => x.document).map(x => x.document.name.split('/').pop());
+      if (!force) {
+        try { await this.purgeTraces(uid, following, new Set(myPosts)); }
+        catch (e) { if (e.offline || e.quota) throw e; const err = new Error('No se pudieron borrar tus comentarios, tus me gusta o tus mensajes en lo de otras personas.'); err.traces = true; throw err; }
+      }
+      [ws, st, posts, fFrom, fTo, nt, rqFrom, rqTo, bl].forEach(add); // st: state/active y los diag-* de cada móvil
+      const cs = await Promise.all(myPosts.map(pid => this.query(['posts', pid], {from: [{collectionId: 'comments'}], select: {fields: [{fieldPath: 'ts'}]}})));
       cs.forEach(r => (r || []).forEach(x => { if (x.document) names.unshift(x.document.name); }));
-    } catch (e) {}
+      try { await clanOnDelete(); } catch (e) { if (!force) throw e; } // con «Borrar igualmente», que el clan no lo impida
+    } catch (e) {
+      if (e.offline || e.quota || e.traces) throw e;
+      throw new Error('No se pudo borrar todo lo de tu cuenta. No se ha eliminado nada más; inténtalo dentro de un rato y, si sigue fallando, escribe a soporte.hierro.app@gmail.com.');
+    }
+    names.push(this.name('users', uid));
     const un = S.settings.social && S.settings.social.username; if (un) names.push(this.name('usernames', un));
     names.push(this.name('profiles', uid), this.name('scores', uid));
-    try { await clanOnDelete(); } catch (e) {}
+    // El Coach del servidor de avisos guarda tu nombre, rutinas y racha: apagarlo (si no hay suscripción push, no hay nada que borrar)
+    if (Push.url()) await Push.call('/coach/off', {}).catch(() => { /* sin suscripción */ });
+    localStorage.removeItem(Coach.LS);
     for (let i = 0; i < names.length; i += 400) await this.commit(names.slice(i, i + 400).map(n => ({delete: n})));
     await this.auth('delete', {idToken: await this.token()});
   }
@@ -3079,7 +3120,7 @@ function viewMe(){
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
     <label class="row" style="font-weight:600"><input type="checkbox" class="sw" id="setSound" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
-    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setNotif" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}</div>`;
+    ${window.Native ? '' : `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setNotif" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}`}${healthHTML()}</div>`;
   h += `<div class="card stack"><h3>Tus datos</h3>
     <div class="small muted">${Cloud.session ? 'Se guardan en tu cuenta y en este móvil, así que funciona sin conexión y se sube solo cuando vuelve la cobertura. Solo tú puedes verlos.' : 'Se guardan solo en este móvil. Descarga una copia de vez en cuando y siempre antes de cambiar de móvil.'}</div>
     <button class="btn primary" data-act="import-csv">Importar CSV de Hevy</button>
@@ -3486,6 +3527,19 @@ function coachHTML(){
   return `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setCoach" ${on ? 'checked' : ''}><span>Mensajes de motivación<br><span class="small muted" style="font-weight:500">${hint}</span></span></label>`
     + (on ? `<div class="f" role="group" aria-labelledby="coachLbl"><span id="coachLbl">Tono de los mensajes</span><div class="seg">${[['suave', 'Suave'], ['picante', 'Picante']].map(([k, l]) => `<button data-coach-level="${k}" aria-pressed="${lv === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">${lv === 'suave' ? 'Ánimo y buen rollo: «Hoy toca entrenar, vamos a por ello».' : 'Con un poco de guasa: «Vamos vago, te toca entrenar».'}</div></div>` : '');
 }
+// 4.13.2: solo en la app de iOS (native.js crea window.Native): guardar los entrenos terminados en Salud
+function healthHTML(){
+  if (!(window.Native && window.Native.is && window.Native.health)) return '';
+  const on = localStorage.getItem('hierro.health') === '1';
+  return `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setHealth" ${on ? 'checked' : ''}><span>Guardar mis entrenos en Salud<br>`
+    + '<span class="small muted" style="font-weight:500">Al terminar un entreno se apunta en la app Salud como entrenamiento de fuerza, con su hora de inicio y fin. Hierro no lee nada de Salud.</span></span></label>';
+}
+document.addEventListener('change', ev => {
+  if (ev.target.id !== 'setHealth') return;
+  const el = ev.target, H = window.Native.health;
+  if (!el.checked) { H.disable(); return; }
+  H.enable().then(on => { el.checked = on; if (!on) toast('Sin permiso de Salud: actívalo en Ajustes › Salud › Acceso a datos › Hierro'); }, () => { el.checked = false; });
+});
 document.addEventListener('change', ev => { if (ev.target.id !== 'setCoach') return; const el = ev.target; Coach.set(el.checked).then(ok => { el.checked = ok; }); });
 document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-coach-level]'); if (b) Coach.level(b.dataset.coachLevel); });
 setTimeout(() => Coach.sync(), 3500); // al abrir la app (una vez por arranque, y solo si cambió algo o hace falta refrescar el registro)
@@ -5531,6 +5585,7 @@ const A = {
     rkReset(); const rkUp = rkDiff(rk0, rkAll()); if (rkUp.length) out.rk = rkUp; // ascensos de rango de este entreno
     if (out.shared && !(A._pendingPhoto && Social.queuePhoto(out, A._pendingPhoto))) out.shared = false; A._pendingPhoto = null;
     Social.onPublished(out);
+    try { window.dispatchEvent(new CustomEvent('hierro:workout-saved', {detail: {start: out.start, end: out.end, name: out.title}})); } catch (e) { /* sin CustomEvent */ } // app de iOS: Salud (native.js)
     const routine = out.routineId && S.routines.find(r => r.id === out.routineId);
     S.active = null; A._pendingFinish = null;
     Store.mark('active', monthKey(out.start));
@@ -5763,11 +5818,19 @@ const A = {
     await signOutLocal(); showAuth();
   },
   async 'acc-delete'(){
-    const ok = await ask('Eliminar cuenta', 'Se borrarán tu cuenta y <b>todos tus entrenos, rutinas y medidas</b>, en la nube y en este móvil. No se puede deshacer. Si quieres conservarlos, descarga antes una copia.', [['0', 'Cancelar'], ['1', 'Eliminar para siempre', 'danger']]);
+    const txt = 'Se borrarán tu cuenta y <b>todos tus datos</b>, en la nube y en este móvil: entrenos, rutinas, medidas, publicaciones y seguidores, '
+      + 'y también tus comentarios, tus me gusta y tus mensajes en lo de otras personas. No se puede deshacer. Si quieres conservar tus entrenos, descarga antes una copia.';
+    const ok = await ask('Eliminar cuenta', txt, [['0', 'Cancelar'], ['1', 'Eliminar para siempre', 'danger']]);
     closeModal(); if (ok !== '1') return;
     toast('Eliminando…');
     try { await Cloud.deleteEverything(); await signOutLocal(); showAuth('✓ Tu cuenta y tus datos se han eliminado.'); }
-    catch (e) { ask('No se pudo eliminar', esc(e.offline ? 'Necesitas conexión a internet.' : (e.message || 'Inténtalo otra vez.')), [['ok', 'Vale']]).then(closeModal); }
+    catch (e) {
+      if (e.traces) {
+        const go = await ask('No se pudo borrar todo', esc(e.message) + ' Puedes intentarlo más tarde o borrar ya la cuenta y el resto de tus datos (lo que quede lo borramos a mano si escribes a soporte.hierro.app@gmail.com).', [['0', 'Más tarde'], ['1', 'Borrar igualmente', 'danger']]);
+        closeModal(); if (go !== '1') return;
+        try { await Cloud.deleteEverything(true); await signOutLocal(); showAuth('✓ Tu cuenta y tus datos se han eliminado.'); return; } catch (e2) { e = e2; }
+      }
+      ask('No se pudo eliminar', esc(e.offline ? 'Necesitas conexión a internet.' : (e.message || 'Inténtalo otra vez.')), [['ok', 'Vale']]).then(closeModal); }
   },
   'soc-mode'(el){ Social.mode = el.dataset.k === 'discover' ? 'discover' : 'following'; render(); Social.refresh(); },
   'soc-refresh'(){ Social.refresh(true); render(); },
@@ -7159,7 +7222,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.1';
+const APP_VERSION = '4.13.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
