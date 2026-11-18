@@ -1,0 +1,11 @@
+{
+  "name": "hierro-health",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Guarda entrenos de fuerza de Hierro en Apple Salud (HealthKit)",
+  "files": ["ios/", "Package.swift"],
+  "capacitor": {
+    "ios": { "src": "ios" }
+  },
+  "peerDependencies": { "@capacitor/core": ">=8.0.0" }
+}
