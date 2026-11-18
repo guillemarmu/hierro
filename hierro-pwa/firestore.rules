@@ -196,7 +196,9 @@ service cloud.firestore {
         && (like || cmt || fol || frq || fok || rl);
     }
     match /notifs/{uid}/items/{nid} {
-      allow read, delete: if signed() && me() == uid;
+      allow read: if signed() && me() == uid;
+      // 4.13.2: quien lo mandó también puede borrarlo (al borrar su cuenta se llevan su nombre de los buzones ajenos)
+      allow delete: if signed() && (me() == uid || resource.data.from == me());
       allow create: if signed() && validNotif(request.resource.data, uid, nid) && !blockedBy(uid) && !banned();
       // 4.9.1: el update también respeta bloqueo y veto (antes se podía reescribir un aviso viejo en el buzón de quien te bloqueó)
       allow update: if signed() && resource.data.from == me() && validNotif(request.resource.data, uid, nid) && !blockedBy(uid) && !banned();
@@ -370,6 +372,13 @@ service cloud.firestore {
         && request.resource.data.ts is int && request.resource.data.ts <= nowMs() + 60000 && request.resource.data.ts >= nowMs() - 600000; // 4.9.2: +1 min (antes +10)
       allow read, delete: if admin();
     }
+    // 4.13.2: borrar la cuenta del todo. Consultas de grupo de colección, solo de lo propio: comentarios y mensajes de muro que
+    // escribiste y avisos que mandaste. Solo listar; leer uno suelto y borrar siguen las reglas de cada ruta.
+    // Ojo: valen para cualquier colección con ese nombre a cualquier profundidad; no crear otras colecciones llamadas así.
+    match /{path=**}/comments/{cid} { allow list: if signed() && resource.data.uid == me(); }
+    match /{path=**}/msgs/{mid} { allow list: if signed() && resource.data.uid == me(); }
+    match /{path=**}/items/{nid} { allow list: if signed() && resource.data.from == me(); }
+
     // Bloqueos: los crea y borra quien bloquea; las reglas de arriba los consultan con exists()
     match /blocks/{id} {
       allow read, delete: if signed() && resource.data.from == me();
