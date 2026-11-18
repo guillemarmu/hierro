@@ -4,10 +4,19 @@ on:
     paths: ['hierro-pwa/**', 'herramientas/**', '.github/workflows/calidad.yml']
   pull_request:
   workflow_dispatch:
+# Las versiones se suben en varios commits (index.html, sw.js…) y los intermedios fallan a propósito (C01).
+# Cada run espera 4 min y, si llega otra subida, la nueva cancela la anterior: solo se juzga el último commit
+# (los runs cancelados no mandan correo).
+concurrency:
+  group: calidad-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   calidad:
     runs-on: ubuntu-latest
     steps:
+      - name: Esperar a que acabe la subida
+        if: github.event_name == 'push'
+        run: sleep 240
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
