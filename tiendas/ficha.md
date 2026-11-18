@@ -68,10 +68,10 @@ Textos y respuestas listos para copiar en Google Play Console y App Store Connec
 - Nada es obligatorio para usar la app sin cuenta salvo el almacenamiento local.
 
 ## Notas para los revisores
-- Cuenta de prueba: **la crea Guillermo** (correo y contraseña) con unos cuantos entrenos, una rutina y una publicación, y la pone en el campo de acceso de cada tienda.
+- Cuenta de prueba: **la crea Guillermo** (correo y contraseña) y la pone en el campo de acceso de cada tienda. Para llenarla: Perfil › Tus datos › «Importar CSV de Hevy» con `revisores-hevy.csv` (en el proyecto «HIERRO» de Claude) (24 entrenos inventados en 8 semanas), crear una rutina, poner un nombre de usuario en Social y publicar un entreno con la foto doble. Mejor que siga a otra cuenta con alguna publicación, para que el feed no salga vacío.
 - Texto (pegar en «Notas para la revisión»):
 
-> Hierro es un diario de gimnasio. Para entrar usa la cuenta de prueba. Desde Entrenar puedes empezar un entreno vacío o una rutina, apuntar series y terminarlo; al guardarlo puedes publicarlo con una foto doble (cámara trasera y frontal). En Social están el feed y los comentarios. Para denunciar: menú de los tres puntos de una publicación, botón «Denunciar» de cada comentario o «Denunciar perfil» en un perfil; para bloquear: «Bloquear» en el perfil. La cuenta se borra en Perfil › Cuenta › «Eliminar mi cuenta y mis datos». El contenido denunciado lo revisa el administrador; el contacto es soporte.hierro.app@gmail.com.
+> Hierro es un diario de gimnasio. Para entrar usa la cuenta de prueba. Desde Entrenar puedes empezar un entreno vacío o una rutina, apuntar series y terminarlo; al guardarlo puedes publicarlo con una foto doble (cámara trasera y frontal). En Social están el feed y los comentarios. Para denunciar: menú de los tres puntos de una publicación, botón «Denunciar» de cada comentario o «Denunciar perfil» en un perfil; para bloquear: «Bloquear» en el perfil. La cuenta se borra en Perfil › Cuenta › «Eliminar mi cuenta y mis datos», con todo su contenido (también comentarios y me gusta en publicaciones de otros). En la app de iOS, Perfil › Ajustes › «Guardar mis entrenos en Salud» apunta cada entreno terminado en la app Salud; la vibración es nativa. El contenido denunciado lo revisa el administrador; el contacto es soporte.hierro.app@gmail.com.
 
 ## Capturas
 - Google: 2-8 capturas de móvil (vertical, 1080×1920 o similar) y un gráfico de 1024×500.
