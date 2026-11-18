@@ -1,0 +1,82 @@
+# Compila la app de Android (TWA) de Hierro: un .aab para Google Play y un .apk para instalar a mano.
+# Se lanza a mano (Actions › Android › Run workflow) o al cambiar tiendas/android.
+# Con los secretos ANDROID_KEYSTORE_B64 y ANDROID_KEYSTORE_PASS firma con la clave de subida de verdad;
+# sin ellos usa una clave de prueba de usar y tirar (sirve para comprobar que compila, no para subir a Play).
+name: Android
+on:
+  workflow_dispatch:
+    inputs:
+      codigo:
+        description: 'Código de versión (vacío = 100 + número de ejecución)'
+        required: false
+  push:
+    branches: [main]
+    paths: ['tiendas/android/**', '.github/workflows/android.yml']
+permissions:
+  contents: read
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Versión
+        env:
+          CODIGO_MANUAL: ${{ inputs.codigo }}
+        run: |
+          V=$(grep -oP "const APP_VERSION = '\K[0-9.]+" hierro-pwa/index.html)
+          echo "NOMBRE=$V" >> "$GITHUB_ENV"
+          if [[ "$CODIGO_MANUAL" =~ ^[0-9]+$ ]]; then C="$CODIGO_MANUAL"
+          elif [ -n "$CODIGO_MANUAL" ]; then echo "::error::El código de versión tiene que ser un número"; exit 1
+          else C=$((100 + GITHUB_RUN_NUMBER)); fi
+          echo "CODIGO=$C" >> "$GITHUB_ENV"
+      - name: Generar el proyecto
+        working-directory: tiendas/android
+        run: |
+          npm i --no-save @bubblewrap/core@1.27.0
+          node generar.mjs "$RUNNER_TEMP/twa" "$CODIGO" "$NOMBRE"
+      - name: Compilar
+        working-directory: ${{ runner.temp }}/twa
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon bundleRelease assembleRelease
+      - name: Firmar
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+        run: |
+          # La contraseña se queda en este paso: no pasa a $GITHUB_ENV ni a la subida del artefacto
+          KS="$RUNNER_TEMP/hierro.keystore"
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > "$KS"; KSP="$KS_PASS"; TIPO=firmada
+          else
+            KSP=$(openssl rand -hex 16); echo "::add-mask::$KSP"; TIPO=prueba
+            keytool -genkeypair -keystore "$KS" -alias hierro -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KSP" -keypass "$KSP" -dname "CN=Hierro prueba" -noprompt
+          fi
+          echo "TIPO=$TIPO" >> "$GITHUB_ENV"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          OUT="$RUNNER_TEMP/salida"; mkdir -p "$OUT"
+          T="$RUNNER_TEMP/twa/app/build/outputs"
+          cp "$T/bundle/release/app-release.aab" "$OUT/hierro-$NOMBRE-$TIPO.aab"
+          jarsigner -keystore "$KS" -storepass "$KSP" -keypass "$KSP" "$OUT/hierro-$NOMBRE-$TIPO.aab" hierro
+          "$BT/zipalign" -f -p 4 "$T/apk/release/app-release-unsigned.apk" "$RUNNER_TEMP/alineado.apk"
+          "$BT/apksigner" sign --ks "$KS" --ks-pass "pass:$KSP" --ks-key-alias hierro --out "$OUT/hierro-$NOMBRE-$TIPO.apk" "$RUNNER_TEMP/alineado.apk"
+          "$BT/apksigner" verify "$OUT/hierro-$NOMBRE-$TIPO.apk"
+          SHA=$(keytool -list -v -keystore "$KS" -storepass "$KSP" -alias hierro | grep -m1 "SHA256:" | sed 's/.*SHA256: //')
+          rm -f "$KS"
+          printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"io.github.guillemarmu.hierro","sha256_cert_fingerprints":["%s"]}}]\n' "$SHA" > "$OUT/assetlinks-clave-de-subida.json"
+          {
+            echo "### Hierro $NOMBRE para Android ($TIPO, código $CODIGO)"
+            echo "Huella SHA-256 de la clave de firma: \`$SHA\`"
+            if [ "$TIPO" = prueba ]; then echo "Clave de prueba: sirve para comprobar que compila, **no** para subir a Google Play."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hierro-android-${{ env.NOMBRE }}-${{ env.TIPO }}
+          path: ${{ runner.temp }}/salida/
+          retention-days: 30
