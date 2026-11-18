@@ -3,13 +3,14 @@
 Instrucciones para el **agente revisor** que mira cada versión antes de publicarla. El revisor no ha escrito el código: no lo arregla, lo **aprueba o lo rechaza**. Si rechaza, la sesión principal corrige y vuelve a pedir revisión. No se publica una versión rechazada.
 
 ## Cómo se lanza (desde la sesión principal)
-1. `node herramientas/calidad.mjs` tiene que dar **✓ PASA**. Si no, ni se pide revisión.
+1. `node herramientas/calidad.mjs` y `node herramientas/visual.mjs` tienen que dar **✓ PASA**. Si no, ni se pide revisión.
 2. Sacar el diff contra `origin/main`: `git diff origin/main -- hierro-pwa/ > /tmp/rev.diff`.
-3. Lanzar un agente nuevo (modelo Opus; nunca Fable) con este archivo, el diff, la salida de `calidad.mjs` y una línea de qué pidió Guillermo. Darle acceso de lectura al repo para mirar el contexto de cada cambio.
+3. Lanzar un agente nuevo (modelo Opus; nunca Fable) con este archivo, el diff, la salida de `calidad.mjs` y `visual.mjs`, la carpeta de capturas (`/tmp/hierro-visual`, con `informe.json`) y una línea de qué pidió Guillermo. Darle acceso de lectura al repo para mirar el contexto de cada cambio.
+   - Si la versión toca la interfaz, el revisor **mira las capturas** de las pantallas afectadas (claro y oscuro; a 390 px y, si hay dudas, a 360) y aplica también las reglas V1…V10. Si no la toca, basta con que `visual.mjs` pase.
 4. Si dice **RECHAZADO**, arreglar lo que diga y repetir desde el paso 1 (como mucho 3 vueltas; si sigue rechazando, contárselo a Guillermo).
 
 ## Qué devuelve
-La primera línea es `APROBADO` o `RECHAZADO`. Después, una lista de hallazgos, cada uno con: regla (R1…R20), archivo y línea, qué pasa en concreto y qué cambiar. Nada de «considera revisar»: si no puede señalar un fallo concreto, no lo pone. Un solo hallazgo **grave** basta para rechazar; los **leves** se apuntan pero no rechazan.
+La primera línea es `APROBADO` o `RECHAZADO`. Después, una lista de hallazgos, cada uno con: regla (R1…R20 o V1…V10), archivo y línea (o captura), qué pasa en concreto y qué cambiar. Nada de «considera revisar»: si no puede señalar un fallo concreto, no lo pone. Un solo hallazgo **grave** basta para rechazar; los **leves** se apuntan pero no rechazan.
 
 ## Las 20 reglas
 
@@ -36,6 +37,23 @@ La primera línea es `APROBADO` o `RECHAZADO`. Después, una lista de hallazgos,
 - **R18 · CSS ordenado.** Variables de tema (`--…`) en vez de colores fijos, sin `!important` nuevos, reglas nuevas en el bloque «Pulido de diseño» y acotadas (ojo con `.hd`).
 - **R19 · Textos.** Español de España, tono de la app, sin anglicismos innecesarios ni textos de ejemplo («Lorem», «Test»).
 - **R20 · Pruebas de verdad.** Hay una prueba nueva (`tXXX.js`) que comprueba lo que se ha hecho en el navegador, incluido al menos un caso que falla si se quita el arreglo.
+
+## Reglas de interfaz (V1…V10, se miran en las capturas)
+Inspiradas en las guías de interfaz web de Vercel y en el estilo propio de Hierro (Glaciar en claro, Aurora en oscuro). `visual.mjs` mide lo que se puede medir (desbordes, texto cortado, objetivos táctiles, contraste, nombres accesibles, solapes, `alt`, errores); el contraste es aproximado (no ve pseudoelementos ni el cristal), así que **manda lo que se ve en la captura**.
+
+**Graves (rechazan)**
+- **V1 · Nada roto a la vista.** Nada se sale de la pantalla, se corta a medias o se monta encima de otra cosa; los textos largos (nombres de ejercicio o de entreno) hacen salto de línea o «…».
+- **V2 · Se lee.** Texto normal con contraste 4,5:1 o más; texto grande o en negrita de 19 px o más, 3:1. En los dos temas. Nada de gris claro sobre cristal claro.
+- **V3 · Se puede tocar.** Botones y controles de 40 px o más (44 ideal), separados lo suficiente para no tocar el de al lado; lo importante, al alcance del pulgar.
+- **V4 · Los dos temas.** Lo nuevo se ve bien en claro y en oscuro: nada de colores fijos que solo funcionan en uno, iconos visibles en los dos.
+- **V5 · Accesible.** Todo botón o campo tiene nombre (texto, `aria-label` o `<label>`); imágenes con `alt`; estado activo/pulsado con `aria-pressed`/`aria-current`; foco visible al navegar con teclado.
+
+**Leves (se apuntan)**
+- **V6 · Coherente con Hierro.** Usa las piezas que ya existen (`.card`, `.btn`, `.chip`, `.seg`, `.pill`, `EI()` para vacíos), las variables del tema y las tipografías (Sora en títulos, Plus Jakarta Sans en texto). Nada que parezca de otra app ni plantilla genérica.
+- **V7 · Jerarquía clara.** Una acción principal por pantalla (`.btn.primary`); títulos, cifras y textos secundarios con tamaños que se distinguen; alineaciones y márgenes consistentes (múltiplos de 4 px).
+- **V8 · Estados completos.** Vacío (qué hacer ahora), cargando (sin saltos de diseño al llegar los datos), error (qué ha pasado y cómo seguir) y desactivado.
+- **V9 · Movimiento con cabeza.** Animaciones cortas (≤300 ms) que explican algo; con «reducir movimiento», sin animación.
+- **V10 · Números y textos.** Cifras con formato español (`12,5 kg`; punto de miles desde 5 cifras, `12.500`, y sin punto en 4 como pide la RAE: `8505`), unidades siempre separadas con espacio duro (`5 %`, `30 t`), sin textos que se repiten ni mayúsculas gritonas.
 
 ## Lo que el revisor no hace
 - No reescribe el código ni propone una versión mejor entera.
