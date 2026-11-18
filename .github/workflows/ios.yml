@@ -1,0 +1,43 @@
+# Comprueba que la app de iOS (Capacitor) de Hierro compila para el simulador, SIN firmar.
+# Se lanza a mano (Actions › iOS › Run workflow) o al cambiar tiendas/ios o este archivo.
+# Todavía no hay cuenta de Apple Developer: no usa secretos ni genera .ipa. Ver tiendas/ios/LEEME.md.
+name: iOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['tiendas/ios/**', '.github/workflows/ios.yml']
+permissions:
+  contents: read
+jobs:
+  compilar:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Preparar el proyecto
+        working-directory: tiendas/ios
+        run: bash preparar.sh
+      - name: Compilar para el simulador
+        working-directory: tiendas/ios/ios/App
+        run: |
+          set -o pipefail
+          if [ -d App.xcworkspace ]; then DEST=(-workspace App.xcworkspace); else DEST=(-project App.xcodeproj); fi
+          xcodebuild "${DEST[@]}" -scheme App -sdk iphonesimulator -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tee "$RUNNER_TEMP/xcodebuild.log" | tail -n 60
+      - name: Resumen
+        if: success()
+        run: |
+          {
+            echo "### Hierro iOS: compila para el simulador (sin firmar)"
+            echo "App: \`$(ls -d "$RUNNER_TEMP"/dd/Build/Products/Debug-iphonesimulator/*.app | head -1 | xargs basename)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hierro-ios-xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          retention-days: 7
