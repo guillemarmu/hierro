@@ -3,10 +3,18 @@
   "metricas": {
     "V02 texto cortado sin «…»": 0,
     "V03 objetivos táctiles de menos de 40 px": 0,
-    "V04 textos con poco contraste": 23,
+    "V04 textos con poco contraste": 24,
     "V05 botones o campos sin nombre accesible": 0,
     "V06 elementos tocables que se solapan": 0,
     "V08 imágenes sin alt": 0
   },
-  "forzados": []
+  "forzados": [
+    {
+      "fecha": "2026-11-18",
+      "motivo": "4.13.0 (otra cuenta) añadió «Crear ejercicio» con el degradado primario: mismo caso que el resto de botones primarios en oscuro (~3,2:1), pendiente de que Guillermo decida el degradado",
+      "subidas": {
+        "V04 textos con poco contraste": 24
+      }
+    }
+  ]
 }
