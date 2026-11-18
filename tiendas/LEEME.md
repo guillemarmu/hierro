@@ -16,16 +16,31 @@ Plan para publicar Hierro en las tiendas sin dejar de ser una web: la app de las
 
 ## Antes de enviar a las tiendas
 
-- **Borrado completo de la cuenta** (versión de la app): que «Eliminar mi cuenta y mis datos» borre también los comentarios en publicaciones ajenas, los mensajes de los muros de piques y alianzas, los «me gusta», los `users/{uid}/state/diag-*`, las solicitudes (`freqs`) y los bloqueos (`blocks`). Google pide declarar con exactitud qué se borra; hoy `soporte.html` dice lo que queda.
+- **Borrado completo de la cuenta**: hecho en la versión 4.13.2. «Eliminar mi cuenta y mis datos» borra también los comentarios en publicaciones ajenas, los mensajes de los muros, los «me gusta», los avisos enviados, los `diag-*`, las solicitudes (`freqs`) y los bloqueos (`blocks`). Necesita las reglas nuevas de Firestore y los índices de abajo (ya publicados); si faltaran, la app avisa y ofrece «Borrar igualmente». `soporte.html#borrar-cuenta` ya lo dice.
 - **Privacidad y condiciones**: quitar la nota «borrador pendiente de revisión» cuando estén revisadas.
-- **Capturas** y **cuenta de prueba** para los revisores (ver `ficha.md`).
+- **Capturas** y **cuenta de prueba** para los revisores (ver `ficha.md`). Para llenar la cuenta de prueba: `revisores-hevy.csv` (8 semanas inventadas, 24 entrenos; está en el proyecto «HIERRO» de Claude) se importa en Perfil › Tus datos › «Importar CSV de Hevy».
 
-## iOS (App Store) — por hacer, cuando haya cuenta de Apple
+### Índices de Firestore para el borrado completo (ya creados)
+- Grupo de colección, de un campo (Firestore › Índices › De un solo campo › Agregar exención, con «Grupo de colecciones» activado, ascendente): `comments.uid`, `msgs.uid` e `items.from`.
+- Compuestos de `posts`: `aud` ↑ + `likes` (array-contains) y `uid` ↑ + `likes` (array-contains).
 
-- **Cómo será**: Capacitor cargando la web publicada (`server.url`), así las peticiones salen desde `guillemarmu.github.io` y siguen valiendo la clave de API y reCAPTCHA tal como están. Con `WKAppBoundDomains` para que funcione el service worker (sin conexión).
-- **Para pasar la norma 4.2 de Apple** (no aceptan «una web metida en una app») hay que añadir cosas nativas: avisos push nativos (el push web no funciona dentro de una app de iOS; el Worker de Cloudflare tendría que mandar también a APNs), guardar los entrenos en Salud, vibración nativa y, más adelante, el descanso en la pantalla de bloqueo.
-- **Compilar sin Mac**: GitHub Actions con macOS (gratis en repos públicos) + fastlane, firmando con una clave de la API de App Store Connect guardada como secreto.
-- **Para revisión**: Apple necesita una cuenta de prueba con datos (ver `ficha.md`).
+## Los 5 motivos más frecuentes de rechazo de Apple (TikTok de @lacaveapps, 19 nov)
+
+| Motivo | Estado en Hierro |
+|---|---|
+| 1. Sin acceso de prueba o la app falla | Pendiente: la cuenta la crea Guillermo; datos en `revisores-hevy.csv` (proyecto «HIERRO»). Probar la app de iOS en TestFlight antes de enviar. |
+| 2. Cobrar productos digitales fuera de Apple | No aplica: Hierro no tiene pagos. |
+| 3. App que es una copia de la web (norma 4.2) | Preparado: Salud (guardar entrenos) y vibración nativa. Siguiente paso, con la cuenta de Apple: avisos push nativos (el Worker tiene que mandar a APNs con la clave .p8). Ver `ios/LEEME.md`. Mejora futura: el descanso en la pantalla de bloqueo. |
+| 4. Pedir permisos sin explicar para qué | Preparado: textos de cámara y Salud en `ios/preparar.sh` (tabla en `ios/LEEME.md`). La cámara solo se pide al publicar y Salud solo al activar el interruptor. En la app de iOS no salen los avisos web, que ahí no funcionan. |
+| 5. Que falte bloquear o denunciar usuarios | Hecho desde la 4.9: denunciar publicaciones, comentarios y perfiles, bloquear y panel de administrador. Las denuncias se atienden a mano desde soporte.hierro.app@gmail.com. |
+| Extra: borrar la cuenta desde la app | Hecho (ver arriba). |
+
+## iOS (App Store) — preparado para compilar; falta la cuenta de Apple
+
+- **Cómo es**: Capacitor 8 cargando la web publicada (`server.url`), así las peticiones salen desde `guillemarmu.github.io` y siguen valiendo la clave de API y reCAPTCHA. Con `WKAppBoundDomains` para que funcione el service worker. Todo en `tiendas/ios/` (ver su `LEEME.md`).
+- **Nativo (norma 4.2)**: guardar los entrenos en Salud (interruptor en Perfil › Ajustes, solo en la app), vibración nativa; el push nativo es el siguiente paso. La web habla con lo nativo a través de `hierro-pwa/native.js`, que fuera de la app no hace nada.
+- **Compilar sin Mac**: GitHub › Actions › **iOS** compila para el simulador sin firmar (comprueba que compila). Con cuenta de Apple: firmar con una clave de la API de App Store Connect + fastlane, capacidad HealthKit en el App ID y, para el push, capacidad Push y clave APNs .p8 para el Worker.
+- **Para revisión**: cuenta de prueba con datos (ver `ficha.md`).
 
 ## Lo que tiene que hacer Guillermo
 
