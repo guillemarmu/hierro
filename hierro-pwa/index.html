@@ -1148,6 +1148,14 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 #modal .sheet.tall .mb{flex:1;min-height:0}
 .btn.primary:disabled{background:var(--sup-3);color:var(--apagado);box-shadow:none;text-shadow:none;opacity:1}
 .gc-t small{display:block;line-height:1.3}
+/* 4.13.1 · Revisión visual (herramientas/visual.mjs + revisor): separación del historial, calendario a 360 px, cifras de las tarjetas, enlaces legales tocables y pill dorada legible en claro */
+#hList{display:flex;flex-direction:column;gap:14px}
+@media (max-width:374px){.cal{gap:2px}}
+.wcard .stats{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,.7fr)}
+.legal-l:not(.rc-l) a{display:inline-block;padding:11px 6px}
+:root[data-theme="light"]{--pr-t:#A8205F}
+.pill.gold,.pill.bd-req{color:var(--pr-t,var(--pr))}
+.excard textarea.note{min-height:40px;padding:10px 4px;margin:-8px 0} /* notas del ejercicio: 40 px tocables sin mover el diseño */
 </style>
 </head>
 <body>
@@ -2925,7 +2933,7 @@ function rkExCardHTML(id){
   else nxt = `Siguiente: <b>${rkName(E.idx + 1)}</b>. ` + (mode === 'sec' ? `Aguantando <b>${esc(T.txt)}</b> de forma habitual, es tuyo.` : / reps$/.test(T.txt) ? `Con series de <b>${esc(T.txt)}</b> de forma habitual, es tuyo.` : `Con series como <b>${esc(T.txt)}</b> de forma habitual, es tuyo.`);
   return `<div class="card stack"><div class="rk-xh">${rkIcon(E.idx, 44)}<h3>${rkName(E.idx)}</h3><span class="small muted num">${rkPts(E.score)}</span></div>${rkBar(E.prog, E.idx)}
     <div>${nxt}</div>
-    ${E.floor ? '<div class="small muted">Últimamente rindes algo menos; tu rango aguanta en el 85 % de tu mejor momento.</div>' : ''}
+    ${E.floor ? '<div class="small muted">Últimamente rindes algo menos; tu rango aguanta en el 85 % de tu mejor momento.</div>' : ''}
     ${E.ses < 3 ? '<div class="small muted">Rango provisional: se asienta con tus próximas sesiones.</div>' : ''}
     <div><button class="rk-lnk" data-act="go-rankhow">¿Cómo se calcula?</button></div></div>`;
 }
@@ -2967,9 +2975,9 @@ function viewRanks(){
   const sexTxt = R.sexSet ? '' : '<div class="small muted">Calculado con el estándar masculino. Si eres mujer, indícalo en Perfil › Tu cuerpo y se ajusta.</div>';
   const hf = R.bw ? rkHf(R.bw, R.sex) : 1, hp = Math.round((hf - 1) * 100);
   const hTxt = !rkHeight() ? '<div class="card row between small"><span>¿Cuánto mides? Con tu altura, los rangos de empuje y pierna se ajustan a tu complexión.</span><button class="linkbtn" data-act="go-height">Añadir</button></div>'
-    : `<div class="card small muted">Altura ${rkHeight()} cm: ${hp ? `tu listón en pecho, hombros, tríceps y cuádriceps va un ${Math.abs(hp)} % más ${hp > 0 ? 'bajo' : 'alto'} por tu complexión` : 'tu complexión es la de referencia, sin ajuste'}. <button class="linkbtn" data-act="go-height">Cambiar</button></div>`;
+    : `<div class="card small muted">Altura ${rkHeight()} cm: ${hp ? `tu listón en pecho, hombros, tríceps y cuádriceps va un ${Math.abs(hp)} % más ${hp > 0 ? 'bajo' : 'alto'} por tu complexión` : 'tu complexión es la de referencia, sin ajuste'}. <button class="linkbtn" data-act="go-height">Cambiar</button></div>`;
   if (G) {
-    const nx = G.idx >= 24 ? 'Has llegado arriba del todo. Ahora, a mantenerlo.' : `Vas al ${Math.min(99, Math.round(G.prog * 100))} % de camino a ${rkName(G.idx + 1)}.`;
+    const nx = G.idx >= 24 ? 'Has llegado arriba del todo. Ahora, a mantenerlo.' : `Vas al ${Math.min(99, Math.round(G.prog * 100))} % de camino a ${rkName(G.idx + 1)}.`;
     h += `<div class="card stack rk-hero">${rkIcon(G.idx, 84)}<div class="small muted">Rango global</div><h2>${rkName(G.idx)}</h2><div style="width:100%">${rkBar(G.prog, G.idx)}</div><div>${nx}</div>${sexTxt}</div>`;
   } else if (n) {
     h += `<div class="card stack rk-hero">${rkIcon(-1, 84)}<h2>Rango global bloqueado</h2><div class="muted">Se desbloquea con ${RK.minEx} ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna.</div><div><b>Llevas ${Math.min(n, RK.minEx)} de ${RK.minEx} ejercicios.</b></div>${R.miss.length ? `<div class="small muted">Te falta: ${rkYes(R.miss)}.</div>` : ''}${sexTxt}</div>`;
@@ -3002,13 +3010,13 @@ function viewRanks(){
 }
 function viewRankHow(){
   const G = rkAll().glob, mine = G ? G.idx : -1;
-  const anc = {3: 'principiante', 6: 'novato', 12: 'intermedio', 16: 'avanzado', 21: 'élite', 24: '1 % superior'};
+  const anc = {3: 'principiante', 6: 'novato', 12: 'intermedio', 16: 'avanzado', 21: 'élite', 24: '1 % superior'};
   const ladder = Array.from({length: 25}, (_, k) => 24 - k).map(i => `<div class="${i === mine ? 'me' : ''}">${rkIcon(i, 24)}<span><b>${rkName(i)}</b>${anc[i] ? ` <small class="rk-anc">${anc[i]}</small>` : ''}${i === mine ? ' <span class="pill accent">Tú</span>' : ''}</span><small class="muted num">desde ${Math.max(1, RK_LO[i])}</small></div>`).join('');
   const C = (t, ...ps) => `<div class="card stack"><h3>${t}</h3>${ps.map(p => `<div>${p}</div>`).join('')}</div>`;
   return C('Qué es un rango', 'Cada ejercicio de fuerza tiene su rango, de Hierro a Simétrico. Hay 9 rangos y, salvo el último, cada uno tiene tres divisiones: empiezas en la I y subes hasta la III antes de pasar al siguiente.')
     + C('Cómo se calcula', 'Estimamos tu repetición máxima con tus series normales (no hace falta hacer un máximo) y la comparamos con lo que levanta una persona de nivel intermedio de tu mismo peso. Eso da tus puntos de rango: 100 puntos es nivel intermedio. Pesar más o menos no da ventaja: el listón sube y baja con tu peso.', 'En dominadas y fondos cuenta tu peso más el lastre. En flexiones, abdominales y planchas cuentan las repeticiones o el tiempo.')
-    + C('Tu altura', 'Si apuntas cuánto mides (Perfil › Tu cuerpo), los ejercicios de pecho, hombros, tríceps y cuádriceps se ajustan a tu complexión: a igual peso, una persona alta y delgada tiene brazos de palanca más largos y menos músculo por centímetro, así que su listón baja un poco; una baja y ancha lo tiene algo más alto. El ajuste es pequeño (como mucho un 7 %) y no se aplica a tirones ni al peso muerto, donde los estudios no dan una ventaja clara. Sin altura, no hay ajuste.')
-    + C('Constancia, no un día suelto', 'Tu rango sale de tus mejores sesiones recientes de cada ejercicio, no de un pico aislado. Un día flojo no te baja. Descansar unas semanas tampoco. Y aunque pierdas forma, nunca caes por debajo del 85 % de tu mejor momento.')
+    + C('Tu altura', 'Si apuntas cuánto mides (Perfil › Tu cuerpo), los ejercicios de pecho, hombros, tríceps y cuádriceps se ajustan a tu complexión: a igual peso, una persona alta y delgada tiene brazos de palanca más largos y menos músculo por centímetro, así que su listón baja un poco; una baja y ancha lo tiene algo más alto. El ajuste es pequeño (como mucho un 7 %) y no se aplica a tirones ni al peso muerto, donde los estudios no dan una ventaja clara. Sin altura, no hay ajuste.')
+    + C('Constancia, no un día suelto', 'Tu rango sale de tus mejores sesiones recientes de cada ejercicio, no de un pico aislado. Un día flojo no te baja. Descansar unas semanas tampoco. Y aunque pierdas forma, nunca caes por debajo del 85 % de tu mejor momento.')
     + C('Músculos, grupos y global', 'El rango de un músculo es la media de sus ejercicios; los que más series haces pesan más. Con los músculos se forman los seis grupos (espalda, pecho, hombros, brazos, piernas y core). El rango global se desbloquea con 8 ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna. Piernas, espalda y pecho son los que más cuentan.')
     + `<div class="card stack"><h3>La escalera</h3><div class="rk-ladder">${ladder}</div></div>`
     + C('De dónde salen los números', 'No usamos datos de otros usuarios. Los listones vienen de tablas públicas de estándares de fuerza por peso corporal, y son orientativos: una máquina de tu gimnasio puede ser más dura o más blanda que otra. Los ejercicios asistidos, el cardio y los que no tienen un estándar fiable no llevan rango.')
@@ -3123,7 +3131,7 @@ function muscleListCard(mc, mp, p){
 function habitsCard(ws){
   const head = '<div class="st-h"><h3>Hábitos</h3><div class="small muted">Cuándo entrenas más, según el periodo elegido.</div></div>';
   if (ws.length < 3) return `<div class="card stack">${head}<div class="chart-empty">Con unos cuantos entrenos más verás tus días y horas favoritos.</div></div>`;
-  const dow = new Array(7).fill(0), BANDS = [['Madrugada', '0–6 h'], ['Mañana', '6–12 h'], ['Mediodía', '12–16 h'], ['Tarde', '16–20 h'], ['Noche', '20–24 h']], band = new Array(5).fill(0);
+  const dow = new Array(7).fill(0), BANDS = [['Madrugada', '0–6 h'], ['Mañana', '6–12 h'], ['Mediodía', '12–16 h'], ['Tarde', '16–20 h'], ['Noche', '20–24 h']], band = new Array(5).fill(0);
   let timed = 0;
   for (const w of ws) {
     const d = new Date(w.start); dow[(d.getDay() + 6) % 7]++;
@@ -3164,7 +3172,7 @@ function viewStats(){
     }
     const M = UI.stMetric;
     const items = buckets.map(b => { const ws = inRange(b.s, b.e), g = agg(ws); return {label: b.label, partial: b.e > now, v: M === 'vol' ? g.vol : M === 'dur' ? g.ms / 36e5 : M === 'sets' ? g.sets : g.n}; });
-    const fmt = M === 'vol' ? (v, ax) => ax ? (v ? fmtN(v / 1000, 1) + 't' : '0') : fmtKg(v) : M === 'dur' ? (v, ax) => fmtN(v, 1) + (ax ? '' : ' h') : v => fmtN(v, 0);
+    const fmt = M === 'vol' ? (v, ax) => ax ? axT(v) : fmtKg(v) : M === 'dur' ? (v, ax) => fmtN(v, 1) + (ax ? '' : ' h') : v => fmtN(v, 0);
     const full = items.filter(i => !i.partial), lastPart = items.length > 0 && items[items.length - 1].partial, avg = full.length ? full.reduce((s, i) => s + i.v, 0) / full.length : 0;
     h += `<div class="card stack"><div class="st-h"><h3>Evolución ${byMonth ? 'mensual' : 'semanal'}</h3><div class="small muted">Cuánto has entrenado en cada ${byMonth ? 'mes' : 'semana'}. Elige la medida.</div></div><div class="seg sm">${[['vol', 'Volumen'], ['dur', 'Horas'], ['sets', 'Series'], ['n', 'Entrenos']].map(([k, l]) => `<button data-act="st-metric" data-k="${k}" aria-pressed="${M === k}">${l}</button>`).join('')}</div>${barChart(items, fmt)}<div class="small muted">${full.length ? `Media: <b>${fmt(avg)}</b> por ${byMonth ? 'mes' : 'semana'}${lastPart ? ' completo' : ''}.` : ''}${lastPart ? ` La barra rayada es ${byMonth ? 'el mes' : 'la semana'} en curso: aún no ha terminado.` : ''}</div></div>`;
     // constancia
@@ -3226,7 +3234,7 @@ function viewMonth(ym){
   if (!cur.length) return h + `<div class="empty">${EI('🗓️')}<h3>Mes sin entrenos</h3><div>No hay entrenos en ${MONTHS[m]} de ${y}.</div><button class="btn primary" data-act="tab" data-tab="train">Empezar un entreno</button></div>`;
   h += `<div class="card stack"><div class="stats4">${tile(a.n, 'Entrenos', delta(a.n, p && p.n))}${tile(fmtDurC(a.ms), 'Tiempo', delta(a.ms, p && p.ms))}${tile(fmtKg(a.vol), 'Volumen', delta(a.vol, p && p.vol))}${tile(a.sets, 'Series', delta(a.sets, p && p.sets))}</div><div class="small muted">${monthStory(cur, a, p, ym, nowYm, cur.flatMap(w => w.prs || []))}</div></div>`;
   const months = [...Array(6)].map((_, i) => { const k = ym - 5 + i, ss = new Date(Math.floor(k / 12), k % 12, 1).getTime(), ee = new Date(Math.floor(k / 12), k % 12 + 1, 1).getTime(); return {label: MON3[k % 12], partial: ee > Date.now(), v: agg(inRange(ss, ee)).vol}; });
-  h += `<div class="card stack"><h3>Volumen de los últimos 6 meses</h3>${barChart(months, (v, ax) => ax ? (v ? fmtN(v / 1000, 1) + 't' : '0') : fmtKg(v), null, 1, 'Volumen de los últimos 6 meses')}</div>`;
+  h += `<div class="card stack"><h3>Volumen de los últimos 6 meses</h3>${barChart(months, (v, ax) => ax ? axT(v) : fmtKg(v), null, 1, 'Volumen de los últimos 6 meses')}</div>`;
   const prs = []; cur.forEach(w => (w.prs || []).forEach(pr => prs.push({...pr, w})));
   const best = {}; prs.forEach(pr => { const k = pr.exId + pr.kind; if (!best[k] || pr.val > best[k].val) best[k] = pr; });
   const prl = Object.values(best).sort((x, y2) => y2.w.start - x.w.start);
@@ -6341,6 +6349,7 @@ function isoWeek(t){
 /* Meses y años de la liga. Convención: cada semana (de lunes a domingo) cuenta entera en el mes en que cae su LUNES
    (la del 29 dic – 4 ene es de diciembre). El mes suma sus semanas y el año suma sus meses. El «mes actual» es el de la
    semana en curso, así lo que entrenas hoy siempre suma en el mes y el año que estás viendo. */
+const axT = v => v ? fmtN(v / 1000, 1) + ' t' : '0'; // etiqueta del eje de volumen en toneladas, con espacio duro
 const ymOf = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 // Lunes (00:00 hora local) de una semana ISO '2026-W46'
@@ -6572,14 +6581,14 @@ function clanIntroHTML(buttons){
     <div class="cl-ways">
       <div><i>🔥</i><span><b>Constancia</b>10 puntos por cada día que entrenas, hasta 5 días.</span></div>
       <div><i>✨</i><span><b>Chiquipuntos</b>3 puntos por cada marca personal que bates.</span></div>
-      <div><i>📈</i><span><b>Mejora</b>Te comparas contigo mismo: subir un 5 % vale lo mismo empieces con 40 kg o con 140.</span></div>
+      <div><i>📈</i><span><b>Mejora</b>Te comparas contigo mismo: subir un 5&nbsp;% vale lo mismo empieces con 40 kg o con 140.</span></div>
     </div>${buttons ? `<div class="grid2"><button class="btn primary" data-act="cl-new">Crear clan</button><button class="btn" data-act="soc-invite">Invitar amigos</button></div>` : ''}</div>`;
 }
 function clanHowHTML(){
   return `<details class="card cl-how"><summary><h3>Cómo se puntúa</h3>${ICON.down}</summary><div class="stack small">
     <p><b>🔥 Constancia.</b> 10 puntos por cada día que entrenas, hasta 5 días (50 puntos). Cuenta el entreno si tiene al menos 3 series.</p>
     <p><b>✨ Chiquipuntos.</b> 3 puntos por cada ejercicio en el que bates una marca personal, hasta 30 puntos a la semana.</p>
-    <p><b>📈 Mejora.</b> Tu mejor marca de la semana en cada ejercicio (1RM estimado, repeticiones o tiempo) frente a tu mejor marca de las 8 semanas anteriores. Cada 1 % de mejora son 2 puntos; como mucho un 10 % por ejercicio y 40 puntos a la semana. Solo cuentan ejercicios que hayas hecho al menos 2 veces en esas 8 semanas, así que bajar peso a propósito no sirve de nada.</p>
+    <p><b>📈 Mejora.</b> Tu mejor marca de la semana en cada ejercicio (1RM estimado, repeticiones o tiempo) frente a tu mejor marca de las 8 semanas anteriores. Cada 1 % de mejora son 2 puntos; como mucho un 10 % por ejercicio y 40 puntos a la semana. Solo cuentan ejercicios que hayas hecho al menos 2 veces en esas 8 semanas, así que bajar peso a propósito no sirve de nada.</p>
     <p><b>💪 Fuerza relativa (si quieres).</b> Tu 1RM estimado de las últimas 12 semanas dividido entre tu peso. Solo se publica el resultado (por ejemplo 1,35×), nunca tu peso.</p>
     <p><b>📅 Semana, mes y año.</b> Cada semana cuenta entera en el mes en que cae su lunes (la del 29 de diciembre al 4 de enero es de diciembre). El mes suma sus semanas y el año suma sus meses, así que el mes que ves es el de la semana en curso.</p>
     <p><b>🛡️ Clan contra clan.</b> Media de puntos por miembro activo (quien ha entrenado en las últimas 4 semanas o en el periodo): un clan de 3 compite igual que uno de 20.</p>
@@ -6635,7 +6644,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
   return rows.map(r => {
     const x = pv.get(r.uid), has = r.v != null, st = effStreak(r.s);
     if (has) pos++;
-    let sub = kind === 'pts' ? `${plural(x.days, 'día', 'días')}, ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}, +${fmtN(x.impr)} % de mejora`
+    let sub = kind === 'pts' ? `${plural(x.days, 'día', 'días')}, ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}, +${fmtN(x.impr)} % de mejora`
       : kind === 'mip' ? `${plural(x.n, 'entreno', 'entrenos')} y ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}`
       : kind === 'rel' ? relSub(r)
       : st ? `Racha de ${plural(st, 'semana seguida', 'semanas seguidas')}` : 'Sin racha ahora mismo';
@@ -6654,7 +6663,7 @@ function clanAwardsHTML(c){
   if (!fuerte) { let b = null; ms.forEach(m => { const v = fzTotal(m.s.rel); if (v > 0 && (!b || v > b.v)) b = {m, v}; }); fuerte = b; }
   const A4 = [
     ['mvp', '🏆', 'MVP', best(w => clanPts(w) + clamp(w.days, 0, 7) / 100 + clamp(w.n, 0, 99) / 1e4), v => `${Math.floor(v)} pts`],
-    ['mip', '📈', 'Más mejorado', best(w => clamp(w.impr, 0, CL.maxImpr)), v => `+${fmtN(v)} %`],
+    ['mip', '📈', 'Más mejorado', best(w => clamp(w.impr, 0, CL.maxImpr)), v => `+${fmtN(v)} %`],
     ['fuerte', '💪', 'Más fuerte', fuerte, v => `Nivel ${fmtN(v, 0)}`],
     ['const', '🔥', 'Más constante', best((w, m) => clamp(w.days, 0, 7) + clamp(m.s.streak, 0, 520) / 1000), v => plural(Math.floor(v), 'día', 'días')]
   ];
@@ -7150,7 +7159,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.0';
+const APP_VERSION = '4.13.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
