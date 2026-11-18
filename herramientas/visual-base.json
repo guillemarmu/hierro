@@ -1,0 +1,12 @@
+{
+  "actualizado": "2026-11-18",
+  "metricas": {
+    "V02 texto cortado sin «…»": 0,
+    "V03 objetivos táctiles de menos de 40 px": 0,
+    "V04 textos con poco contraste": 23,
+    "V05 botones o campos sin nombre accesible": 0,
+    "V06 elementos tocables que se solapan": 0,
+    "V08 imágenes sin alt": 0
+  },
+  "forzados": []
+}
