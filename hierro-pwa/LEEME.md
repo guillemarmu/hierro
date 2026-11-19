@@ -67,7 +67,7 @@ Con esas reglas, los datos privados (entrenos, rutinas, medidas) solo los ve su 
 
 - **Instalar:** iPhone → Safari → Compartir → **Añadir a pantalla de inicio**. Android → Chrome → **Instalar app**.
 - **Cada persona** abre el enlace, pulsa **Crear cuenta** (nombre, email y contraseña) y empieza con su app vacía.
-- **Tus datos de antes:** si en el móvil había entrenos guardados sin cuenta, al entrar la app te pregunta si los añade a tu cuenta. También puedes usar **Restaurar copia** o **Importar CSV de Hevy**.
+- **Tus datos de antes:** si en el móvil había entrenos guardados sin cuenta, al entrar la app te pregunta si los añade a tu cuenta. También puedes usar **Restaurar copia** o **Importar entrenos (CSV)**.
 - **Sin cobertura en el gimnasio:** se guarda en el móvil y se sube solo al volver la conexión (arriba verás "Sincronizado" o "Pendiente de subir").
 - **Cuenta:** en Perfil puedes cambiar nombre y contraseña, cerrar sesión o eliminar la cuenta con todos sus datos.
 - **Social:** en la pestaña Social cada uno elige su @usuario. Busca a tus amigos, síguelos y verás sus entrenos en el feed; puedes dar me gusta, comentar, copiar su entreno o guardarlo como rutina y compararte con ellos. Al terminar un entreno eliges si se publica. Con perfil privado no se publica nada.
