@@ -18,7 +18,7 @@ Plan para publicar Hierro en las tiendas sin dejar de ser una web: la app de las
 
 - **Borrado completo de la cuenta**: hecho en la versión 4.13.2. «Eliminar mi cuenta y mis datos» borra también los comentarios en publicaciones ajenas, los mensajes de los muros, los «me gusta», los avisos enviados, los `diag-*`, las solicitudes (`freqs`) y los bloqueos (`blocks`). Necesita las reglas nuevas de Firestore y los índices de abajo (ya publicados); si faltaran, la app avisa y ofrece «Borrar igualmente». `soporte.html#borrar-cuenta` ya lo dice.
 - **Privacidad y condiciones**: quitar la nota «borrador pendiente de revisión» cuando estén revisadas.
-- **Capturas** y **cuenta de prueba** para los revisores (ver `ficha.md`). Para llenar la cuenta de prueba: `revisores-hevy.csv` (8 semanas inventadas, 24 entrenos; está en el proyecto «HIERRO» de Claude) se importa en Perfil › Tus datos › «Importar CSV de Hevy».
+- **Capturas** y **cuenta de prueba** para los revisores (ver `ficha.md`). Para llenar la cuenta de prueba: `revisores-hevy.csv` (8 semanas inventadas, 24 entrenos; está en el proyecto «HIERRO» de Claude) se importa en Perfil › Tus datos › «Importar entrenos (CSV)».
 
 ### Índices de Firestore para el borrado completo (ya creados)
 - Grupo de colección, de un campo (Firestore › Índices › De un solo campo › Agregar exención, con «Grupo de colecciones» activado, ascendente): `comments.uid`, `msgs.uid` e `items.from`.
