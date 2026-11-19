@@ -3620,7 +3620,11 @@ function ask(title, text, buttons){
 }
 let toastT = null;
 let toastFn = null;
-function toast(msg, action){ const t = $('#toast'); t.textContent = msg; toastFn = null; if (action) { toastFn = action.fn; const b = document.createElement('button'); b.dataset.act = 'toast-act'; b.textContent = action.label; t.appendChild(b); } t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove('show'); toastFn = null; }, action ? 4500 : 2600); }
+function toast(msg, action, ms){ // ms: duración (por defecto 2,6 s; 4,5 s con botón)
+  const t = $('#toast'); t.textContent = msg; toastFn = null;
+  if (action) { toastFn = action.fn; const b = document.createElement('button'); b.dataset.act = 'toast-act'; b.textContent = action.label; t.appendChild(b); }
+  t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove('show'); toastFn = null; }, ms || (action ? 4500 : 2600));
+}
 
 /* ---------- Selector de ejercicios ---------- */
 let PICK = null; // {mode:'add'|'replace', ei, sel:[], q, m}
@@ -5701,7 +5705,9 @@ const A = {
   async 'add-weight'(){
     if (!(await healthOk())) return;
     const lw = lastWeight();
-    modal('Tu peso', `${msDateHTML()}<label class="f">Peso (kg)<input inputmode="decimal" id="ms-weight" placeholder="${lw ? fmtN(lw.weight) : 'Ej.: 75'}"></label>`, `<button class="btn primary" data-act="ms-save">Guardar</button>`);
+    const hint = '<div class="small muted">Los rangos usan el peso que tenías al hacer cada entreno.</div>';
+    modal('Tu peso', `${msDateHTML()}<label class="f">Peso (kg)<input inputmode="decimal" id="ms-weight" placeholder="${lw ? fmtN(lw.weight) : 'Ej.: 75'}"></label>${hint}`,
+      `<button class="btn primary" data-act="ms-save">Guardar</button>`);
     setTimeout(() => { const i = $('#ms-weight'); if (i) i.focus(); }, 300);
   },
   'ms-save'(){
@@ -5709,7 +5715,11 @@ const A = {
     ['weight', 'fat', 'waist', 'chest', 'arm', 'thigh'].forEach(k => { const i = $('#ms-' + k), v = i ? num(i.value) : null; if (v != null) { m[k] = v; any = true; } });
     if (!any) { toast('Escribe al menos un valor'); return; }
     if (m.weight != null && !okW(m)) { toast('Pon tu peso en kg (30-300)'); return; }
+    // rkAll puntúa cada entreno con el último peso anterior (o, si no hay, con el primero): ¿cambia el de algún entreno ya hecho?
+    const was = bwPicker(S.measures), now = bwPicker([...S.measures, m]), redo = m.weight != null && S.workouts.some(w => was(w.start) !== now(w.start));
     S.measures.push(m); Store.mark('meta'); closeModal(); render();
+    if (m.weight != null && S.workouts.length)
+      toast(redo ? 'Peso guardado. Rangos recalculados con este peso' : 'Peso guardado. Contará en los rangos desde tu próximo entreno', null, 5000);
   },
   'del-measure'(el){ // data-k: «weight» borra solo el peso del registro; «other» solo las otras medidas; sin él, el registro entero
     const k = el.dataset.k, keys = k === 'weight' ? ['weight'] : k === 'other' ? MF_OTHER.map(f => f[0]) : null;
@@ -6302,12 +6312,16 @@ function rkSust(win){ // win: puntos de las últimas ≤6 sesiones, de la más r
   let s = 0, w = 0; for (const o of a) { s += o.n * o.w; w += o.w; } return w ? s / w : 0;
 }
 function rkReset(){ rkAll.c = null; }
+// peso que usan los rangos para un entreno que empieza en t: el último válido anterior y, si no hay, el primero (null sin pesos)
+function bwPicker(list){
+  const ms = list.filter(okW).sort((a, b) => a.date - b.date);
+  return t => { if (!ms.length) return null; let lo = 0, hi = ms.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (ms[mid].date < t) lo = mid + 1; else hi = mid; } return ms[lo ? lo - 1 : 0].weight; };
+}
 function rkAll(){
   if (rkAll.c) return rkAll.c;
   const sex = S.settings.sex === 'f' ? 'f' : 'm';
   // pesos válidos por fecha (mismo criterio que bodyweightNear: 30-300 kg; el último anterior y, si no hay, el primero posterior)
-  const ms = S.measures.filter(okW).sort((a, b) => a.date - b.date);
-  const bwAt = t => { if (!ms.length) return null; let lo = 0, hi = ms.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (ms[mid].date < t) lo = mid + 1; else hi = mid; } return ms[lo ? lo - 1 : 0].weight; };
+  const bwAt = bwPicker(S.measures);
   const info = new Map(), ex = new Map(), none = new Map(); // none: exId → 'std' | 'bw'
   for (let i = S.workouts.length - 1; i >= 0; i--) {          // S.workouts va de más nuevo a más viejo: se recorre al revés
     const w = S.workouts[i], bw = bwAt(w.start), per = new Map();
@@ -7222,7 +7236,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.2';
+const APP_VERSION = '4.13.3';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
