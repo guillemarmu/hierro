@@ -1072,7 +1072,7 @@ html.rest-up #view{padding-bottom:104px}
 .gc-row{display:flex;flex-direction:column;gap:7px;width:100%;text-align:left;min-height:44px;justify-content:center}
 .gc-row b{font-size:15px}.gc-row small{font-size:13.5px;flex:none}
 .gc-rk{display:flex;align-items:center;gap:10px}.gc-t{flex:1;min-width:0}.gc-t b{display:block}
-/* 4.10.3 · Foto doble (estilo BeReal) */
+/* 4.10.3 · Foto doble */
 .dcam{position:fixed;inset:0;z-index:45;background:#000;color:#fff;display:flex;flex-direction:column;padding:calc(8px + var(--sat,0px)) 0 calc(12px + var(--sab,0px));touch-action:none;-webkit-user-select:none;user-select:none}
 .dcam-top{display:flex;align-items:center;gap:10px;padding:4px 14px 10px}
 .dcam-top b{font-size:17px;letter-spacing:-.01em}
@@ -1297,7 +1297,7 @@ function platesFor(kg){
 }
 
 /* =========================================================
-   Biblioteca de ejercicios  (nombre | músculo | material | tipo | nombres en Hevy)
+   Biblioteca de ejercicios  (nombre | músculo | material | tipo | otros nombres)
    tipo: wr = peso×reps · bw = peso corporal (+kg opcional) · dur = tiempo · cardio = km + min
    ========================================================= */
 const MUSCLES = {pecho:'Pecho',espalda:'Espalda',hombros:'Hombros',biceps:'Bíceps',triceps:'Tríceps',antebrazo:'Antebrazo',cuadriceps:'Cuádriceps',isquios:'Isquios',gluteos:'Glúteos',gemelos:'Gemelos',abdominales:'Abdominales',lumbares:'Lumbares',trapecio:'Trapecio',aductores:'Aductores',abductores:'Abductores',cardio:'Cardio',completo:'Cuerpo completo'};
@@ -1425,9 +1425,9 @@ const LIB = LIB_SRC.trim().split('\n').map(l => {
    Estado + guardado en este dispositivo (IndexedDB, con localStorage de reserva)
    ========================================================= */
 const S = {workouts: [], routines: [], customEx: [], measures: [], settings: {rest: 90, sound: true}, active: null};
-// Nombres de Hevy en castellano → su nombre en inglés (que ya está como alias en el catálogo). Así la importación
-// de Hevy en castellano usa los ejercicios de Hierro en lugar de crear uno propio por cada ejercicio.
-const HEVY_ES = `Press de Banca (Barra)|Bench Press (Barbell);Press de Banca (Mancuerna)|Bench Press (Dumbbell);Press de Banca Inclinado (Barra)|Incline Bench Press (Barbell)
+// Nombres en castellano de los CSV importados → su nombre en inglés (que ya está como alias en el catálogo). Así la importación
+// en castellano usa los ejercicios de Hierro en lugar de crear uno propio por cada ejercicio.
+const ES_NAMES = `Press de Banca (Barra)|Bench Press (Barbell);Press de Banca (Mancuerna)|Bench Press (Dumbbell);Press de Banca Inclinado (Barra)|Incline Bench Press (Barbell)
 Press de Banca Inclinado (Mancuerna)|Incline Bench Press (Dumbbell);Press de Banca en Declive (Barra)|Decline Bench Press (Barbell);Press de Banca Declinado (Barra)|Decline Bench Press (Barbell)
 Press de Banca (Máquina Smith)|Bench Press (Smith Machine);Press de Banca Inclinado (Máquina Smith)|Incline Bench Press (Smith Machine);Press de Pecho (Máquina)|Chest Press (Machine)
 Press de Pecho Inclinado (Máquina)|Incline Chest Press (Machine);Aperturas (Mancuerna)|Chest Fly (Dumbbell);Aperturas (Máquina)|Chest Fly (Machine);Mariposa (Pec Deck)|Butterfly (Pec Deck)
@@ -1459,8 +1459,8 @@ Abducción de Cadera (Máquina)|Hip Abduction (Machine);Aducción de Cadera (Má
 Elevación de Gemelos Sentado|Seated Calf Raise;Elevación de Gemelos Sentado (Máquina)|Seated Calf Raise;Prensa de Gemelos (Máquina)|Calf Press (Machine);Abdominal Corto|Crunch;Abdominal Corto con Cable|Cable Crunch;Abdominal Corto (Máquina)|Crunch (Machine)
 Elevación de Piernas Colgado|Hanging Leg Raise;Elevación de Piernas Tumbado|Lying Leg Raise;Plancha|Plank;Plancha Lateral|Side Plank;Rueda Abdominal|Ab Wheel;Giro Ruso|Russian Twist;Giros Rusos|Russian Twist
 Swing con Kettlebell|Kettlebell Swing;Cinta de Correr|Treadmill;Correr|Running;Ciclismo|Cycling;Bicicleta Estática|Stationary Bike;Elíptica|Elliptical Trainer;Máquina de Remo|Rowing Machine;Máquina Escaladora|Stair Machine;Caminar|Walking;Saltar a la Comba|Jump Rope`;
-const HEVY_ES_MAP = new Map(HEVY_ES.split(/[;\n]/).map(x => x.split('|')).filter(x => x.length === 2).map(([es, en]) => [norm(es), norm(en)]));
-// Equipo deducido del nombre (lo que va entre paréntesis en Hevy)
+const ES_NAMES_MAP = new Map(ES_NAMES.split(/[;\n]/).map(x => x.split('|')).filter(x => x.length === 2).map(([es, en]) => [norm(es), norm(en)]));
+// Equipo deducido del nombre (lo que va entre paréntesis en el nombre importado)
 function guessEquip(name){
   const n = norm(name);
   for (const [re, k] of [[/smith/, 'smith'], [/kettlebell|pesa rusa/, 'kettlebell'], [/mancuerna|dumbbell/, 'mancuernas'], [/barra|barbell|trap bar/, 'barra'], [/cable|polea/, 'polea'], [/maquina|machine|pec deck/, 'maquina'], [/banda|band/, 'banda'], [/asistid|assisted|peso corporal|bodyweight/, 'corporal']]) if (re.test(n)) return k;
@@ -1594,7 +1594,7 @@ function photoId(x){
   if (!x) return null;
   if (photoCache.has(x.id)) return photoCache.get(x.id);
   let id = PHOTO.get(norm(x.name)) || null;
-  if (!id) { /* ejercicio propio o importado de Hevy: busca el más parecido de la biblioteca */
+  if (!id) { /* ejercicio propio o importado: busca el más parecido de la biblioteca */
     const a = photoTokens(x.name); let best = 0;
     if (a.size) PHOTO.forEach((pid, n) => { const b = photoTokens(n); let k = 0; b.forEach(t => { if (a.has(t)) k++; }); const j = k / (a.size + b.size - k); if (j > best && j >= .5) { best = j; id = pid; } });
   }
@@ -2110,7 +2110,7 @@ setInterval(() => { if (document.visibilityState === 'visible') Sync.schedule(10
 const isWork = s => s.t !== 'w';
 function setVol(s){ return (s.kg || 0) * (s.reps || 0); }
 function e1rm(s){ if (!s.kg || !s.reps) return 0; return s.reps === 1 ? s.kg : s.kg * (1 + s.reps / 30); }
-function wVolume(w){ let v = 0; w.exercises.forEach(e => e.sets.forEach(s => { v += setVol(s); })); return v; } // 4.11.1: el calentamiento también suma volumen (como en Hevy); récords y rangos siguen sin contarlo
+function wVolume(w){ let v = 0; w.exercises.forEach(e => e.sets.forEach(s => { v += setVol(s); })); return v; } // 4.11.1: el calentamiento también suma volumen (como en otras apps); récords y rangos siguen sin contarlo
 function wSets(w){ let n = 0; w.exercises.forEach(e => n += e.sets.length); return n; }
 function hasData(s, type){
   if (type === 'dur') return s.sec > 0;
@@ -2185,7 +2185,7 @@ function setText(s, type){
   if (s.kg == null && s.reps == null) return '';
   return `${fmtN(s.kg || 0)} kg × ${s.reps ?? ''}`;
 }
-/* Copiar el entreno como texto, como «Compartir › Copiar texto» de Hevy (desde 4.5.7). o = {title, start, notes, ex: [{name, type, notes, ss, sets}]}.
+/* Copiar el entreno como texto para compartir (desde 4.5.7). o = {title, start, notes, ex: [{name, type, notes, ss, sets}]}.
    Formato: título, fecha, notas y, por ejercicio, «Serie 1: 80 kg x 8», con [Fallo]/[Drop set] y «Calentamiento: …» (no numeradas). */
 function setLine(s, type){
   if (!s) return '';
@@ -2780,7 +2780,7 @@ function viewHome(){
   if (pc) h += pc;
   else if (nx && !S.active) h += tocaCard('Te toca hoy', nx);
   if (!S.workouts.length) {
-    h += `<div class="empty">${EI('💪')}<h3>${Cloud.session && Cloud.session.name ? 'Hola, ' + esc(Cloud.session.name.split(' ')[0]) : 'Bienvenido a Hierro'}</h3><div>Empieza un entreno, trae tu historial de Hevy o recupera una copia de Hierro.</div><div class="stack" style="width:100%;max-width:320px"><button class="btn primary" data-act="tab" data-tab="train">Empezar a entrenar</button><button class="btn" data-act="import-csv">Importar de Hevy (CSV)</button><button class="btn" data-act="restore-json">Restaurar copia de Hierro</button></div></div>`;
+    h += `<div class="empty">${EI('💪')}<h3>${Cloud.session && Cloud.session.name ? 'Hola, ' + esc(Cloud.session.name.split(' ')[0]) : 'Bienvenido a Hierro'}</h3><div>Empieza un entreno, importa tu historial desde un CSV o recupera una copia de Hierro.</div><div class="stack" style="width:100%;max-width:320px"><button class="btn primary" data-act="tab" data-tab="train">Empezar a entrenar</button><button class="btn" data-act="import-csv">Importar entrenos (CSV)</button><button class="btn" data-act="restore-json">Restaurar copia de Hierro</button></div></div>`;
     return warn + h;
   }
   h += bodyNagCard() + goalCard(thisWeek) + warn;
@@ -2843,7 +2843,7 @@ function viewTrain(){
   { const pp = plan(), t = planToday(); h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>${pp ? `${pp.days.filter(id => id && S.routines.some(r => r.id === id)).length} días a la semana · ${t && t.r ? 'hoy: ' + esc(t.r.name) : 'hoy descansas'}` : 'Organiza tu semana y analiza tus rutinas'}</small></div><i>›</i></button></div>`; }
   h += `<div class="section-h"><h2>Rutinas</h2><button class="btn ghost" data-act="new-routine">${ICON.plus.replace('<svg', '<svg width="16" height="16"')} Nueva rutina</button></div>`;
   if (!S.routines.length) {
-    h += `<div class="card empty">${EI('📋')}<h3>Sin rutinas todavía</h3><div>Crea tus días (por ejemplo Torso A, Pierna A…) o impórtalos desde tu historial de Hevy. Aquí no hay límite de rutinas.</div><div class="row"><button class="btn primary" data-act="new-routine">Crear rutina</button><button class="btn" data-act="import-csv">Importar de Hevy</button></div></div>`;
+    h += `<div class="card empty">${EI('📋')}<h3>Sin rutinas todavía</h3><div>Crea tus días (por ejemplo Torso A, Pierna A…) o impórtalos desde tu historial en CSV. Aquí no hay límite de rutinas.</div><div class="row"><button class="btn primary" data-act="new-routine">Crear rutina</button><button class="btn" data-act="import-csv">Importar CSV</button></div></div>`;
     return h;
   }
   h += S.routines.map((r, i) => { const isN = nx && nx.id === r.id, ms = Object.entries(routineSets(r)).sort((a, b) => b[1] - a[1]), ns = ms.reduce((a, x) => a + x[1], 0);
@@ -2862,7 +2862,7 @@ function exFilter(q, m){
   return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle))) && (!nq || norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')).includes(nq)));
 }
 function exItem(e, count, sel){
-  return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)}, ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? (e.src === 'hevy' ? ', de Hevy' : ', propio') : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
+  return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)}, ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? (e.src === 'hevy' ? ', importado' : ', propio') : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
 }
 function exChips(sel, act){
   const used = new Set(allEx().map(e => e.muscle)), M = Object.entries(MUSCLES).filter(([k]) => used.has(k));
@@ -3123,7 +3123,7 @@ function viewMe(){
     ${window.Native ? '' : `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setNotif" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}`}${healthHTML()}</div>`;
   h += `<div class="card stack"><h3>Tus datos</h3>
     <div class="small muted">${Cloud.session ? 'Se guardan en tu cuenta y en este móvil, así que funciona sin conexión y se sube solo cuando vuelve la cobertura. Solo tú puedes verlos.' : 'Se guardan solo en este móvil. Descarga una copia de vez en cuando y siempre antes de cambiar de móvil.'}</div>
-    <button class="btn primary" data-act="import-csv">Importar CSV de Hevy</button>
+    <button class="btn primary" data-act="import-csv">Importar entrenos (CSV)</button>
     <div class="grid2"><button class="btn" data-act="export-json">Descargar copia</button><button class="btn" data-act="export-csv">Exportar CSV</button></div>
     <button class="btn" data-act="restore-json">Restaurar copia (.json)</button>
     ${!Cloud.session ? `<div class="small ${backupStale() ? 'pr' : 'muted'}">${S.settings.lastBackup ? 'Última copia: ' + fmtDate(S.settings.lastBackup, false) : 'Todavía no has descargado ninguna copia.'}</div>` : ''}
@@ -3657,7 +3657,7 @@ function customExForm(x, fromPicker){
     `<button class="btn primary" data-act="cx-save" data-id="${x ? x.id : ''}" data-picker="${fromPicker ? 1 : ''}">Guardar</button>`);
 }
 
-/* ---------- Importar CSV de Hevy ---------- */
+/* ---------- Importar CSV ---------- */
 function parseCSV(text){
   const firstLine = text.slice(0, text.indexOf('\n') > -1 ? text.indexOf('\n') : text.length);
   const D = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
@@ -3674,7 +3674,7 @@ function parseCSV(text){
   return rows.filter(r => r.some(x => x !== ''));
 }
 const MONMAP = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,ene:0,abr:3,ago:7,dic:11,set:8};
-function parseHevyDate(s){
+function parseCSVDate(s){
   s = String(s || '').trim(); if (!s) return null;
   // formato de 12 horas («6:30 PM», «6:30 p. m.»): se pasa a 24 h antes de leer la fecha
   const ap = s.match(/(\d{1,2})(:\d{2}(?::\d{2})?)\s*([ap])\.?\s*m\.?\s*$/i);
@@ -3687,7 +3687,7 @@ function parseHevyDate(s){
   if (m) return new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]).getTime();
   const t = Date.parse(s); return isNaN(t) ? null : t;
 }
-// Duración razonable: si en Hevy se quedó el entreno abierto (horas) o se cerró al momento (1 min), se estima por las series
+// Duración razonable: si en la app de origen se quedó el entreno abierto (horas) o se cerró al momento (1 min), se estima por las series
 function estDuration(w){ const n = w.exercises.reduce((a, e) => a + e.sets.length, 0); return Math.min(150, Math.max(20, Math.round(n * 3))) * 60000; }
 function fixDuration(w){
   const d = w.end - w.start, n = w.exercises.reduce((a, e) => a + e.sets.length, 0);
@@ -3714,7 +3714,7 @@ function guessMuscle(name){
   for (const [re, k] of R) if (re.test(n)) return k;
   return 'completo';
 }
-// Ejercicios propios creados al importar de Hevy en castellano antes de la 4.5.2: se vuelve a calcular su músculo una vez
+// Ejercicios propios creados al importar un CSV en castellano antes de la 4.5.2: se vuelve a calcular su músculo una vez
 function fixImportedMuscles(){
   const mig = S.settings.mig || {}; if (mig.mus) return 0;
   let n = 0;
@@ -3723,12 +3723,12 @@ function fixImportedMuscles(){
   }
   S.settings.mig = {...mig, mus: 1}; if (n) rebuildEx(); Store.mark('meta'); return n;
 }
-// Ejercicios propios que en realidad son del catálogo (importados de Hevy en castellano antes de la 4.5.3): se cambian por el
-// del catálogo en entrenos, rutinas y entreno en curso, y se borra el propio. Los que no tienen equivalente se marcan «De Hevy».
+// Ejercicios propios que en realidad son del catálogo (importados de un CSV en castellano antes de la 4.5.3): se cambian por el
+// del catálogo en entrenos, rutinas y entreno en curso, y se borra el propio. Los que no tienen equivalente se marcan como importados.
 function mergeImportedEx(){
   const mig = S.settings.mig || {}; if (mig.hevy) return 0;
   const idx = new Map(); LIB.forEach(e => { idx.set(norm(e.name), e.id); e.aliases.forEach(a => idx.set(norm(a), e.id)); });
-  for (const [es, en] of HEVY_ES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
+  for (const [es, en] of ES_NAMES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
   const map = new Map();
   for (const c of S.customEx) {
     if (c.equip !== 'otro' || (c.aliases || []).length) continue; // los creados a mano (con equipo elegido) no se tocan
@@ -3745,16 +3745,16 @@ function mergeImportedEx(){
 }
 function exIndex(){
   const idx = new Map(); allEx().forEach(e => { idx.set(norm(e.name), e.id); e.aliases.forEach(a => idx.set(norm(a), e.id)); });
-  for (const [es, en] of HEVY_ES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
+  for (const [es, en] of ES_NAMES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
   return idx;
 }
-function importHevyCSV(text){
+function importWorkoutsCSV(text){
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('El archivo está vacío.');
   const H = rows[0].map(h => norm(h).replace(/ /g, '_'));
   const col = name => H.indexOf(name);
   const need = ['title', 'start_time', 'exercise_title'];
-  if (need.some(n => col(n) < 0)) throw new Error('Este CSV no parece una exportación de Hevy (faltan columnas title, start_time o exercise_title).');
+  if (need.some(n => col(n) < 0)) throw new Error('Este CSV no tiene el formato esperado (faltan las columnas title, start_time o exercise_title).');
   const lbs = col('weight_kg') < 0 && col('weight_lbs') >= 0;
   const cW = lbs ? col('weight_lbs') : col('weight_kg'), cMi = col('distance_miles'), cKm = col('distance_km');
   const get = (r, n) => { const i = typeof n === 'number' ? n : col(n); return i >= 0 ? (r[i] ?? '') : ''; };
@@ -3762,9 +3762,9 @@ function importHevyCSV(text){
   const created = [];
   const groups = new Map();
   for (const r of rows.slice(1)) {
-    const start = parseHevyDate(get(r, 'start_time')); if (!start) continue;
+    const start = parseCSVDate(get(r, 'start_time')); if (!start) continue;
     const key = get(r, 'title') + '|' + start;
-    if (!groups.has(key)) groups.set(key, {title: get(r, 'title'), start, end: parseHevyDate(get(r, 'end_time')) || start + 3600e3, notes: get(r, 'description'), rows: []});
+    if (!groups.has(key)) groups.set(key, {title: get(r, 'title'), start, end: parseCSVDate(get(r, 'end_time')) || start + 3600e3, notes: get(r, 'description'), rows: []});
     groups.get(key).rows.push(r);
   }
   const existing = new Set(S.workouts.map(w => Math.round(w.start / 60000)));
@@ -3818,7 +3818,7 @@ function offerRoutinesFromHistory(){
     `<button class="btn" data-act="m-close">Ahora no</button><button class="btn primary" data-act="rt-create">Crear rutinas</button>`);
   return true;
 }
-/* 4.10.2: «Actualizar la rutina con lo de hoy» como en Hevy. Los ejercicios (y las series) de la rutina que no hiciste se quedan
+/* 4.10.2: «Actualizar la rutina con lo de hoy». Los ejercicios (y las series) de la rutina que no hiciste se quedan
    como estaban; lo que hiciste actualiza sus series; lo que añadiste entra en su sitio; lo que quitaste del entreno sale de la rutina.
    w = entreno en curso (con las series sin marcar y `ri` = posición en la rutina), r = rutina de origen. */
 function routineMerge(w, r){
@@ -3845,7 +3845,7 @@ function routineMergeSaved(w, r){
   return routineMerge(act, r);
 }
 /* 4.10.2: rutina a partir de varios entrenos con el mismo nombre (el más reciente primero). Parte del último y añade, en su sitio,
-   los ejercicios que salieron en los anteriores y ese día no hiciste (en Hevy la rutina los conservaba). */
+   los ejercicios que salieron en los anteriores y ese día no hiciste (la rutina original los conservaba). */
 function routineFromWorkouts(ws, name){
   const base = routineFromWorkout(ws[0], name), have = new Set(base.exercises.map(e => e.exId));
   ws.slice(1).forEach(w => w.exercises.forEach((e, i) => {
@@ -4157,7 +4157,7 @@ function phNode(v, cls){
   d.append(a, b); return d;
 }
 /* 4.12.1 · Intercambio animado (FLIP: la pequeña crece hasta ocupar la grande y la grande se encoge a la esquina) y miniatura arrastrable a
-   cualquiera de las 4 esquinas, como en BeReal. Tocar = intercambiar; arrastrar = mover (el toque que acaba un arrastre no intercambia). */
+   cualquiera de las 4 esquinas. Tocar = intercambiar; arrastrar = mover (el toque que acaba un arrastre no intercambia). */
 const PH = {drag: null, until: 0};
 function phSwap(el){
   const d = el && el.closest('.dph'); if (!d || Date.now() < PH.until) return; const a = d.querySelector('.dph-a'), b = d.querySelector('.dph-b'); if (!a || !b) return;
@@ -4832,8 +4832,8 @@ function renderTabs(){
 /* ---------- Vistas sociales ---------- */
 const n7Of = uid => uid === Social.myUid() ? inRange(Date.now() - 7 * 864e5, Date.now() + 1).length : (((Social.users.get(uid) || {}).profile || {}).stats || {}).n7;
 const avatar = (name, cls = '', n7) => `<span class="avatar ${cls}${n7 >= 3 ? ' hot' : ''}" aria-hidden="true"${n7 > 0 ? ` style="--aro:${heat(Math.min(1, .1 + n7 * .2))}"` : ''}>${esc((name || '?').slice(0, 1).toUpperCase())}</span>`;
-/* 4.10.3 · Foto doble al estilo BeReal, obligatoria para publicar. Siempre en el momento: sin galería.
-   En iPhone el navegador no deja abrir las dos cámaras a la vez (BeReal tampoco): la trasera al pulsar y, al momento, la frontal con cuenta atrás.
+/* 4.10.3 · Foto doble (trasera + frontal), obligatoria para publicar. Siempre en el momento: sin galería.
+   En iPhone el navegador no deja abrir las dos cámaras a la vez: la trasera al pulsar y, al momento, la frontal con cuenta atrás.
    Resultado: un solo JPEG 3:4 (≤260 KB, cabe en posts.photo sin tocar las reglas) con la frontal en miniatura arriba a la izquierda.
    Sin getUserMedia o sin permiso: respaldo con la cámara del sistema (<input capture>), dos fotos seguidas. */
 const DCAM = {W: 1080, H: 1440, ins: .3, cd: 2, tick: 700};
@@ -4870,7 +4870,7 @@ function dcamEnc(src, W0, H0, max){
   return out;
 }
 function dcamCompose(back, front){ return {a: dcamEnc(back, DCAM.W, DCAM.H, 260000), b: dcamEnc(front, 600, 800, 110000)}; }
-/* Foto doble en pantalla: la grande y la pequeña arriba a la izquierda; tocar la pequeña las intercambia (como en BeReal).
+/* Foto doble en pantalla: la grande y la pequeña arriba a la izquierda; tocar la pequeña las intercambia.
    v: data URL o blob: de una foto vieja (ya compuesta) o {a, b}. */
 function dcamFile(face, cb){ // respaldo: cámara del sistema (capture = sin galería); llamar dentro de un toque
   const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.setAttribute('capture', face); i.style.display = 'none'; document.body.appendChild(i);
@@ -6150,12 +6150,12 @@ $('#fileCsv').addEventListener('change', async ev => {
   const f = ev.target.files[0]; if (!f) return;
   try {
     const text = await f.text();
-    const r = importHevyCSV(text);
+    const r = importWorkoutsCSV(text);
     render();
     const msg = `<div><b>${r.added}</b> ${r.added === 1 ? 'entreno importado' : 'entrenos importados'}${r.skipped ? `, ${r.skipped} ya estaban` : ''}.</div>${r.created.length ? `<div class="small muted">${r.created.length === 1 ? 'Se ha creado 1 ejercicio propio que no estaba' : `Se han creado ${r.created.length} ejercicios propios que no estaban`} en la biblioteca: ${esc(r.created.slice(0, 8).join(', '))}${r.created.length > 8 ? '…' : ''}. Puedes editarlos en Perfil › Ejercicios propios.</div>` : ''}`;
     await ask('Importación lista', msg, [['ok', 'Seguir', 'primary']]); closeModal();
     if (r.added) offerRoutinesFromHistory();
-  } catch (e) { ask('No se pudo importar', esc(e.message || 'Revisa que sea el CSV que exporta Hevy.'), [['ok', 'Vale']]).then(closeModal); }
+  } catch (e) { ask('No se pudo importar', esc(e.message || 'Revisa que sea un CSV de entrenos con el formato esperado.'), [['ok', 'Vale']]).then(closeModal); }
 });
 $('#fileJson').addEventListener('change', async ev => {
   const f = ev.target.files[0]; if (!f) return;
@@ -6199,7 +6199,7 @@ Sentadilla (barra)|1.5;Sentadilla frontal|1.2;Sentadilla en Smith|1.5;Sentadilla
 Extensión de cuádriceps|1;Sentadilla búlgara|0.35;Sentadilla goblet|0.5;Zancadas (mancuernas)|0.35;Subida al banco|0.3;Peso muerto rumano (barra)|1.35
 Peso muerto rumano (mancuernas)|0.5;Curl femoral sentado|0.8;Curl femoral tumbado|0.7;Buenos días|0.9;Hip thrust (barra)|1.8;Hip thrust (máquina)|1.6
 Patada de glúteo (polea)|0.3`.split(/[;\n]/).map(x => x.split('|')).map(([n, k]) => ['x-' + norm(n).replace(/ /g, '-'), +k]));
-// Ejercicios propios (p. ej. «De Hevy»): estándar prudente según grupo y equipo; con equipo «Otro» o asistidos no cuentan
+// Ejercicios propios (p. ej. importados): estándar prudente según grupo y equipo; con equipo «Otro» o asistidos no cuentan
 const FZ_FALL = {pe: {barra: 1.15, smith: 1.15, mancuernas: 0.4, maquina: 1, polea: 0.35}, es: {barra: 1, smith: 1, mancuernas: 0.45, maquina: 1, polea: 0.9},
   ho: {barra: 0.75, smith: 0.75, mancuernas: 0.25, maquina: 0.7, polea: 0.15}, bi: {barra: 0.55, mancuernas: 0.25, maquina: 0.5, polea: 0.45},
   tr: {barra: 0.6, mancuernas: 0.3, maquina: 0.7, polea: 0.55}, pi: {barra: 1.4, smith: 1.4, mancuernas: 0.4, maquina: 2, polea: 0.3}};
@@ -6408,7 +6408,7 @@ const LOGROS = [
   ['clan', '🛡️', 'Espíritu de clan', 'Únete a un clan o funda uno', s => [s.clan, 1]]
 ];
 const REL_ACH = new Set(['rb1', 'rs15', 'rd2']);
-// Ejercicios propios que son el mismo levantamiento con barra (p. ej. «Press de Banca (Barra)» importado de Hevy)
+// Ejercicios propios que son el mismo levantamiento con barra (p. ej. «Press de Banca (Barra)» importado de un CSV)
 const REL_RE = {'x-press-banca-barra': /^(press (de )?banca|bench press)( plano)? (con )?(barra|barbell)$/, 'x-sentadilla-barra': /^(sentadilla|back squat|squat)( trasera)? (con )?(barra|barbell)$/,
   'x-peso-muerto-barra': /^(peso muerto|deadlift)( convencional)? (con )?(barra|barbell)$/, 'x-press-militar-barra': /^(press militar|press de hombros de pie|overhead press)( de pie)? (con )?(barra|barbell)$/};
 const relIds = id => [id, ...S.customEx.filter(c => REL_RE[id] && REL_RE[id].test(norm(c.name))).map(c => c.id)];
@@ -7236,7 +7236,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.3';
+const APP_VERSION = '4.13.4';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
