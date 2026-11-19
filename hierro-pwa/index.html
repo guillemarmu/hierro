@@ -1159,6 +1159,8 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 :root[data-theme="light"]{--pr-t:#A8205F}
 .pill.gold,.pill.bd-req{color:var(--pr-t,var(--pr))}
 .excard textarea.note{min-height:40px;padding:10px 4px;margin:-8px 0} /* notas del ejercicio: 40 px tocables sin mover el diseño */
+/* Ejercicio propio: todos los músculos a la vista (en iPhone el desplegable cortaba la lista en Cuádriceps y no se veía Abdominales) */
+#modal .chips.cx-mus{margin:0;padding:0}
 </style>
 </head>
 <body>
@@ -3697,9 +3699,10 @@ function drawPicker(){
 /* ---------- Ejercicio propio ---------- */
 function customExForm(x, fromPicker){
   const q = fromPicker && PICK ? PICK.q : UI.exQuery;
+  const mus = x && MUSCLES[x.muscle] ? x.muscle : 'pecho';
   modal(x ? 'Editar ejercicio' : 'Nuevo ejercicio', `
     <label class="f">Nombre<input id="cxName" value="${esc(x ? x.name : q)}" placeholder="p. ej. Remo en máquina Hammer"></label>
-    <label class="f">Músculo principal<select id="cxMuscle">${Object.entries(MUSCLES).map(([k, v]) => `<option value="${k}" ${x && x.muscle === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+    <div class="f" role="group" aria-labelledby="cxMusLbl"><span id="cxMusLbl">Músculo principal</span><input type="hidden" id="cxMuscle" value="${esc(mus)}"><div class="chips wrap cx-mus">${Object.entries(MUSCLES).map(([k, v]) => `<button class="chip" data-act="cx-muscle" data-m="${k}" aria-pressed="${mus === k}">${v}</button>`).join('')}</div></div>
     <label class="f">Material<select id="cxEquip">${Object.entries(EQUIP).map(([k, v]) => `<option value="${k}" ${x && x.equip === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     <label class="f">Qué registras<select id="cxType">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${x && x.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     <div class="small muted">Sin límite de ejercicios propios.</div>`,
@@ -5731,6 +5734,10 @@ const A = {
   },
   'new-custom-ex'(){ customExForm(null, !!PICK); },
   'edit-custom-ex'(el){ customExForm(exOf(el.dataset.id), false); },
+  'cx-muscle'(el){
+    $('#cxMuscle').value = el.dataset.m;
+    for (const b of document.querySelectorAll('#modal .cx-mus .chip')) b.setAttribute('aria-pressed', b === el);
+  },
   'cx-save'(el){
     const name = $('#cxName').value.trim(); if (!name) { $('#cxName').focus(); toast('Ponle un nombre'); return; }
     const id = el.dataset.id;
@@ -7306,7 +7313,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.6';
+const APP_VERSION = '4.13.7';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
