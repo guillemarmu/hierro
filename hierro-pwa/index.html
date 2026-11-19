@@ -1944,6 +1944,8 @@ const Sync = {
     const ah = hashOf(S.active || null); if (ah !== Store.synced.active) out.active = ah;
     return out;
   },
+  pulledAt: 0,
+  onlyActive(){ const d = this.diff(); return !!d.active && !d.w.length && !d.del.length && !d.meta && Date.now() - this.pulledAt < 120000; },
   pendingCount(){ if (!this.on()) return 0; const d = this.diff(); return d.w.length + d.del.length + (d.meta ? 1 : 0) + (d.active ? 1 : 0) + Social.pushItems().length + Clan.pushItems().length; },
   async push(){
     const uid = Cloud.session.uid, d = this.diff(), items = [];
@@ -2037,8 +2039,9 @@ const Sync = {
     clearTimeout(this.timer); this.timer = null;
     this.busy = true; this.state = 'busy'; syncUI();
     try {
-      // primero se baja lo nuevo (sin pisar cambios locales pendientes) y luego se sube lo local
-      if (await this.pull()) { render(); if (S.active && !ED) restoreActiveBar(); }
+      // primero se baja lo nuevo (sin pisar cambios locales pendientes) y luego se sube lo local.
+      // 4.13.5: si solo cambia el entreno en curso y se bajó hace menos de 2 min, solo se sube (cada serie costaba unas 3 lecturas)
+      if (!this.onlyActive()) { if (await this.pull()) { render(); if (S.active && !ED) restoreActiveBar(); } this.pulledAt = Date.now(); }
       await this.push();
       this.last = Date.now(); this.state = 'ok'; this.err('datos');
     } catch (e) {
@@ -4071,7 +4074,7 @@ async function afterLogin(isNew){
   tab = 'home'; Object.keys(navStack).forEach(k => navStack[k] = []); Social.reset();
   await Store.load(Cloud.session.uid);
   render();
-  await Sync.run();
+  Sync.pulledAt = 0; await Sync.run();
   if (isNew) { S.settings.terms = TERMS_V; Store.mark('meta'); }
   if (S.active) restoreActiveBar();
   if (Social.ready()) Social.pollNotifs();
@@ -4266,7 +4269,7 @@ const Social = {
     todo.forEach(el => this.phIO.observe(el));
   },
   async wipeCache(uid){ // cierre de sesión o cuenta borrada: fuera lo guardado en el móvil
-    KV.del('soc:' + uid); KV.del('socn:' + uid);
+    KV.del('soc:' + uid); KV.del('socn:' + uid); KV.del('clsc:' + uid);
     const idx = await this.phIndex(); idx.splice(0).forEach(pid => KV.del('socph:' + pid)); KV.del('socph:idx');
   },
   reset(){
@@ -5952,7 +5955,7 @@ const A = {
       ${i.errs.length ? `<div><div class="small muted">Último error</div>${i.errs.map(x => `<div class="small" style="word-break:break-word">${esc(x)}</div>`).join('')}</div>` : ''}</div>`,
       `<button class="btn" data-act="sync-copy">Copiar</button><button class="btn primary" data-act="sync-now">Reintentar ahora</button>`);
   },
-  async 'sync-now'(){ Sync.tries = 0; Clan.denied = false; closeModal(); toast('Subiendo…'); await Sync.run(); toast(Sync.pendingCount() ? 'Aún queda algo: toca el estado para ver qué' : 'Todo subido'); },
+  async 'sync-now'(){ Sync.tries = 0; Sync.pulledAt = 0; Clan.denied = false; closeModal(); toast('Subiendo…'); await Sync.run(); toast(Sync.pendingCount() ? 'Aún queda algo: toca el estado para ver qué' : 'Todo subido'); },
   async 'sync-copy'(){ try { await navigator.clipboard.writeText(syncInfo().text); toast('Copiado'); } catch (e) { toast('No se pudo copiar'); } }
 };
 function fillFromPh(e, si){
@@ -6551,7 +6554,7 @@ function relSide(c, per, K = clanKeys()){
 const Clan = {
   uid: null, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false,
   rank: 'pts', lift: 'total', per: 'w', emo: null, allLogros: false,
-  check(){ const u = Social.myUid() || null; if (this.uid !== u) Object.assign(this, {uid: u, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false, noMonths: false}); },
+  check(){ const u = Social.myUid() || null; if (this.uid !== u) Object.assign(this, {uid: u, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false, noMonths: false, sc: null}); },
   myCid(){ return S.settings.clan || ''; },
   mine(){ const c = this.clans.find(x => x._id === this.myCid()); return c && (c.members || []).includes(Social.myUid()) ? c : null; },
   // Resumen público (scores/{uid}). Sin peso corporal: solo semanas, racha, logros y, si lo activas, el cociente de fuerza relativa.
@@ -6590,20 +6593,35 @@ const Clan = {
     try { const d = await Cloud.getDoc('scores', uid); this.extra.set(uid, d ? docData(d) : {_none: true}); socRender(); } catch (e) {}
     this.fetching.delete(uid);
   },
-  async load(force){
+  // 4.13.5: los resúmenes de la liga se guardan en el móvil (KV clsc:{uid}) y solo se bajan los que cambiaron desde la última vez
+  // (antes, hasta 300 lecturas cada vez que se abría Clanes). Cada SC_FULL, o al tirar para actualizar, se rehace la lista entera
+  // para soltar los borrados (cuentas borradas o que dejan de compartir).
+  SC_FULL: 3600e3,
+  async scoresDelta(me, since, full){
+    const now = Date.now(), kc = this.sc || await KV.get('clsc:' + me);
+    const delta = !full && !!kc && kc.uid === me && Array.isArray(kc.list) && now - kc.full < this.SC_FULL;
+    // «updated» lo pone cada móvil: 1 h de margen por relojes atrasados, y una fecha en el futuro no sube el corte
+    const lo = delta ? Math.max(since, Math.min(kc.max, kc.at || 0) - 3600e3) : since;
+    const sr = await Cloud.queryRoot({from: [{collectionId: 'scores'}], where: ff('updated', 'GREATER_THAN_OR_EQUAL', lo), orderBy: [{field: {fieldPath: 'updated'}, direction: 'DESCENDING'}], limit: 300});
+    const map = new Map(delta ? kc.list.filter(d => d && d._id && d.updated >= since).map(d => [d._id, d]) : []);
+    (sr || []).filter(r => r.document).forEach(r => { const d = docData(r.document); map.set(d._id, d); });
+    const list = [...map.values()].sort((a, b) => b.updated - a.updated).slice(0, 300);
+    if (Social.myUid() !== me) return list; // se cerró la sesión mientras tanto: no se guarda nada
+    this.sc = {uid: me, list, at: now, full: delta ? kc.full : now, max: list.reduce((m, d) => d.updated <= now ? Math.max(m, d.updated) : m, 0)};
+    KV.set('clsc:' + me, this.sc);
+    return list;
+  },
+  async load(force, full){
     this.check(); if (!Social.ready() || this.loading) return;
     if (!force && this.loaded && Date.now() - this.at < 120000) return;
     this.loading = true;
     try {
       const me = Social.myUid(), since = Date.now() - 35 * 864e5;
-      const [cr, sr] = await Promise.all([
-        Cloud.queryRoot({from: [{collectionId: 'clans'}], limit: 60}),
-        Cloud.queryRoot({from: [{collectionId: 'scores'}], where: ff('updated', 'GREATER_THAN_OR_EQUAL', since), orderBy: [{field: {fieldPath: 'updated'}, direction: 'DESCENDING'}], limit: 300})
-      ]);
+      const [cr, sl] = await Promise.all([Cloud.queryRoot({from: [{collectionId: 'clans'}], limit: 60}), this.scoresDelta(me, since, full)]);
       const clans = (cr || []).filter(r => r.document).map(r => docData(r.document));
       for (const id of [this.myCid(), CLAN_INVITE]) if (id && !clans.some(c => c._id === id)) { const d = await Cloud.getDoc('clans', id).catch(() => null); if (d) clans.push(docData(d)); }
       this.clans = clans;
-      this.scores = new Map((sr || []).filter(r => r.document).map(r => { const d = docData(r.document); return [d._id, d]; }));
+      this.scores = new Map(sl.map(d => [d._id, d]));
       // la lista de miembros del clan es la que manda
       const cid = this.myCid();
       if (cid && !clans.some(c => c._id === cid && (c.members || []).includes(me))) { const c = clans.find(x => x._id === cid); S.settings.clan = ''; Store.mark(); toast(c ? `Ya no estás en ${c.name}` : 'Tu clan se ha disuelto'); }
@@ -7236,7 +7254,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.4';
+const APP_VERSION = '4.13.5';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -7344,7 +7362,7 @@ function pullRefresh(){
   const job = (async () => {
     if (root && tab === 'clan' && Cloud.enabled() && Cloud.session && Social.ready()) {
       Clan.err = null;
-      const ps = [Clan.load(true)];
+      const ps = [Clan.load(true, true)]; // tirar para actualizar: la liga entera
       if (typeof Rel !== 'undefined' && Rel.load) ps.push(Rel.load(true));
       await Promise.all(ps);
       await wait(() => !Clan.loading && !(typeof Rel !== 'undefined' && Rel.loading), 7000);
@@ -7356,7 +7374,7 @@ function pullRefresh(){
       socRender();
       if (Social.err) toast(Social.err);
     } else {
-      if (Sync.on()) await Sync.run();
+      if (Sync.on()) { Sync.pulledAt = 0; await Sync.run(); } // tirar para actualizar siempre baja lo nuevo
       render();
     }
   })().catch(e => { console.warn('pull', e); });
