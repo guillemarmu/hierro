@@ -64,6 +64,7 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <li><strong>Datos de entrenamiento (privados):</strong> entrenos, rutinas, ejercicios propios y ajustes. Se guardan en Google Cloud Firestore y solo los ves tú.</li>
 <li id="salud"><strong>Datos corporales (opcionales):</strong> peso, medidas corporales (grasa, cintura, pecho, brazo y muslo), sexo y altura. Pueden considerarse <strong>datos de salud</strong>, así que solo los guardamos si das tu consentimiento explícito en la app la primera vez que los añades. Se usan solo para tus estadísticas y para ajustar los estándares de fuerza. Se quedan en tu móvil o en tu cuenta privada y nunca se publican. Puedes retirar el consentimiento en la app (Perfil › Tu cuerpo) cuando quieras: al hacerlo se borran.</li>
 <li><strong>Datos sociales (opcionales):</strong> si usas las funciones sociales, tu perfil, los entrenos que publiques, me gusta, comentarios, seguidores y clanes.</li>
+<li id="fotos"><strong>Fotos (opcionales):</strong> si publicas un entreno, las dos fotos que haces en ese momento con la cámara (trasera y frontal) se guardan con la publicación y las ven quienes pueden ver esa publicación. La cámara solo se abre cuando tú lo pides y Hierro no accede a tu galería. Si borras la publicación, se borran sus fotos.</li>
 <li><strong>Notificaciones push (opcionales):</strong> la suscripción push de tu navegador y los datos mínimos para programar el aviso.</li>
 <li id="ios-salud"><strong>App Salud de Apple (solo en la app de iOS, opcional):</strong> si activas «Guardar mis entrenos en Salud», cada entreno que terminas se apunta en la app Salud de tu iPhone como entrenamiento de fuerza, con su nombre y su hora de inicio y fin. Se escribe directamente en tu iPhone: no recibimos ni leemos ningún dato de Salud y no se usa para publicidad. Lo desactivas en Perfil o en Ajustes › Salud del iPhone.</li>
 <li><strong>Diagnóstico:</strong> si usas una cuenta, la app guarda en ella el estado de la sincronización, la versión de Hierro y el navegador del móvil, para poder resolver fallos.</li>
@@ -88,8 +89,9 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <li><strong>Contenido público y funciones sociales:</strong> tu consentimiento, al activarlas o publicar.</li>
 <li><strong>Notificaciones push:</strong> tu consentimiento, al aceptar el permiso del navegador. Puedes retirarlo cuando quieras.</li>
 <li><strong>Moderación</strong> (denuncias, bloqueos, retirada de contenido): interés legítimo en mantener una comunidad segura.</li>
+<li><strong>Seguridad y diagnóstico</strong> (reCAPTCHA / App Check y estado de la sincronización): interés legítimo en proteger el servicio frente a abusos y en poder resolver fallos.</li>
 </ul>
-<p>No vendemos tus datos, no hay publicidad y no elaboramos perfiles con fines comerciales.</p>
+<p>No vendemos tus datos, no hay publicidad y no elaboramos perfiles con fines comerciales. No tomamos decisiones automatizadas con efectos legales sobre ti: los rangos de fuerza son solo un cálculo orientativo.</p>
 
 <h2 id="terceros">5. Proveedores y transferencias</h2>
 <p>Para funcionar usamos estos encargados del tratamiento:</p>
@@ -99,16 +101,18 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <li><strong>Cloudflare (Workers):</strong> servidor que guarda la suscripción push y los datos mínimos para programar los avisos.</li>
 <li><strong>GitHub (GitHub Pages):</strong> alojamiento de la web y de las fotos de ejemplo de los ejercicios.</li>
 </ul>
+<p>Si descargas Hierro desde Google Play o el App Store, Google y Apple tratan los datos de la descarga (y, en Android, la app se muestra a través de Chrome) según sus propias políticas de privacidad; Hierro no recibe esos datos.</p>
 <p>Estos proveedores pueden tratar datos fuera del Espacio Económico Europeo, por ejemplo en EE. UU. Las transferencias se amparan en el Marco de Privacidad de Datos UE-EE. UU. o en cláusulas contractuales tipo.</p>
 
 <h2 id="local">6. Almacenamiento local y cookies</h2>
 <p>Hierro no usa cookies de seguimiento ni herramientas de analítica. Con cuenta, reCAPTCHA (Google) puede usar sus propias cookies y almacenamiento para la protección contra abusos descrita en el apartado 5. Las tipografías se sirven desde la propia web, sin conectar con Google Fonts. Guarda datos en el almacenamiento local de tu navegador (localStorage e IndexedDB) y usa un service worker para funcionar sin conexión. Es necesario para que la app funcione; puedes borrarlo desde los ajustes del navegador.</p>
 
 <h2 id="conservacion">7. Cuánto tiempo los guardamos</h2>
-<p>Mientras tu cuenta exista. Al borrarla se eliminan tus datos. Si borras la cuenta, también dejan de estar visibles tu perfil y tu contenido público.</p>
+<p>Mientras tu cuenta exista. Al borrarla desde la app se eliminan tus datos: entrenos, perfil, publicaciones con sus fotos, comentarios, me gusta, mensajes, seguidores, avisos y datos de diagnóstico. Si escribes para que la borremos nosotros, lo haremos en un plazo máximo de 30 días.</p>
+<p>Excepciones: las denuncias se guardan el tiempo necesario para resolverlas y, como máximo, un año; y si una cuenta se suspende por incumplir las normas, guardamos el identificador de la cuenta suspendida mientras dure la suspensión. Los datos que solo están en tu móvil se borran al desinstalar la app o borrar los datos del navegador.</p>
 
 <h2 id="derechos">8. Tus derechos</h2>
-<p>Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a href="mailto:soporte.hierro.app@gmail.com">soporte.hierro.app@gmail.com</a>. Además, desde Ajustes en la app puedes exportar una copia de tus datos y borrar tu cuenta con todo su contenido.</p>
+<p>Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a href="mailto:soporte.hierro.app@gmail.com">soporte.hierro.app@gmail.com</a>. Además, desde Perfil en la app puedes descargar una copia de tus datos («Tus datos») y borrar tu cuenta con todo su contenido («Cuenta › Eliminar mi cuenta y mis datos»). Cuando el tratamiento se base en tu consentimiento, puedes retirarlo en cualquier momento sin que afecte a lo hecho antes. Responderemos en el plazo máximo de un mes.</p>
 <p>Si crees que tus datos no se tratan bien, puedes reclamar ante la Agencia Española de Protección de Datos: <a href="https://www.aepd.es" rel="noopener">aepd.es</a>.</p>
 
 <h2 id="menores">9. Edad mínima</h2>
@@ -117,8 +121,7 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <h2 id="cambios">10. Cambios y contacto</h2>
 <p>Si esta política cambia de forma relevante, lo avisaremos en la app o en esta página. Dudas: <a href="mailto:soporte.hierro.app@gmail.com">soporte.hierro.app@gmail.com</a>. Consulta también las <a href="condiciones.html">condiciones de uso</a>.</p>
 <div class="nota">
-<p>Última actualización: 19 de noviembre de 2026 (app Salud en iOS)</p>
-<p>Este texto es un borrador pendiente de revisión.</p>
+<p>Última actualización: 20 de noviembre de 2026 (fotos, plazos de conservación y apps de Google Play y App Store)</p>
 </div>
 <footer class="pie"><a href="./">← Volver a Hierro</a> <a href="privacidad.html">Privacidad</a> <a href="condiciones.html">Condiciones</a></footer>
 </div>
