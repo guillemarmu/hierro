@@ -2116,6 +2116,8 @@ setInterval(() => { if (document.visibilityState === 'visible') Sync.schedule(10
    Cálculos: volumen, anteriores, chiquipuntos
    ========================================================= */
 const isWork = s => s.t !== 'w';
+// Etiqueta de la serie: el calentamiento no cuenta; fallo y drop set sí cuentan, pero enseñan su letra (1, F, 3, 4).
+const setLab = (t, c) => t === 'w' ? 'W' : (++c.n, t === 'n' ? c.n : t.toUpperCase());
 function setVol(s){ return (s.kg || 0) * (s.reps || 0); }
 function e1rm(s){ if (!s.kg || !s.reps) return 0; return s.reps === 1 ? s.kg : s.kg * (1 + s.reps / 30); }
 function wVolume(w){ let v = 0; w.exercises.forEach(e => e.sets.forEach(s => { v += setVol(s); })); return v; } // 4.11.1: el calentamiento también suma volumen (como en otras apps); récords y rangos siguen sin contarlo
@@ -2876,11 +2878,11 @@ function viewWorkout(w){
   <button class="btn ghost block" data-act="w-copytext" data-id="${w.id}">Copiar como texto</button>
   ${Social.ready() ? `<button class="btn ghost block" data-act="w-share" data-id="${w.id}">${w.shared ? '✓ Publicado en el feed · quitar' : '📸 Publicar en el feed (con foto doble)'}</button>` : ''}`;
   for (const e of w.exercises) {
-    const x = exOf(e.exId); let n = 0;
+    const x = exOf(e.exId), sn = {n: 0};
     h += `<div class="card stack"><button class="row between" data-act="open-ex" data-id="${x.id}" style="text-align:left"><h3>${esc(x.name)}</h3>${e.ss ? '<span class="pill accent">Superserie</span>' : ''}</button>
       ${e.notes ? `<div class="small muted">${esc(e.notes)}</div>` : ''}
       <table class="sets"><tr><th>Serie</th><th>${x.type === 'dur' ? 'Tiempo' : x.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th><th>${x.type === 'wr' ? '1RM est.' : ''}</th></tr>
-      ${e.sets.map(s => { const lab = s.t === 'n' ? ++n : s.t.toUpperCase(); return `<tr><td><b class="st-${s.t}">${lab}</b></td><td>${setText(s, x.type)}</td><td class="muted">${x.type === 'wr' && s.kg && s.reps ? fmtN(e1rm(s)) : ''}</td></tr>`; }).join('')}</table>
+      ${e.sets.map(s => { const lab = setLab(s.t, sn); return `<tr><td><b class="st-${s.t}">${lab}</b></td><td>${setText(s, x.type)}</td><td class="muted">${x.type === 'wr' && s.kg && s.reps ? fmtN(e1rm(s)) : ''}</td></tr>`; }).join('')}</table>
       ${(prBy[e.exId] || []).map(p => `<div class="pr small">${ICON.trophy.replace('<svg', '<svg width="14" height="14" style="vertical-align:-2px"')} ${p.label}: ${p.txt}</div>`).join('')}</div>`;
   }
   h += `<div class="grid2"><button class="btn" data-act="repeat-workout" data-id="${w.id}">Repetir entreno</button><button class="btn" data-act="routine-from-workout" data-id="${w.id}">Guardar como rutina</button><button class="btn" data-act="edit-workout" data-id="${w.id}">Editar</button><button class="btn danger" data-act="delete-workout" data-id="${w.id}">Eliminar</button></div>`;
@@ -3427,11 +3429,11 @@ function exCardHTML(e, ei){
   const cols = x.type === 'dur' ? ['Seg'] : x.type === 'cardio' ? ['km', 'min'] : x.type === 'bw' ? ['+kg', 'Reps'] : ['kg', 'Reps'];
   const fields = x.type === 'dur' ? ['sec'] : x.type === 'cardio' ? ['km', 'min'] : ['kg', 'reps'];
   const rest = e.rest ?? S.settings.rest;
-  let n = 0;
+  const sn = {n: 0};
   if (chk && !ED.prc) ED.prc = {};
   const rows = e.sets.map((s, si) => {
     const pr = chk && s.done ? setPR(ED.data, ei, si, ED.prc) : null;
-    const lab = s.t === 'n' ? ++n : s.t.toUpperCase();
+    const lab = setLab(s.t, sn);
     const ph = phFor(e, si) || {};
     const pv = prev[si], key = ei + '-' + si;
     const inputs = fields.map(f => `<input class="sin" inputmode="${f === 'reps' || f === 'sec' ? 'numeric' : 'decimal'}" data-act="set-in" data-f="${f}" data-ei="${ei}" data-si="${si}" value="${s[f] != null ? String(s[f]).replace('.', ',') : ''}" placeholder="${ph[f] != null ? fmtN(ph[f], 2) : '–'}" aria-label="${f} serie ${si + 1}">`).join('') + (fields.length === 1 ? '<div></div>' : '');
@@ -3484,11 +3486,12 @@ function nextSetInfo(){
     const kg = v('kg'), reps = v('reps'), sec = v('sec'), km = v('km'), min = v('min');
     const val = x.type === 'dur' ? (sec ? fmtClock(sec) : '') : x.type === 'cardio' ? [km ? fmtN(km, 2) + ' km' : '', min ? fmtN(min) + ' min' : ''].filter(Boolean).join(' · ')
       : [kg ? fmtN(kg, 2) + ' kg' : '', reps ? reps + ' reps' : ''].filter(Boolean).join(' × ');
-    return {name: x.name, n: si + 1, total: e.sets.length, val};
+    // Como en la tabla: el calentamiento no cuenta (Serie 1 de 4 tras un calentamiento).
+    return {name: x.name, w: s.t === 'w', n: e.sets.slice(0, si + 1).filter(isWork).length, total: e.sets.filter(isWork).length, val};
   }
   return null;
 }
-const nextSetText = nx => nx ? `${nx.name} · Serie ${nx.n} de ${nx.total}${nx.val ? ' · ' + nx.val : ''}` : '';
+const nextSetText = nx => nx ? `${nx.name} · ${nx.w ? 'Calentamiento' : `Serie ${nx.n} de ${nx.total}`}${nx.val ? ' · ' + nx.val : ''}` : '';
 // El aviso fijo al bloquear el móvil («Descanso · termina a las…», 4.5.6) se quitó en 4.5.11 a petición de Guillermo.
 // Esto solo cierra el que pudiera quedar de una versión anterior; el aviso de fin de descanso sigue igual.
 function restLockNotif(){
@@ -5357,8 +5360,8 @@ function viewPost(pid){
   if (prs.length) h += `<div class="stack"><h3>Chiquipuntos</h3>${prs.map(r => `<div class="prcard">${ICON.trophy}<div><b>${esc(r.ex)}</b><small>${esc(r.label)}</small></div><span class="num">${esc(r.txt)}</span></div>`).join('')}</div>`;
   const safeSet = (s, t) => { try { return setText(s, t); } catch (e) { return ''; } };
   for (const e of exs) {
-    let n = 0;
-    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${t === 'n' ? ++n : t.toUpperCase()}</b></td><td>${esc(safeSet(s, e.type))}</td></tr>`; }).join('')}</table></div>`;
+    const sn = {n: 0};
+    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${setLab(t, sn)}</b></td><td>${esc(safeSet(s, e.type))}</td></tr>`; }).join('')}</table></div>`;
   }
   h += `<button class="btn primary block" data-act="soc-copy" data-id="${esc(p.id)}">Hacer este entreno</button>
     <div class="grid2 det-acts"><button class="btn" data-act="soc-copy-routine" data-id="${esc(p.id)}">Guardar como rutina</button><button class="btn" data-act="soc-copytext" data-id="${esc(p.id)}">Copiar texto</button></div>
@@ -7313,7 +7316,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.7';
+const APP_VERSION = '4.13.8';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
