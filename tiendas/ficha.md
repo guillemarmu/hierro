@@ -13,7 +13,7 @@ Textos y respuestas listos para copiar en Google Play Console y App Store Connec
 - **Nombre**: Hierro (si en Apple está cogido: «Hierro: diario de gym»).
 - **Subtítulo de Apple** (30 caracteres): `Entrenos, récords y progreso`
 - **Descripción corta de Google** (80 caracteres): `Apunta tus entrenos de gimnasio, bate tus récords y pica a tus amigos.`
-- **Palabras clave de Apple** (100 caracteres): `gimnasio,gym,pesas,entreno,rutina,fuerza,musculación,récords,series,hevy,progreso,culturismo`
+- **Palabras clave de Apple** (100 caracteres): `gimnasio,gym,pesas,entreno,rutina,fuerza,musculación,récords,series,progreso,culturismo`
 - **Categoría**: Salud y forma física (las dos tiendas).
 - **Descripción larga**:
 
@@ -37,7 +37,7 @@ Textos y respuestas listos para copiar en Google Play Console y App Store Connec
 > **Tus datos son tuyos**
 > • Sin publicidad y sin analítica.
 > • Exporta tus datos cuando quieras y borra tu cuenta desde la app.
-> • ¿Vienes de Hevy? Importa tu historial con el CSV.
+> • ¿Vienes de otra app? Importa tu historial desde un CSV.
 
 ## Clasificación por edad
 - Apple: **16+** (las condiciones piden 16 años). Respuestas: contenido generado por usuarios = sí; mensajes entre usuarios = sí (comentarios y muros de clan); sin violencia, sexo, drogas, apuestas ni compras.
@@ -68,7 +68,7 @@ Textos y respuestas listos para copiar en Google Play Console y App Store Connec
 - Nada es obligatorio para usar la app sin cuenta salvo el almacenamiento local.
 
 ## Notas para los revisores
-- Cuenta de prueba: **la crea Guillermo** (correo y contraseña) y la pone en el campo de acceso de cada tienda. Para llenarla: Perfil › Tus datos › «Importar CSV de Hevy» con `revisores-hevy.csv` (en el proyecto «HIERRO» de Claude) (24 entrenos inventados en 8 semanas), crear una rutina, poner un nombre de usuario en Social y publicar un entreno con la foto doble. Mejor que siga a otra cuenta con alguna publicación, para que el feed no salga vacío.
+- Cuenta de prueba: **la crea Guillermo** (correo y contraseña) y la pone en el campo de acceso de cada tienda. Para llenarla: Perfil › Tus datos › «Importar entrenos (CSV)» con `revisores-hevy.csv` (en el proyecto «HIERRO» de Claude) (24 entrenos inventados en 8 semanas), crear una rutina, poner un nombre de usuario en Social y publicar un entreno con la foto doble. Mejor que siga a otra cuenta con alguna publicación, para que el feed no salga vacío.
 - Texto (pegar en «Notas para la revisión»):
 
 > Hierro es un diario de gimnasio. Para entrar usa la cuenta de prueba. Desde Entrenar puedes empezar un entreno vacío o una rutina, apuntar series y terminarlo; al guardarlo puedes publicarlo con una foto doble (cámara trasera y frontal). En Social están el feed y los comentarios. Para denunciar: menú de los tres puntos de una publicación, botón «Denunciar» de cada comentario o «Denunciar perfil» en un perfil; para bloquear: «Bloquear» en el perfil. La cuenta se borra en Perfil › Cuenta › «Eliminar mi cuenta y mis datos», con todo su contenido (también comentarios y me gusta en publicaciones de otros). En la app de iOS, Perfil › Ajustes › «Guardar mis entrenos en Salud» apunta cada entreno terminado en la app Salud; la vibración es nativa. El contenido denunciado lo revisa el administrador; el contacto es soporte.hierro.app@gmail.com.
