@@ -308,6 +308,12 @@ table.sets tr+tr td{border-top:1px solid var(--linea)}
 .plates .pl i{display:block;width:7px;border-radius:2.5px}
 .sgrid{display:grid;grid-template-columns:44px minmax(0,1.1fr) minmax(0,1fr) minmax(0,.85fr) 52px;gap:6px;align-items:center}
 .sgrid.nochk{grid-template-columns:44px minmax(0,1.1fr) minmax(0,1fr) minmax(0,.85fr)}
+.sgrid.eff{grid-template-columns:40px minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) 40px 48px;gap:5px}
+.sgrid.eff.nochk{grid-template-columns:40px minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) 40px}
+.seff{height:48px;border-radius:14px;font-family:var(--rotulo);font-weight:700;font-size:16px;background:var(--field);color:var(--texto);font-variant-numeric:tabular-nums}
+.seff.nov{color:var(--apagado);box-shadow:inset 0 0 0 1.5px var(--field-borde)}
+.srow.done .seff{background:transparent;box-shadow:none}
+.effgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .sgrid.hd{font-size:12.5px;color:var(--apagado);font-weight:700;text-align:center;padding:2px 0 0}
 .sgrid.hd div:nth-child(2){text-align:left;padding-left:4px}
 .srow{border-radius:18px;padding:3px 0;touch-action:pan-y;position:relative;background:transparent}
@@ -1668,7 +1674,7 @@ const isObj = o => !!o && typeof o === 'object' && !Array.isArray(o);
 function cleanW(w){
   if (!isObj(w) || !isFinite(+w.start) || !w.id) return null;
   w.start = +w.start; w.end = isFinite(+w.end) ? +w.end : w.start;
-  w.exercises = (Array.isArray(w.exercises) ? w.exercises : []).filter(isObj).map(e => { e.sets = (Array.isArray(e.sets) ? e.sets : []).filter(isObj).map(s => (typeof s.t === 'string' && s.t ? s : Object.assign(s, {t: 'n'}))); return e; });
+  w.exercises = (Array.isArray(w.exercises) ? w.exercises : []).filter(isObj).map(e => { e.sets = (Array.isArray(e.sets) ? e.sets : []).filter(isObj).map(s => { if ('rpe' in s && rpeOk(s.rpe) == null) delete s.rpe; return typeof s.t === 'string' && s.t ? s : Object.assign(s, {t: 'n'}); }); return e; });
   return w;
 }
 const cleanArr = a => (Array.isArray(a) ? a : []).filter(isObj);
@@ -2236,6 +2242,16 @@ function setPR(d, ei, si, cache){
   if (type === 'cardio' && (s.km || 0) > b.km) return {label: 'Más distancia', txt: fmtN(s.km, 2) + ' km'};
   return null;
 }
+/* RIR/RPE (4.15, opcional): S.settings.effort = true lo enseña; S.settings.effUnit = 'rir' (por defecto) o 'rpe'.
+   Se guarda siempre como RPE en s.rpe (1-10, medios puntos); RIR = 10 - RPE. Sin el ajuste no sale en ninguna parte. */
+const EFF_RPE = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10], EFF_RIR = [5, 4, 3, 2, 1, 0];
+const effMode = () => S.settings.effort === true ? (S.settings.effUnit === 'rpe' ? 'rpe' : 'rir') : null;
+const rpeOk = v => typeof v === 'number' && isFinite(v) && v >= 1 && v <= 10 ? Math.round(v * 2) / 2 : null;
+const effVal = (rpe, mode) => { const v = rpeOk(rpe); return v == null || !mode ? null : mode === 'rpe' ? v : 10 - v; };
+// RIR 5+ se guarda como RPE 5; en RPE, lo que queda por debajo de 6 sale «<6»
+const effFmt = (rpe, mode) => { const v = effVal(rpe, mode); return v == null ? null : mode === 'rir' && v >= 5 ? '5+' : mode === 'rpe' && v < 6 ? '<6' : fmtN(v); };
+function effText(rpe, mode = effMode()){ const t = effFmt(rpe, mode); return t == null ? '' : (mode === 'rpe' ? 'RPE ' : 'RIR ') + t; }
+const effSfx = s => { const t = s ? effText(s.rpe) : ''; return t ? ' · ' + t : ''; };
 function setText(s, type){
   if (!s) return '';
   if (type === 'dur') return s.sec ? fmtClock(s.sec) : '';
@@ -2262,7 +2278,7 @@ function workoutText(o){
     const rows = []; let n = 0;
     for (const s of e.sets || []) {
       const v = setLine(s, e.type); if (!v) continue; const t = s.t || 'n';
-      rows.push(`${t === 'w' ? 'Calentamiento' : 'Serie ' + (++n)}: ${v}${t === 'f' ? ' [Fallo]' : t === 'd' ? ' [Drop set]' : ''}`);
+      rows.push(`${t === 'w' ? 'Calentamiento' : 'Serie ' + (++n)}: ${v}${effSfx(s).replace(' · ', ', ')}${t === 'f' ? ' [Fallo]' : t === 'd' ? ' [Drop set]' : ''}`);
     }
     if (!rows.length) continue;
     L.push('', e.name + (e.ss ? ' (superserie)' : '')); if (e.notes) L.push('Notas: ' + String(e.notes).trim()); L.push(...rows);
@@ -2931,7 +2947,7 @@ function viewWorkout(w){
     h += `<div class="card stack"><button class="row between" data-act="open-ex" data-id="${x.id}" style="text-align:left"><h3>${esc(x.name)}</h3>${e.ss ? '<span class="pill accent">Superserie</span>' : ''}</button>
       ${e.notes ? `<div class="small muted">${esc(e.notes)}</div>` : ''}
       <table class="sets"><tr><th>Serie</th><th>${x.type === 'dur' ? 'Tiempo' : x.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th><th>${x.type === 'wr' ? '1RM est.' : ''}</th></tr>
-      ${e.sets.map(s => { const lab = setLab(s.t, sn); return `<tr><td><b class="st-${s.t}">${lab}</b></td><td>${setText(s, x.type)}</td><td class="muted">${x.type === 'wr' && s.kg && s.reps ? fmtN(e1rm(s)) : ''}</td></tr>`; }).join('')}</table>
+      ${e.sets.map(s => { const lab = setLab(s.t, sn); return `<tr><td><b class="st-${s.t}">${lab}</b></td><td>${setText(s, x.type)}${effSfx(s)}</td><td class="muted">${x.type === 'wr' && s.kg && s.reps ? fmtN(e1rm(s)) : ''}</td></tr>`; }).join('')}</table>
       ${(prBy[e.exId] || []).map(p => `<div class="pr small">${ICON.trophy.replace('<svg', '<svg width="14" height="14" style="vertical-align:-2px"')} ${p.label}: ${p.txt}</div>`).join('')}</div>`;
   }
   h += `<div class="grid2"><button class="btn" data-act="repeat-workout" data-id="${w.id}">Repetir entreno</button><button class="btn" data-act="routine-from-workout" data-id="${w.id}">Guardar como rutina</button><button class="btn" data-act="edit-workout" data-id="${w.id}">Editar</button><button class="btn danger" data-act="delete-workout" data-id="${w.id}">Eliminar</button></div>`;
@@ -3201,6 +3217,13 @@ function bodyNagCard(){
 }
 const msDateHTML = () => `<label class="f">Fecha<input type="date" id="msDate" value="${toLocalInput(Date.now()).slice(0, 10)}"></label>`;
 function goBody(sel){ navTo(() => { tab = 'me'; navStack.me = []; }); setTimeout(() => { const i = $(sel); if (i) { i.scrollIntoView({block: 'center'}); i.focus(); } }, 450); }
+// Ajustes: pitido y RIR/RPE (4.15; sacado de viewMe para que no crezca)
+function prefsHTML(){
+  const ef = effMode();
+  return `<label class="row" style="font-weight:600"><input type="checkbox" class="sw" id="setSound" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
+    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setEffort" ${ef ? 'checked' : ''}><span>RIR o RPE en cada serie<br><span class="small muted" style="font-weight:500">Lo cerca del fallo que acabas: RIR (reps que te quedaban) o RPE (esfuerzo de 6 a 10).</span></span></label>
+    ${ef ? `<div class="f" role="group" aria-labelledby="effLbl"><span id="effLbl">Cómo apuntarlo</span><div class="seg">${[['rir', 'RIR'], ['rpe', 'RPE']].map(([k, l]) => `<button data-act="set-eff-unit" data-v="${k}" aria-pressed="${ef === k}">${l}</button>`).join('')}</div></div>` : ''}`;
+}
 function viewMe(){
   const tot = S.workouts.length, vol = S.workouts.reduce((a, w) => a + wVolume(w), 0), ms = S.workouts.reduce((a, w) => a + (w.end - w.start), 0);
   const name = Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : 'Tú';
@@ -3222,7 +3245,7 @@ function viewMe(){
   h += `<div class="card stack"><h3>Ajustes</h3>
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
-    <label class="row" style="font-weight:600"><input type="checkbox" class="sw" id="setSound" ${S.settings.sound ? 'checked' : ''}> Pitido y vibración al acabar el descanso</label>
+    ${prefsHTML()}
     ${window.Native ? '' : `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setNotif" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}`}${healthHTML()}</div>`;
   h += `<div class="card stack"><h3>Tus datos</h3>
     <div class="small muted">${Cloud.session ? 'Se guardan en tu cuenta y en este móvil, así que funciona sin conexión y se sube solo cuando vuelve la cobertura. Solo tú puedes verlos.' : 'Se guardan solo en este móvil. Descarga una copia de vez en cuando y siempre antes de cambiar de móvil.'}</div>
@@ -3479,12 +3502,17 @@ function platesHTML(e){
   const txt = groups.map(([p, n]) => (n > 1 ? n + '×' : '') + fmtN(p, 2)).join(' + ');
   return `<span class="pl" aria-hidden="true"><u></u>${r.list.map(p => { const [, c, hh] = PLATES.find(q => q[0] === p); return `<i style="height:${hh}px;background:${c}"></i>`; }).join('')}</span><span>${txt} por lado${r.exact ? '' : ` (${fmtN(r.total, 2)} kg)`}</span>`;
 }
+function effBtnHTML(s, ei, si, ef){
+  const t = effFmt(s.rpe, ef);
+  return `<button class="seff${t == null ? ' nov' : ''}" data-act="set-eff" data-ei="${ei}" data-si="${si}" aria-label="${ef === 'rpe' ? 'RPE' : 'RIR'} serie ${si + 1}: ${t ?? 'sin poner'}">${t ?? '–'}</button>`;
+}
 function exCardHTML(e, ei){
   const x = exOf(e.exId), m = ED.mode, chk = m === 'active';
   const prev = prevSets(e.exId, m === 'past' ? ED.data.id : null);
   const cols = x.type === 'dur' ? ['Seg'] : x.type === 'cardio' ? ['km', 'min'] : x.type === 'bw' ? ['+kg', 'Reps'] : ['kg', 'Reps'];
   const fields = x.type === 'dur' ? ['sec'] : x.type === 'cardio' ? ['km', 'min'] : ['kg', 'reps'];
   const rest = e.rest ?? S.settings.rest;
+  const ef = m !== 'routine' && (x.type === 'wr' || x.type === 'bw') ? effMode() : null, efc = ef ? 'eff' : '';
   const sn = {n: 0};
   if (chk && !ED.prc) ED.prc = {};
   const rows = e.sets.map((s, si) => {
@@ -3493,17 +3521,18 @@ function exCardHTML(e, ei){
     const ph = phFor(e, si) || {};
     const pv = prev[si], key = ei + '-' + si;
     const inputs = fields.map(f => `<input class="sin" inputmode="${f === 'reps' || f === 'sec' ? 'numeric' : 'decimal'}" data-act="set-in" data-f="${f}" data-ei="${ei}" data-si="${si}" value="${s[f] != null ? String(s[f]).replace('.', ',') : ''}" placeholder="${ph[f] != null ? fmtN(ph[f], 2) : '–'}" aria-label="${f} serie ${si + 1}">`).join('') + (fields.length === 1 ? '<div></div>' : '');
-    return `<div class="swrap"><div class="sgrid srow t-${s.t} ${chk && s.done ? 'done' : ''} ${pr ? 'prow' : ''} ${chk ? '' : 'nochk'} ${chk && ED.cur === key ? 'cur' : ''} ${ED.just === key ? 'just' : ''}" id="r-${ei}-${si}" data-ei="${ei}" data-si="${si}">
+    return `<div class="swrap"><div class="sgrid srow t-${s.t} ${chk && s.done ? 'done' : ''} ${pr ? 'prow' : ''} ${chk ? '' : 'nochk'} ${efc} ${chk && ED.cur === key ? 'cur' : ''} ${ED.just === key ? 'just' : ''}" id="r-${ei}-${si}" data-ei="${ei}" data-si="${si}">
       <button class="sbadge" data-act="set-menu" data-ei="${ei}" data-si="${si}" aria-label="Tipo de serie">${lab}${pr ? `<i class="medal" title="Chiquipunto: ${pr.label}">${ICON.trophy}</i>` : ''}</button>
       <button class="sprev" data-act="use-prev" data-ei="${ei}" data-si="${si}">${pv ? esc(setText(pv, x.type)) : '–'}</button>
       ${inputs}
+      ${ef ? effBtnHTML(s, ei, si, ef) : ''}
       ${chk ? `<button class="schk" data-act="set-done" data-ei="${ei}" data-si="${si}" aria-label="Marcar serie hecha" aria-pressed="${!!s.done}">${ICON.check}</button>` : ''}</div></div>`;
   }).join('');
   return `<div class="excard ${e.ss ? 'ss' : ''}" id="ex-${ei}">
     <div class="exh">${photoUrl(x) ? `<button class="exthumb" data-act="ed-ex-info" data-id="${x.id}" aria-label="Ver ${esc(x.name)}">${photoImg(x)}</button>` : ''}<button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${chk ? rkChipLive(e) : ''}${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
     <textarea class="note" rows="1" data-act="ex-note" data-ei="${ei}" placeholder="Añadir notas…" aria-label="Notas">${esc(e.notes || '')}</textarea>
     ${m !== 'past' ? `<div class="exinfo"><button class="restline" data-act="ex-rest" data-ei="${ei}" aria-label="Descanso ${rest ? fmtClock(rest) : 'desactivado'}${e.rest == null ? ', por defecto' : ', ajustado'}. Cambiar">${ICON.clock} Descanso ${rest ? fmtClock(rest) : 'desactivado'}</button><span class="plates" id="pl-${ei}">${platesHTML(e)}</span></div>` : ''}
-    <div class="sgrid hd ${chk ? '' : 'nochk'}"><div>Serie</div><div>Anterior</div><div>${cols[0]}</div><div>${cols[1] || ''}</div>${chk ? '<div></div>' : ''}</div>
+    <div class="sgrid hd ${chk ? '' : 'nochk'} ${efc}"><div>Serie</div><div>Anterior</div><div>${cols[0]}</div><div>${cols[1] || ''}</div>${ef ? `<div>${ef === 'rpe' ? 'RPE' : 'RIR'}</div>` : ''}${chk ? '<div></div>' : ''}</div>
     ${rows}
     <button class="addset" data-act="add-set" data-ei="${ei}">${ICON.plus.replace('<svg', '<svg width="16" height="16"')} Añadir serie</button></div>`;
 }
@@ -3873,6 +3902,7 @@ function exIndex(){
   return idx;
 }
 /* 4.14: los valores absurdos de un CSV se descartan (la serie se queda sin ese dato) sin bloquear la importación */
+const withRpe = (s, v) => { v = rpeOk(num(v)); if (v != null) s.rpe = v; return s; }; // columna rpe de Hevy (4.15)
 const csvClamp = (v, max, signed) => v != null && (v > max || v < (signed ? -max : 0)) ? null : v;
 function importWorkoutsCSV(text){
   const rows = parseCSV(text);
@@ -3920,7 +3950,7 @@ function importWorkoutsCSV(text){
       const s = {t, kg: kg != null ? Math.round(kg * 100) / 100 : null, reps, sec: null, km: null, min: null};
       const type = exOf(exId).type;
       if (type === 'dur') s.sec = dur; if (type === 'cardio') { s.km = km; s.min = dur ? Math.round(dur / 6) / 10 : null; }
-      block.sets.push(s);
+      block.sets.push(withRpe(s, get(r, 'rpe')));
     }
     if (!exercises.length) continue;
     const w = {id: rid(), title: g.title || 'Entreno', start: g.start, end: Math.min(Math.max(g.end, g.start + 60000), g.start + 864e5), notes: g.notes || '', routineId: null, exercises, prs: []};
@@ -4006,13 +4036,13 @@ async function saveFile(filename, data, mime){
   } catch (e) { toast('No se ha podido guardar el archivo'); return false; }
 }
 function toCSV(){
-  const head = ['title','start_time','end_time','description','exercise_title','superset_id','exercise_notes','set_index','set_type','weight_kg','reps','distance_km','duration_seconds'];
+  const head = ['title','start_time','end_time','description','exercise_title','superset_id','exercise_notes','set_index','set_type','weight_kg','reps','distance_km','duration_seconds','rpe'];
   // 4.9.1: un texto que empieza por = + - @ se trata como fórmula en Excel (un entreno copiado de otro podía colarla): se antepone '
   const q = v => { const txt = typeof v === 'string'; v = v == null ? '' : String(v); if (txt && /^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const dt = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`; };
   const T = {n: 'normal', w: 'warmup', f: 'failure', d: 'dropset'};
   const lines = [head.join(',')];
-  S.workouts.slice().reverse().forEach(w => w.exercises.forEach(e => e.sets.forEach((s, i) => lines.push([w.title, dt(w.start), dt(w.end), w.notes, exOf(e.exId).name, e.ss ? e.ss.replace(/^s/, '') : '', e.notes, i, T[s.t], s.kg, s.reps, s.km, s.sec != null ? s.sec : s.min != null ? Math.round(s.min * 60) : ''].map(q).join(',')))));
+  S.workouts.slice().reverse().forEach(w => w.exercises.forEach(e => e.sets.forEach((s, i) => lines.push([w.title, dt(w.start), dt(w.end), w.notes, exOf(e.exId).name, e.ss ? e.ss.replace(/^s/, '') : '', e.notes, i, T[s.t], s.kg, s.reps, s.km, s.sec != null ? s.sec : s.min != null ? Math.round(s.min * 60) : '', rpeOk(s.rpe) ?? ''].map(q).join(',')))));
   return lines.join('\n');
 }
 
@@ -4477,7 +4507,7 @@ const Social = {
     const ex = arr(s.ex, 40).map(e => {
       e = obj(e); const name = e ? str(e.name, 80).trim() : ''; if (!name) return null;
       return {id: str(e.id, 64), name, muscle: own(MUSCLES, e.muscle) ? e.muscle : 'completo', equip: own(EQUIP, e.equip) ? e.equip : 'otro', type: own(TYPES, e.type) ? e.type : 'wr',
-        sets: arr(e.sets, 60).map(x => x = obj(x)).filter(Boolean).map(x => ({t: ['n', 'w', 'f', 'd'].includes(x.t) ? x.t : 'n', kg: nul(x.kg, 2000), reps: nul(x.reps, 5000), sec: nul(x.sec, 172800), km: nul(x.km, 5000), min: nul(x.min, 3000)}))};
+        sets: arr(e.sets, 60).map(x => x = obj(x)).filter(Boolean).map(x => ({t: ['n', 'w', 'f', 'd'].includes(x.t) ? x.t : 'n', kg: nul(x.kg, 2000), reps: nul(x.reps, 5000), sec: nul(x.sec, 172800), km: nul(x.km, 5000), min: nul(x.min, 3000), rpe: rpeOk(x.rpe)}))};
     }).filter(Boolean);
     const lc = obj(s.lastC), lastC = lc && typeof lc.uid === 'string' && lc.uid && typeof lc.cid === 'string' && lc.cid ? {uid: str(lc.uid, 128), cid: str(lc.cid, 64), text: str(lc.text, 140), ts: fin(lc.ts, 0, 8.64e15, 0)} : null;
     return {v: 1, id: s.id, uid: s.uid, start, end: fin(s.end, start, start + 7 * 864e5, start), title: str(s.title, 80).trim() || 'Entreno', notes: str(s.notes, 1000), name: str(s.name, 40), username: str(s.username, 20), wid: str(s.wid, 80),
@@ -5478,7 +5508,7 @@ function viewPost(pid){
   const safeSet = (s, t) => { try { return setText(s, t); } catch (e) { return ''; } };
   for (const e of exs) {
     const sn = {n: 0};
-    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${setLab(t, sn)}</b></td><td>${esc(safeSet(s, e.type))}</td></tr>`; }).join('')}</table></div>`;
+    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${setLab(t, sn)}</b></td><td>${esc(safeSet(s, e.type) + effSfx(s))}</td></tr>`; }).join('')}</table></div>`;
   }
   h += `<button class="btn primary block" data-act="soc-copy" data-id="${esc(p.id)}">Hacer este entreno</button>
     <div class="grid2 det-acts"><button class="btn" data-act="soc-copy-routine" data-id="${esc(p.id)}">Guardar como rutina</button><button class="btn" data-act="soc-copytext" data-id="${esc(p.id)}">Copiar texto</button></div>
@@ -5808,6 +5838,14 @@ const A = {
   },
   'set-type'(el){ ED.data.exercises[+el.dataset.ei].sets[+el.dataset.si].t = el.dataset.t; closeModal(); renderEditor(); edTouch(); },
   'set-del'(el){ closeModal(); delSet(+el.dataset.ei, +el.dataset.si); },
+  'set-eff'(el){
+    const ei = +el.dataset.ei, si = +el.dataset.si, mode = effMode(), s = ED && ED.data.exercises[ei] && ED.data.exercises[ei].sets[si]; if (!s || !mode) return;
+    const cur = rpeOk(s.rpe), vals = mode === 'rpe' ? EFF_RPE : EFF_RIR, rpe = v => mode === 'rpe' ? v : 10 - v, on = v => cur != null && (mode === 'rir' && v === 5 ? cur <= 5 : cur === rpe(v));
+    const help = mode === 'rpe' ? 'Lo duro que ha sido la serie, de 6 a 10. 10: no podías hacer ni una más. 8: te quedaban 2.' : 'Repeticiones que te quedaban en reserva. 0: al fallo. 2: podías hacer 2 más.';
+    modal(mode === 'rpe' ? 'RPE de la serie' : 'RIR de la serie', `<div class="small muted">${help}</div><div class="effgrid">${vals.map(v => `<button class="btn ${on(v) ? 'primary' : ''}" data-act="eff-pick" data-v="${rpe(v)}" data-ei="${ei}" data-si="${si}" aria-pressed="${on(v)}">${fmtN(v)}${mode === 'rir' && v === 5 ? '+' : ''}</button>`).join('')}</div>${cur != null ? `<button class="btn ghost block" data-act="eff-pick" data-v="" data-ei="${ei}" data-si="${si}">Quitar</button>` : ''}`);
+  },
+  'eff-pick'(el){ const s = ED && ED.data.exercises[+el.dataset.ei] && ED.data.exercises[+el.dataset.ei].sets[+el.dataset.si]; closeModal(); if (!s) return; const v = rpeOk(+el.dataset.v); if (el.dataset.v === '' || v == null) delete s.rpe; else s.rpe = v; renderEditor(); edTouch(); },
+  'set-eff-unit'(el){ S.settings.effUnit = el.dataset.v === 'rpe' ? 'rpe' : 'rir'; Store.mark('meta'); render(); },
   'toast-act'(){ const f = toastFn; toastFn = null; $('#toast').classList.remove('show'); if (f) f(); },
   'ex-reorder'(){ closeModal(); openReorder(); },
   'add-set'(el){ const e = ED.data.exercises[+el.dataset.ei]; const last = e.sets[e.sets.length - 1]; const s = blankSet(last && last.t === 'w' ? 'n' : (last ? last.t : 'n')); if (ED.mode !== 'active' && last) { s.kg = last.kg; s.reps = last.reps; s.sec = last.sec; s.km = last.km; s.min = last.min; } else if (last) { s.ph = {kg: last.kg ?? (last.ph || {}).kg, reps: last.reps ?? (last.ph || {}).reps, sec: last.sec ?? (last.ph || {}).sec, km: last.km ?? (last.ph || {}).km, min: last.min ?? (last.ph || {}).min}; } e.sets.push(s); renderEditor(); edTouch(); },
@@ -6353,6 +6391,7 @@ document.addEventListener('change', ev => {
   if (el.id === 'setHeight') { const v = Math.round(+el.value); if (el.value !== '' && !S.settings.healthOk) { const val = el.value; healthOk().then(ok => { const i = $('#setHeight') || el; if (ok) { if (S.settings.height === Math.round(+val)) return; i.value = val; i.dispatchEvent(new Event('change', {bubbles: true})); } else i.value = rkHeight() || ''; }); return; } if (el.value === '') { delete S.settings.height; Store.mark('meta'); toast('Altura borrada'); } else if (v >= 120 && v <= 230) { S.settings.height = v; Store.mark('meta'); toast('Altura: ' + v + ' cm'); } else { el.value = rkHeight() || ''; toast('Pon tu altura en centímetros (120-230)'); } }
   if (el.id === 'setRest') { S.settings.rest = +el.value; Store.mark('meta'); toast('Descanso por defecto: ' + (S.settings.rest ? fmtClock(S.settings.rest) : 'sin temporizador')); }
   if (el.id === 'setNotif') { if (el.checked) askNotif().then(ok => { el.checked = ok; }); else { S.settings.notif = false; Store.mark('meta'); } }
+  if (el.id === 'setEffort') { S.settings.effort = el.checked; Store.mark('meta'); render(); }
   if (el.id === 'setSound') { S.settings.sound = el.checked; Store.mark('meta'); if (el.checked) { unlockAudio(); beep(); } }
 });
 document.addEventListener('keydown', ev => {
@@ -7468,7 +7507,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.14.0';
+const APP_VERSION = '4.15.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
