@@ -47,10 +47,20 @@ Otros ajustes: sin modos en segundo plano (Apple rechaza los que no se usan, nor
 
 Para App Review: la interfaz de la app tiene que ofrecer el interruptor de Salud (llamando a `Native.health.enable()`) y explicar para qué se usa; la política de privacidad debe mencionar Salud y la cámara.
 
-## Qué falta cuando haya cuenta de Apple Developer
+## Cuenta de Apple Developer (activa desde el 20 nov 2026)
 
-1. **App ID** `io.github.guillemarmu.hierro` en developer.apple.com con la capacidad **HealthKit** (y **Push Notifications** cuando se añada el push).
-2. **Firmar y subir** desde Actions: clave de la API de App Store Connect (`.p8`, Key ID, Issuer ID) como secretos del repo + **fastlane** (`match` o firma automática con la clave de la API) para generar el `.ipa` y subirlo a TestFlight.
+- Persona física «Guillermo Martín Muñoz», **Team ID `P8TDPVJAT8`**.
+- **App ID** `io.github.guillemarmu.hierro` registrado con **HealthKit** (y la compra dentro de la app que Apple pone siempre).
+- **App en App Store Connect**: «Hierro», iOS, español (España), SKU `hierro-ios`, acceso ilimitado de usuarios.
+- **Clave de la API** «GitHub Actions» (función Administración): Key ID `U85TUDM496`, Issuer ID `8a7cb5bd-8ca6-4805-b3fe-e4a834e90684`. El `.p8` solo se descarga una vez: lo guarda Guillermo fuera de GitHub.
+
+### Subir a TestFlight
+
+1. Secretos del repo (Settings › Secrets and variables › Actions; solo puede guillemarmu): `ASC_KEY_ID` = `U85TUDM496`, `ASC_ISSUER_ID` = `8a7cb5bd-8ca6-4805-b3fe-e4a834e90684` y `ASC_KEY_P8` = el contenido entero del `.p8` (con las líneas BEGIN/END).
+2. Actions › **iOS TestFlight** › Run workflow (`.github/workflows/ios-testflight.yml`). Prepara el proyecto, archiva en Release con **firma automática** (`-allowProvisioningUpdates` + la clave de la API; Xcode crea solo el certificado de distribución y el perfil) y sube el `.ipa` a App Store Connect con `xcodebuild -exportArchive` (`destination` = `upload`).
+3. Versión = `APP_VERSION`; compilación = 100 + número de ejecución (o el manual, que tiene que ser mayor que el último subido).
+4. A los 10-30 min sale en TestFlight. Para probarla: App Store Connect › Hierro › TestFlight › añadir probadores internos (tu Apple ID) y la app TestFlight en el iPhone.
+
 3. **Push nativo (siguiente paso)**: se ha quitado hasta que el Worker pueda enviar a APNs. Hará falta: clave APNs (`.p8`) como secreto del Worker de Cloudflare (`hierro-avisos`); que el Worker envíe a APNs (JWT ES256, `api.push.apple.com`, topic = appId) y guarde los tokens; volver a añadir `@capacitor/push-notifications`, `UIBackgroundModes` = `remote-notification` y `aps-environment` en `App.entitlements`; la capacidad Push en el App ID; y `Native.push.token()` en `native.js`.
 4. **Capturas** de iPhone, ficha, cuenta de prueba para los revisores (ver `../ficha.md`) y política de privacidad actualizada.
 5. **Mejora futura**: Live Activity del descanso en la pantalla de bloqueo (ActivityKit + extensión de widget; requiere Xcode/Swift y notificaciones push de Live Activity).
