@@ -1,0 +1,111 @@
+# Compila Hierro para iOS FIRMADO y lo sube a App Store Connect (TestFlight).
+# Se lanza a mano: Actions › «iOS TestFlight» › Run workflow.
+# Firma automática con la clave de la API de App Store Connect (función Administración); sin Mac ni certificados a mano.
+# Secretos del repo (los pone Guillermo): ASC_KEY_ID, ASC_ISSUER_ID y ASC_KEY_P8 (contenido entero del .p8).
+name: iOS TestFlight
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Número de compilación (vacío = 100 + número de ejecución). Tiene que ser mayor que el último subido.'
+        required: false
+        default: ''
+permissions:
+  contents: read
+env:
+  TEAM_ID: P8TDPVJAT8
+jobs:
+  testflight:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Comprobar secretos
+        env:
+          K: ${{ secrets.ASC_KEY_ID }}
+          I: ${{ secrets.ASC_ISSUER_ID }}
+          P: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          [ -n "$K" ] && [ -n "$I" ] && [ -n "$P" ] || { echo "::error::Faltan los secretos ASC_KEY_ID, ASC_ISSUER_ID o ASC_KEY_P8 (ver tiendas/ios/LEEME.md)."; exit 1; }
+      - name: Versión y número de compilación
+        id: v
+        env:
+          MANUAL: ${{ github.event.inputs.build }}
+        run: |
+          VER=$(grep -o "APP_VERSION = '[0-9.]*'" hierro-pwa/index.html | head -1 | grep -o "[0-9.]*")
+          [ -n "$VER" ] || { echo "::error::No encuentro APP_VERSION"; exit 1; }
+          if [ -n "$MANUAL" ]; then
+            [[ "$MANUAL" =~ ^[0-9]+$ ]] || { echo "::error::El número de compilación tiene que ser un entero"; exit 1; }
+            BUILD="$MANUAL"
+          else
+            BUILD=$((100 + GITHUB_RUN_NUMBER))
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"; echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Versión $VER ($BUILD)"
+      - name: Preparar el proyecto
+        working-directory: tiendas/ios
+        run: bash preparar.sh
+      - name: Clave de la API
+        env:
+          P: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          umask 077
+          printf '%s\n' "$P" > "$RUNNER_TEMP/asc.p8"
+          grep -q 'BEGIN PRIVATE KEY' "$RUNNER_TEMP/asc.p8" || { echo "::error::ASC_KEY_P8 no parece un .p8 (falta BEGIN PRIVATE KEY)"; exit 1; }
+      - name: Archivar (firmado)
+        working-directory: tiendas/ios/ios/App
+        env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          if [ -d App.xcworkspace ]; then DEST=(-workspace App.xcworkspace); else DEST=(-project App.xcodeproj); fi
+          xcodebuild "${DEST[@]}" -scheme App -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Hierro.xcarchive" -derivedDataPath "$RUNNER_TEMP/dd" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="${{ steps.v.outputs.ver }}" CURRENT_PROJECT_VERSION="${{ steps.v.outputs.build }}" \
+            archive | tee "$RUNNER_TEMP/archive.log" | tail -n 60
+      - name: Exportar y subir a App Store Connect
+        env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+            '<plist version="1.0"><dict>' \
+            '<key>method</key><string>app-store-connect</string>' \
+            '<key>destination</key><string>upload</string>' \
+            "<key>teamID</key><string>${TEAM_ID}</string>" \
+            '<key>signingStyle</key><string>automatic</string>' \
+            '<key>uploadSymbols</key><true/>' \
+            '<key>manageAppVersionAndBuildNumber</key><false/>' \
+            '</dict></plist>' > "$RUNNER_TEMP/export.plist"
+          plutil -lint "$RUNNER_TEMP/export.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Hierro.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
+            | tee "$RUNNER_TEMP/export.log" | tail -n 60
+      - name: Borrar la clave
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc.p8"
+      - name: Resumen
+        if: success()
+        run: |
+          {
+            echo "### Hierro iOS ${{ steps.v.outputs.ver }} (${{ steps.v.outputs.build }}) subida a App Store Connect"
+            echo "Aparecerá en TestFlight en unos 10-30 minutos, cuando Apple termine de procesarla."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hierro-ios-testflight-logs
+          path: |
+            ${{ runner.temp }}/archive.log
+            ${{ runner.temp }}/export.log
+          retention-days: 7
