@@ -275,7 +275,7 @@ table.sets tr+tr td{border-top:1px solid var(--linea)}
 /* capas */
 .layer{position:fixed;inset:0;display:none;z-index:20}
 .layer.open{display:block}
-#editor,#summary,#auth{background-color:var(--fondo);background-image:var(--aurora);background-repeat:no-repeat}
+#editor,#summary,#auth,#welcome{background-color:var(--fondo);background-image:var(--aurora);background-repeat:no-repeat}
 #editor{z-index:30}
 #editor .ehead,#summary .ehead{padding:calc(14px + var(--sat)) 12px 8px;display:flex;align-items:center;gap:8px}
 #editor .ehead .ttl{flex:1;min-width:0;font-size:17px;font-weight:700;display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.1}
@@ -579,6 +579,16 @@ h3+.sx{border-top:0;padding-top:0}
 .lc-tip.show{opacity:1}
 .split{display:flex;flex-direction:column;gap:9px}
 #auth{z-index:39;overflow-y:auto;overflow-x:hidden}
+#welcome{z-index:38;overflow-y:auto;overflow-x:hidden}
+.wl{max-width:420px;min-height:100%;margin:0 auto;padding:calc(20px + var(--sat)) 24px calc(24px + var(--sab));display:flex;flex-direction:column;gap:18px}
+.wl .skip{align-self:flex-end;min-height:44px;color:var(--texto)}
+.wl .body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px}
+.wl .ei{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;line-height:1;background:var(--acc-soft);box-shadow:inset 0 0 0 1px var(--glass-borde)}
+.wl .body h2{font-size:28px;line-height:1.15}
+.wl .body p{color:var(--texto);max-width:320px}
+.wl .dots{display:flex;gap:8px;justify-content:center}
+.wl .dots i{width:8px;height:8px;border-radius:50%;background:var(--sup-3)}
+.wl .dots i.on{width:22px;border-radius:4px;background:var(--acc)}
 .auth{max-width:420px;margin:0 auto;padding:calc(36px + var(--sat)) 24px 34px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;position:relative;min-height:100%}
 .auth>*{position:relative}
 .auth .logo{width:116px;height:116px;border-radius:28px;filter:drop-shadow(0 18px 40px var(--glow))}
@@ -1161,6 +1171,9 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 .excard textarea.note{min-height:40px;padding:10px 4px;margin:-8px 0} /* notas del ejercicio: 40 px tocables sin mover el diseño */
 /* Ejercicio propio: todos los músculos a la vista (en iPhone el desplegable cortaba la lista en Cuádriceps y no se veía Abdominales) */
 #modal .chips.cx-mus{margin:0;padding:0}
+/* 4.14 · Cuenta, social y moderación */
+.auth input[type=checkbox]{min-height:0;width:22px;height:22px;padding:0;margin-top:1px;flex:none;box-shadow:none}
+.au-age{padding:8px 0;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1171,7 +1184,7 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
   </defs></svg>
 <div id="app">
   <header id="top"></header>
-  <main id="view" aria-live="polite"></main>
+  <main id="view"></main>
   <button id="activeBar" type="button" data-act="open-active"></button>
   <nav id="tabs" aria-label="Secciones"></nav>
 </div>
@@ -1180,6 +1193,7 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 <div id="restLive" class="sr-only" aria-live="polite"></div>
 <div id="summary" class="layer" role="dialog" aria-modal="true" aria-label="Resumen del entreno"></div>
 <div id="auth" class="layer" role="dialog" aria-modal="true" aria-label="Entrar en Hierro"></div>
+<div id="welcome" class="layer" role="dialog" aria-modal="true" aria-label="Bienvenida a Hierro"></div>
 <div id="modal" class="layer" role="dialog" aria-modal="true"></div>
 <div id="ptr" aria-hidden="true"><div class="pb"><svg viewBox="0 0 24 24"><circle class="rg" cx="12" cy="12" r="9"/><path class="ar" d="M12 7.5v8M8.5 12.5 12 16l3.5-3.5"/></svg></div></div>
 <div id="toast" role="status"></div>
@@ -1217,6 +1231,16 @@ const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// 4.14 · Filtro de texto ofensivo (Apple 1.2). Lista corta y conservadora: insultos graves, odio y sexo explícito (ES y algo de EN).
+// Se compara por palabra completa y sin acentos (ñ=ny); ampliar la lista aquí. Solo para texto que ven otras personas.
+const BAD_WORDS = ['puta', 'puto', 'putón', 'hijoputa', 'gilipollas', 'subnormal', 'mongolo', 'maricón', 'marica', 'sudaca', 'negrata',
+  'follar', 'fóllame', 'polla', 'coño', 'chupapollas', 'mamada', 'suicídate', 'mátate', 'pedófilo', 'nazi de mierda',
+  'fuck', 'fucker', 'fucking', 'motherfucker', 'cunt', 'whore', 'slut', 'nigger', 'nigga', 'faggot', 'retard', 'rapist'];
+const badKey = t => String(t || '').toLowerCase().replace(/ñ/g, 'ny').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[@4]/g, 'a').replace(/3/g, 'e').replace(/1/g, 'i').replace(/0/g, 'o').replace(/[$5]/g, 's').replace(/[^a-z]+/g, ' ').replace(/([a-z])\1{2,}/g, '$1').trim(); // solo 3+ repeticiones («pollaaa»), para no convertir «polla» en «pola»
+const BAD_RE = new RegExp('(?:^| )(?:' + BAD_WORDS.map(w => badKey(w).replace(/ /g, ' ')).join('|') + ')(?:s|es)?(?= |$)');
+const badText = s => !!s && BAD_RE.test(badKey(s));
+const BAD_MSG = 'Ese texto no está permitido en Hierro. Revisa las normas.';
 const clone = o => JSON.parse(JSON.stringify(o));
 const num = v => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
 const fmtN = (n, d = 1) => n == null ? '' : (Math.round(n * 10 ** d) / 10 ** d).toLocaleString('es-ES', {maximumFractionDigits: d});
@@ -1732,13 +1756,13 @@ const AUTH_ERRORS = {
   USER_DISABLED: 'Esta cuenta está desactivada.',
   CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'Por seguridad, cierra sesión, vuelve a entrar y repite la acción.',
   TOKEN_EXPIRED: 'Tu sesión ha caducado. Vuelve a entrar.',
-  OPERATION_NOT_ALLOWED: 'El acceso con email y contraseña no está activado en Firebase (mira el paso 3 de la guía).',
-  CONFIGURATION_NOT_FOUND: 'Firebase Authentication no está activado en el proyecto (mira el paso 3 de la guía).'
+  OPERATION_NOT_ALLOWED: 'No se pueden crear cuentas ahora mismo. Inténtalo más tarde.',
+  CONFIGURATION_NOT_FOUND: 'No se pueden crear cuentas ahora mismo. Inténtalo más tarde.'
 };
 function authMsg(raw){
   const code = String(raw || '').split(/[ :]/)[0];
   if (AUTH_ERRORS[code]) return AUTH_ERRORS[code];
-  if (/API key not valid|API_KEY_INVALID/i.test(raw || '')) return 'La configuración de Firebase no es correcta (revisa apiKey en config.js).';
+  if (/API key not valid|API_KEY_INVALID/i.test(raw || '')) return 'No se ha podido conectar con el servidor. Inténtalo más tarde.';
   return 'No se ha podido completar. Inténtalo otra vez.';
 }
 const QUOTA_MSG = 'Hierro va a tope hoy y la nube está en pausa. Tus entrenos se guardan en el móvil y se subirán solos en unas horas.';
@@ -1951,6 +1975,9 @@ const Sync = {
   },
   pulledAt: 0,
   onlyActive(){ const d = this.diff(); return !!d.active && !d.w.length && !d.del.length && !d.meta && Date.now() - this.pulledAt < 120000; },
+  rejKey(x){ return x[0].update ? x[0].update.name + '|' + hashOf(x[0].update.fields) : ''; },
+  // 4.14: lo que las reglas del servidor han rechazado no está «pendiente»: es un error (no se reenvía hasta que cambie)
+  rejCount(){ return this.on() ? Social.pushItems().filter(x => x[0].update && Social.rej.has(this.rejKey(x))).length : 0; },
   pendingCount(){ if (!this.on()) return 0; const d = this.diff(); return d.w.length + d.del.length + (d.meta ? 1 : 0) + (d.active ? 1 : 0) + Social.pushItems().length + Clan.pushItems().length; },
   async push(){
     const uid = Cloud.session.uid, d = this.diff(), items = [];
@@ -1967,7 +1994,7 @@ const Sync = {
     // perfil público y entrenos publicados (si falla, no bloquea tus datos privados)
     // Si el lote falla, se reintenta elemento a elemento: así algo malo no frena lo demás. Borrar una publicación que ya no existe
     // (la quitaste desde otro dispositivo) lo rechazan las reglas con 403: si de verdad ya no está, se da por hecho.
-    const rejKey = x => x[0].update ? x[0].update.name + '|' + hashOf(x[0].update.fields) : '';
+    const rejKey = x => this.rejKey(x);
     const sitems = Social.pushItems().filter(x => !(x[0].update && Social.rej.has(rejKey(x)))); let sfail = null; // lo que las reglas ya rechazaron no se reenvía hasta que cambie
     const isProf = x => !!(x[0].update && /\/profiles\//.test(x[0].update.name)), others = sitems.filter(x => !isProf(x));
     const chunks = [...sitems.filter(isProf).map(x => [x])]; for (let i = 0; i < others.length; i += 200) chunks.push(others.slice(i, i + 200)); // el perfil va aparte: un post rechazado no arrastra su commit
@@ -2085,26 +2112,44 @@ function syncDetail(){
   if (d.del.length) n(d.del.length, 'entreno borrado', 'entrenos borrados');
   if (d.meta) out.push('Rutinas, medidas o ajustes');
   if (d.active) out.push('Entreno en curso');
-  const si = Social.pushItems(); let prof = 0, post = 0, photo = 0, del = 0;
-  si.forEach(([w]) => { const nm = w.delete || (w.update && w.update.name) || ''; if (w.delete) del++; else if (/\/profiles\//.test(nm)) prof++; else if (w.updateMask && w.updateMask.fieldPaths.includes('photo')) photo++; else post++; });
-  if (prof) out.push('Tu perfil público'); if (post) n(post, 'publicación', 'publicaciones'); if (photo) n(photo, 'foto', 'fotos'); if (del) n(del, 'publicación por quitar', 'publicaciones por quitar');
+  out.push(...socKinds(Social.pushItems().filter(x => !(x[0].update && Social.rej.has(Sync.rejKey(x))))));
   if (Clan.pushItems().length) out.push('Tu resumen del clan');
   return out;
+}
+// Qué es cada cosa social de la cola (perfil, publicaciones, fotos, borrados), en palabras
+function socKinds(si){
+  const out = []; let prof = 0, post = 0, photo = 0, del = 0;
+  si.forEach(([w]) => { const nm = w.delete || (w.update && w.update.name) || ''; if (w.delete) del++; else if (/\/profiles\//.test(nm)) prof++; else if (w.updateMask && w.updateMask.fieldPaths.includes('photo')) photo++; else post++; });
+  if (prof) out.push('Tu perfil público'); if (post) out.push(plural(post, 'publicación', 'publicaciones')); if (photo) out.push(plural(photo, 'foto', 'fotos')); if (del) out.push(plural(del, 'publicación por quitar', 'publicaciones por quitar'));
+  return out;
+}
+// Lo que el servidor ha rechazado (permiso denegado): se cuenta como error, no como pendiente
+function syncRejected(){ return Sync.on() ? socKinds(Social.pushItems().filter(x => x[0].update && Social.rej.has(Sync.rejKey(x)))) : []; }
+// El error de la nube, en español entendible; el detalle técnico queda aparte para soporte
+function syncErrText(e){
+  const st = e.status || 0;
+  if (st === 403) return 'El servidor ha rechazado un cambio (permiso denegado)';
+  if (st === 401) return 'Tu sesión ha caducado. Vuelve a entrar';
+  if (st === 429) return 'El servidor está ocupado. Se reintentará solo';
+  if (st >= 500) return 'El servidor no está disponible ahora mismo. Se reintentará solo';
+  if (st === 400 || st === 404 || st === 409) return 'El servidor no ha aceptado un cambio';
+  return 'No se ha podido subir todo';
 }
 function syncInfo(){
   const ST = {ok: 'Sincronizado', idle: 'Sincronizando…', busy: 'Sincronizando…', offline: 'Sin conexión', error: 'Error al subir', expired: 'Sesión caducada'};
   const det = syncDetail(), when = t => t ? new Date(t).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit', second: '2-digit'}) : '—';
   const PART = {datos: 'Tus datos', social: 'Social', clan: 'Clan'};
-  const errs = Object.entries(Sync.errs).map(([k, e]) => `${PART[k] || k}: ${e.status ? e.status + ' · ' : ''}${e.msg} (${when(e.at)})`);
-  return {state: ST[Sync.state] || Sync.state, det, errs, last: when(Sync.last), tries: Sync.tries, v: APP_VERSION,
-    text: [`Hierro ${APP_VERSION} · ${ST[Sync.state] || Sync.state} · última subida ${when(Sync.last)} · intentos ${Sync.tries} · App Check ${AppCheck.last || '–'}`, 'Pendiente: ' + (det.join(', ') || 'nada'), ...errs].join('\n')};
+  const ents = Object.entries(Sync.errs), errs = ents.map(([k, e]) => `${PART[k] || k}: ${syncErrText(e)} (${when(e.at)})`);
+  const tech = ents.map(([k, e]) => `${PART[k] || k}: ${e.status ? e.status + ' · ' : ''}${e.msg}`), rej = syncRejected();
+  return {state: Sync.state === 'ok' && rej.length ? ST.error : ST[Sync.state] || Sync.state, det, rej, errs, tech, last: when(Sync.last), tries: Sync.tries, v: APP_VERSION,
+    text: [`Hierro ${APP_VERSION} · ${ST[Sync.state] || Sync.state} · última subida ${when(Sync.last)} · intentos ${Sync.tries} · App Check ${AppCheck.last || '–'}`, 'Pendiente: ' + (det.join(', ') || 'nada'), ...errs, ...tech].join('\n')};
 }
 function syncUI(){
   const el = $('#syncState'); if (!el) return;
   const pend = Sync.state !== 'busy' ? Sync.pendingCount() : 0;
-  const map = {ok: ['ok', 'Sincronizado'], idle: ['', 'Sincronizando…'], busy: ['busy', 'Sincronizando…'], offline: ['off', 'Sin conexión'], error: ['off', 'Pendiente de subir'], expired: ['off', 'Sesión caducada']};
+  const map = {ok: ['ok', 'Sincronizado'], idle: ['', 'Sincronizando…'], busy: ['busy', 'Sincronizando…'], offline: ['off', 'Sin conexión'], error: ['off', 'Error al subir'], expired: ['off', 'Sesión caducada']};
   let [cls, txt] = map[Sync.state] || map.idle;
-  if (Sync.state === 'ok' && pend) [cls, txt] = (Sync.errs.social || Sync.errs.clan) && Sync.tries >= 2 ? ['off', 'Error al subir'] : ['busy', 'Pendiente de subir'];
+  if (Sync.state === 'ok' && pend) [cls, txt] = Sync.rejCount() || ((Sync.errs.social || Sync.errs.clan) && Sync.tries >= 2) ? ['off', 'Error al subir'] : ['busy', 'Pendiente de subir'];
   el.className = 'sync ' + cls; el.innerHTML = `<i></i><span>${txt}</span>`; el.title = txt; el.dataset.act = 'sync-info'; el.setAttribute('role', 'button');
   if (Sync.state === 'ok') Sync.nudge(pend);
 }
@@ -2127,6 +2172,10 @@ function hasData(s, type){
   if (type === 'cardio') return s.km > 0 || s.min > 0;
   return s.reps > 0;
 }
+/* 4.14: límites razonables al apuntar (no se guardan disparates) */
+const SET_MAX = {kg: 1000, reps: 1000, sec: 86400, km: 1000, min: 1440};
+function setValOk(f, v, type){ return v == null || (isFinite(v) && v <= SET_MAX[f] && v >= (f === 'kg' && type === 'bw' ? -SET_MAX.kg : 0)); }
+function durOk(v){ return v != null && v >= 1 && v <= 1440; }
 function exHistory(exId, beforeTs = Infinity, excludeId = null){
   const out = [];
   for (const w of S.workouts) {
@@ -2409,7 +2458,7 @@ function viewPlan(){
   /* Días */
   h += `<div class="card stack"><h3>Cada día, qué trabaja</h3>${a.rs.map((r, i) => { if (!r) return ''; const m = Object.entries(a.perDay[i]).sort((x, y) => y[1] - x[1]); return `<div><div class="row between"><b>${DAY_NAMES[i]} · ${esc(r.name)}</b><span class="small muted num">${m.reduce((s, x) => s + x[1], 0)} series</span></div><div class="small muted">${m.length ? m.map(([k, v]) => `${MUSCLES[k] || k} ${v}`).join(' · ') : 'Rutina sin series'}</div></div>`; }).join('')}</div>`;
   const ad = planAdherence(p);
-  if (ad && ad.plan) { const pct = Math.round(Math.min(1, ad.done / ad.plan) * 100); h += `<div class="card stack"><div class="row between"><h3>¿Lo estás cumpliendo?</h3><b class="num">${pct}%</b></div><div class="mbar sm" style="grid-template-columns:1fr"><div class="track">${fillBar(pct)}</div></div><div class="small muted">${ad.done} de ${ad.plan} entrenos en ${ad.k === 1 ? 'la última semana' : 'las últimas ' + ad.k + ' semanas'}.</div></div>`; }
+  if (ad && ad.plan) { const pct = Math.round(Math.min(1, ad.done / ad.plan) * 100); h += `<div class="card stack"><div class="row between"><h3>¿Lo estás cumpliendo?</h3><b class="num">${pct}%</b></div><div class="mbar sm" style="grid-template-columns:1fr"><div class="track">${fillBar(pct)}</div></div><div class="small muted">${ad.done} de ${ad.plan} ${ad.plan === 1 ? 'entreno' : 'entrenos'} en ${ad.k === 1 ? 'la última semana' : 'las últimas ' + ad.k + ' semanas'}.</div></div>`; }
   return h;
 }
 function planSave(days, goal, extra){
@@ -2805,7 +2854,7 @@ function goalCard(thisWeek){
     top = `<div class="gc-risk"><div><b>Tu racha de ${st} semanas está en peligro</b><small>${left === 1 ? 'Se pierde esta noche' : 'Se pierde el domingo · quedan ' + left + ' días'}</small></div>${S.active ? '' : '<button class="btn primary sm" data-act="start-empty">Entrenar ahora</button>'}</div>`;
   } else if (n && st >= 1) top = `<div class="gc-ok">Racha de ${st === 1 ? '1 semana' : st + ' semanas'} a salvo ✓</div>`;
   let h = top;
-  h += `<button class="gc-row" data-act="goal-pick" aria-label="Meta semanal: ${n} de ${goal.n} entrenos. Cambiar meta"><span class="row between"><b>${done ? 'Meta cumplida 💪' : n + ' de ' + goal.n + ' entrenos esta semana'}</b><small class="muted">${done ? n + ' de ' + goal.n : 'Cambiar meta'}</small></span><span class="rk-bar" aria-hidden="true" style="--rk:${done ? 'var(--ok, var(--acc))' : 'var(--acc)'}"><i style="width:${pc(n / goal.n * 100)}%"></i></span></button>`;
+  h += `<button class="gc-row" data-act="goal-pick" aria-label="Meta semanal: ${n} de ${goal.n} entrenos. Cambiar meta"><span class="row between"><b>${done ? 'Meta cumplida 💪' : n + ' de ' + goal.n + (goal.n === 1 ? ' entreno' : ' entrenos') + ' esta semana'}</b><small class="muted">${done ? n + ' de ' + goal.n : 'Cambiar meta'}</small></span><span class="rk-bar" aria-hidden="true" style="--rk:${done ? 'var(--ok, var(--acc))' : 'var(--acc)'}"><i style="width:${pc(n / goal.n * 100)}%"></i></span></button>`;
   const R = rkAll(), g = R.glob;
   if (g && g.idx < 24) {
     const lo = RK_LO[g.idx], hi = RK_LO[g.idx + 1], pts = lo + g.prog * (hi - lo), x = Math.max(1, Math.ceil(hi - pts - 1e-9));
@@ -2828,7 +2877,7 @@ function viewHome(){
   if (!Sync.on() && backupStale()) warn += `<div class="card row between"><div class="small">Hace tiempo que no guardas una copia de tus datos.</div><button class="btn sm" data-act="export-json">Descargar copia</button></div>`;
   let h = '';
   const d = new Date();
-  if (d.getDate() <= 7) { const pm = d.getFullYear() * 12 + d.getMonth() - 1; const pmw = S.workouts.filter(w => { const x = new Date(w.start); return x.getFullYear() * 12 + x.getMonth() === pm; }); if (pmw.length) h += `<button class="card tap row between next" data-act="go-month" data-ym="${pm}"><div><span class="pill accent">Nuevo</span><h3 style="margin-top:6px">Tu informe de ${MONTHS[pm % 12]}</h3><div class="small muted">${pmw.length} entrenos · ${fmtKg(agg(pmw).vol)}</div></div>${ICON.back.replace('<svg', '<svg width="22" height="22" style="transform:scaleX(-1)"')}</button>`; }
+  if (d.getDate() <= 7) { const pm = d.getFullYear() * 12 + d.getMonth() - 1; const pmw = S.workouts.filter(w => { const x = new Date(w.start); return x.getFullYear() * 12 + x.getMonth() === pm; }); if (pmw.length) h += `<button class="card tap row between next" data-act="go-month" data-ym="${pm}"><div><span class="pill accent">Nuevo</span><h3 style="margin-top:6px">Tu informe de ${MONTHS[pm % 12]}</h3><div class="small muted">${plural(pmw.length, 'entreno', 'entrenos')} · ${fmtKg(agg(pmw).vol)}</div></div>${ICON.back.replace('<svg', '<svg width="22" height="22" style="transform:scaleX(-1)"')}</button>`; }
   const pc = planHomeCard();
   if (pc) h += pc;
   else if (nx && !S.active) h += tocaCard('Te toca hoy', nx);
@@ -2838,13 +2887,13 @@ function viewHome(){
   }
   h += bodyNagCard() + goalCard(thisWeek) + warn;
   const last7 = inRange(now - 7 * 864e5, now + 1), ms7 = muscleSets(last7);
-  h += `<div class="card stack"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${weekStreak()}</b> sem. seguidas</span></div>
+  h += `<div class="card stack"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${weekStreak()}</b> ${weekStreak() === 1 ? 'sem. seguida' : 'sem. seguidas'}</span></div>
     <div class="wk" role="img" aria-label="Días entrenados esta semana: ${trained.size}">${days.map((dd, i) => { const on = trained.has(new Date(dd).getDay()); return `<div class="${on ? 'on' : i > todayIdx ? 'fut' : ''} ${i === todayIdx ? 'today' : ''}"><i>${on ? CHECK_SVG : ''}</i><span>${'LMXJVSD'[i]}</span></div>`; }).join('')}</div>
     <div class="stats"><div class="stat"><b>${thisWeek.length}</b><span>Entrenos</span></div><div class="stat"><b>${fmtKg(thisWeek.reduce((a, w) => a + wVolume(w), 0))}</b><span>Volumen</span></div><div class="stat"><b>${fmtDurC(thisWeek.reduce((a, w) => a + (w.end - w.start), 0))}</b><span>Tiempo</span></div></div></div>`;
   const m7 = Object.entries(ms7).sort((a, b) => b[1] - a[1]);
   h += `<div class="card stack"><div class="row between"><h3>Últimos 7 días</h3><button class="linkbtn" data-act="go-stats">Ver estadísticas</button></div>
     <div class="bm-row"><div class="bm-sm">${bodyMap(ms7)}</div><div class="mlist">${m7.length ? m7.slice(0, 5).map(([k, v]) => `<div><i style="background:${heat(v / m7[0][1])}"></i><span>${MUSCLES[k] || k}</span><b class="num">${v}</b></div>`).join('') : '<span class="muted">Sin entrenos estos días.</span>'}</div></div></div>`;
-  h += `<div class="section-h"><h2>Historial</h2><span class="small muted num">${S.workouts.length} entrenos</span></div>`;
+  h += `<div class="section-h"><h2>Historial</h2><span class="small muted num">${plural(S.workouts.length, 'entreno', 'entrenos')}</span></div>`;
   if (S.workouts.length > 3 || UI.hQuery) h += `<input type="search" id="hQ" class="search" placeholder="Buscar entreno o ejercicio" aria-label="Buscar en el historial" autocomplete="off" value="${esc(UI.hQuery)}">`;
   h += `<div id="hList">${historyHTML()}</div>`;
   return h;
@@ -2896,7 +2945,7 @@ function viewTrain(){
   { const pp = plan(), t = planToday(); h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>${pp ? `${planDays(pp)} días a la semana · ${t && t.rs.length ? 'hoy: ' + esc(planNames(t.rs)) : 'hoy descansas'}` : 'Organiza tu semana y analiza tus rutinas'}</small></div><i>›</i></button></div>`; }
   h += `<div class="section-h"><h2>Rutinas</h2><button class="btn ghost" data-act="new-routine">${ICON.plus.replace('<svg', '<svg width="16" height="16"')} Nueva rutina</button></div>`;
   if (!S.routines.length) {
-    h += `<div class="card empty">${EI('📋')}<h3>Sin rutinas todavía</h3><div>Crea tus días (por ejemplo Torso A, Pierna A…) o impórtalos desde tu historial en CSV. Aquí no hay límite de rutinas.</div><div class="row"><button class="btn primary" data-act="new-routine">Crear rutina</button><button class="btn" data-act="import-csv">Importar CSV</button></div></div>`;
+    h += `<div class="card empty">${EI('📋')}<h3>Sin rutinas todavía</h3><div>Crea tus días (por ejemplo Torso A, Pierna A…) o impórtalos desde tu historial en CSV. Crea todas las que necesites.</div><div class="row"><button class="btn primary" data-act="new-routine">Crear rutina</button><button class="btn" data-act="import-csv">Importar CSV</button></div></div>`;
     return h;
   }
   h += S.routines.map((r, i) => { const isN = nx && nx.id === r.id, ms = Object.entries(routineSets(r)).sort((a, b) => b[1] - a[1]), ns = ms.reduce((a, x) => a + x[1], 0);
@@ -2910,9 +2959,10 @@ function viewTrain(){
 
 /* ---------- Ejercicios ---------- */
 function exUseCount(){ const c = {}; S.workouts.forEach(w => w.exercises.forEach(e => c[e.exId] = (c[e.exId] || 0) + 1)); return c; }
+const EX_STOP = new Set(['de', 'del', 'con', 'en', 'la', 'el', 'a', 'y']);
 function exFilter(q, m){
-  const nq = norm(q);
-  return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle))) && (!nq || norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')).includes(nq)));
+  const nq = norm(q), tk = nq.split(' ').filter(t => t && !EX_STOP.has(t));
+  return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle))) && (!nq || (() => { const hay = norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')); return hay.includes(nq) || (tk.length > 0 && tk.every(t => hay.includes(t))); })()));
 }
 function exItem(e, count, sel){
   return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)}, ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? (e.src === 'hevy' ? ', importado' : ', propio') : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
@@ -2944,7 +2994,7 @@ function viewExercise(id){
   const span = {'3m': 91, '1y': 365}[UI.exRange];
   const hist = span ? all.filter(h => h.w.start >= Date.now() - span * 864e5) : all;
   const pu = photoUrl(x), pu1 = photoUrl(x, 1);
-  let h = `${pu ? `<div class="exhero"><img src="${pu}" alt="${esc(x.name)}: posición inicial" onerror="this.parentNode.remove()"><img class="f1" src="${pu1}" alt="" onerror="this.remove()">${x.custom ? '<small>Foto de un ejercicio parecido</small>' : ''}</div>` : ''}<div class="stack"><h2>${esc(x.name)}</h2><div class="row"><span class="pill">${esc(MUSCLES[x.muscle] || '')}</span><span class="pill">${esc(EQUIP[x.equip] || '')}</span>${x.custom ? '<span class="pill accent">Propio</span>' : ''}<span class="pill num">${all.length} sesiones</span></div></div>
+  let h = `${pu ? `<div class="exhero"><img src="${pu}" alt="${esc(x.name)}: posición inicial" onerror="this.parentNode.remove()"><img class="f1" src="${pu1}" alt="" onerror="this.remove()">${x.custom ? '<small>Foto de un ejercicio parecido</small>' : ''}</div>` : ''}<div class="stack"><h2>${esc(x.name)}</h2><div class="row"><span class="pill">${esc(MUSCLES[x.muscle] || '')}</span><span class="pill">${esc(EQUIP[x.equip] || '')}</span>${x.custom ? '<span class="pill accent">Propio</span>' : ''}<span class="pill num">${plural(all.length, 'sesión', 'sesiones')}</span></div></div>
   <div class="seg" role="group">${[['prog', 'Progreso'], ['hist', 'Historial'], ['rec', 'Chiquipuntos']].map(([k, l]) => `<button data-act="ex-tab" data-k="${k}" aria-pressed="${UI.exTab === k}">${l}</button>`).join('')}</div>`;
   if (!all.length) return h.slice(0, h.indexOf('<div class="seg" role="group">')) + `<div class="card empty">${EI('🏁')}<h3>Aún sin estrenar</h3><div>Cuando lo hagas en un entreno, aquí verás tu progreso, tu historial y tus chiquipuntos.</div></div>` + customExBtns(x);
   if (UI.exTab === 'prog') {
@@ -3161,7 +3211,7 @@ function viewMe(){
     <button data-act="go-ranks"><span>${rkIcon(rkAll().glob ? rkAll().glob.idx : -1, 26)}</span><div><b>Rangos</b><small>${rkAll().glob ? 'Global: ' + rkName(rkAll().glob.idx) : 'Tu nivel en cada ejercicio y músculo'}</small></div><i>›</i></button>
     <button data-act="go-month" data-ym="${S.workouts.some(w => { const d = new Date(w.start); return d.getFullYear() * 12 + d.getMonth() === now.getFullYear() * 12 + now.getMonth(); }) ? now.getFullYear() * 12 + now.getMonth() : pm}"><span>${ICON.trophy}</span><div><b>Informe mensual</b><small>Tu mes comparado con el anterior, chiquipuntos y constancia</small></div><i>›</i></button>${S.customEx.length ? `<button data-act="go-myex"><span>${ICON.dumbbell}</span><div><b>Ejercicios propios</b><small>${plural(S.customEx.length, 'ejercicio creado por ti', 'ejercicios creados por ti')}</small></div><i>›</i></button>` : ''}</div>`;
   const sg = streakGrid(26);
-  h += `<div class="card stack"><div class="row between"><h3>Últimas 26 semanas</h3><span class="small muted">${plural(sg.days, 'día', 'días')}, ${weekStreak()} sem. seguidas</span></div>${sg.svg}<div class="small muted">Cada cuadro es un día; más color, más volumen.</div></div>`;
+  h += `<div class="card stack"><div class="row between"><h3>Últimas 26 semanas</h3><span class="small muted">${plural(sg.days, 'día', 'días')}, ${weekStreak() === 1 ? '1 sem. seguida' : weekStreak() + ' sem. seguidas'}</span></div>${sg.svg}<div class="small muted">Cada cuadro es un día; más color, más volumen.</div></div>`;
   const cm = UI.calMonth ?? (now.getFullYear() * 12 + now.getMonth()), y = Math.floor(cm / 12), m = cm % 12;
   const nOn = new Set(S.workouts.filter(w => { const d = new Date(w.start); return d.getFullYear() === y && d.getMonth() === m; }).map(w => new Date(w.start).getDate())).size;
   h += `<div class="card stack"><div class="row between"><button class="iconbtn" data-act="cal" data-d="-1" aria-label="Mes anterior">${ICON.back}</button>
@@ -3184,9 +3234,9 @@ function viewMe(){
   if (Cloud.session) h += `<div class="card stack"><h3>Cuenta</h3>
     <div class="menu">${Social.ready() ? `<button data-act="tab" data-tab="social">Mi perfil público: @${esc(Social.me().username)}</button>` : ''}<button data-act="acc-name">Cambiar nombre</button><button data-act="acc-pass">Cambiar contraseña</button>${(S.settings.blocked || []).length ? `<button data-act="go-blocked">Personas bloqueadas (${S.settings.blocked.length})</button>` : ''}${Mod.admin ? '<button data-act="go-mod">🛡️ Moderación (admin)</button>' : ''}<button data-act="logout">Cerrar sesión</button><button class="danger" data-act="acc-delete">Eliminar mi cuenta y mis datos</button></div></div>`;
   h += installCard(true);
-  h += `<div class="small muted legal-l" style="text-align:center"><a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a></div>`;
+  h += `<div class="small muted legal-l" style="text-align:center"><a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a> · <a href="${LEGAL}soporte.html" target="_blank" rel="noopener">Ayuda</a></div>`;
   if (AppCheck.cfg()) h += `<div class="small muted legal-l rc-l" style="text-align:center">Protegido por reCAPTCHA: se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones</a> de Google.</div>`;
-  h += `<div class="small muted" style="text-align:center">Hierro · versión ${APP_VERSION}</div><div style="text-align:center"><button class="btn ghost sm" data-act="chk-update">Buscar actualización</button></div>`;
+  h += `<div class="small muted" style="text-align:center">Hierro · versión ${APP_VERSION}</div>${IS_NATIVE || IS_TWA ? '' : '<div style="text-align:center"><button class="btn ghost sm" data-act="chk-update">Buscar actualización</button></div>'}`;
   return h;
 }
 
@@ -3268,7 +3318,7 @@ function viewStats(){
     const items = buckets.map(b => { const ws = inRange(b.s, b.e), g = agg(ws); return {label: b.label, partial: b.e > now, v: M === 'vol' ? g.vol : M === 'dur' ? g.ms / 36e5 : M === 'sets' ? g.sets : g.n}; });
     const fmt = M === 'vol' ? (v, ax) => ax ? axT(v) : fmtKg(v) : M === 'dur' ? (v, ax) => fmtN(v, 1) + (ax ? '' : ' h') : v => fmtN(v, 0);
     const full = items.filter(i => !i.partial), lastPart = items.length > 0 && items[items.length - 1].partial, avg = full.length ? full.reduce((s, i) => s + i.v, 0) / full.length : 0;
-    h += `<div class="card stack"><div class="st-h"><h3>Evolución ${byMonth ? 'mensual' : 'semanal'}</h3><div class="small muted">Cuánto has entrenado en cada ${byMonth ? 'mes' : 'semana'}. Elige la medida.</div></div><div class="seg sm">${[['vol', 'Volumen'], ['dur', 'Horas'], ['sets', 'Series'], ['n', 'Entrenos']].map(([k, l]) => `<button data-act="st-metric" data-k="${k}" aria-pressed="${M === k}">${l}</button>`).join('')}</div>${barChart(items, fmt)}<div class="small muted">${full.length ? `Media: <b>${fmt(avg)}</b> por ${byMonth ? 'mes' : 'semana'}${lastPart ? ' completo' : ''}.` : ''}${lastPart ? ` La barra rayada es ${byMonth ? 'el mes' : 'la semana'} en curso: aún no ha terminado.` : ''}</div></div>`;
+    h += `<div class="card stack"><div class="st-h"><h3>Evolución ${byMonth ? 'mensual' : 'semanal'}</h3><div class="small muted">Cuánto has entrenado en cada ${byMonth ? 'mes' : 'semana'}. Elige la medida.</div></div><div class="seg sm">${[['vol', 'Volumen'], ['dur', 'Horas'], ['sets', 'Series'], ['n', 'Entrenos']].map(([k, l]) => `<button data-act="st-metric" data-k="${k}" aria-pressed="${M === k}">${l}</button>`).join('')}</div>${barChart(items, fmt)}<div class="small muted">${full.length && avg > 0 ? `Media: <b>${fmt(avg)}</b> por ${byMonth ? 'mes completo' : 'semana completa'}.` : ''}${lastPart ? ` La barra rayada es ${byMonth ? 'el mes' : 'la semana'} en curso: aún no ha terminado.` : ''}</div></div>`;
     // constancia
     const dset = new Set(cur.map(w => new Date(w.start).toDateString())).size;
     const nWeeks = Math.max(1, (now - weekStart(from)) / (7 * 864e5));
@@ -3295,7 +3345,7 @@ function viewStats(){
     // ejercicios principales
     const ex = {}; cur.slice().reverse().forEach(w => w.exercises.forEach(e => { const t = exOf(e.exId).type; (ex[e.exId] = ex[e.exId] || {n: 0, sc: [], type: t}).n++; ex[e.exId].sc.push(exScore(e.sets, t)); }));
     const all = Object.entries(ex).sort((x, y) => y[1].n - x[1].n).slice(0, 15), LIM = 5, open = UI.stMore.ejs;
-    h += `<div class="card stack"><div class="st-h"><h3>Ejercicios principales</h3><div class="small muted">Los que más has hecho y cómo evoluciona tu mejor marca.</div></div>${all.slice(0, open ? all.length : LIM).map(([id, o]) => { const sc = o.sc.filter(v => v > 0); const f = sc[0], l = sc[sc.length - 1]; return `<button class="exrow" data-act="open-ex" data-id="${id}"><div><b>${esc(exOf(id).name)}</b><small>${o.n} ${o.n === 1 ? 'sesión' : 'sesiones'}${l ? ` · ${o.type === 'wr' ? '1RM ' : ''}${fmtN(l)}${scoreUnit(o.type)}` : ''} ${sc.length > 1 ? delta(l, f) : ''}</small></div>${spark(sc.slice(-12))}</button>`; }).join('') || '<div class="chart-empty">Sin ejercicios en este periodo.</div>'}
+    h += `<div class="card stack"><div class="st-h"><h3>Ejercicios principales</h3><div class="small muted">Los que más has hecho y cómo evoluciona tu mejor marca.</div></div>${all.slice(0, open ? all.length : LIM).map(([id, o]) => { const sc = o.sc.filter(v => v > 0); const f = sc[0], l = sc[sc.length - 1]; return `<button class="exrow" data-act="open-ex" data-id="${id}"><div><b>${esc(exOf(id).name)}</b><small>${plural(o.n, 'sesión', 'sesiones')}${l ? ` · ${o.type === 'wr' ? '1RM ' : ''}${fmtN(l)}${scoreUnit(o.type)}` : ''} ${sc.length > 1 ? delta(l, f) : ''}</small></div>${spark(sc.slice(-12))}</button>`; }).join('') || '<div class="chart-empty">Sin ejercicios en este periodo.</div>'}
       ${all.length > LIM ? `<button class="st-more" data-act="st-more" data-k="ejs">${open ? 'Ver menos' : `Ver los ${all.length} principales`}</button>` : ''}</div>`;
   }
   return h;
@@ -3307,7 +3357,7 @@ function monthStory(cur, a, p, ym, nowYm, prs){
   const m = ym % 12, pick = (...v) => v[(ym + cur.length) % v.length], out = [], pm = MONTHS[(m + 11) % 12];
   if (!p) out.push(pick('Tu primer mes con entrenos registrados: buen comienzo.', 'Aquí empieza tu historial: este es tu primer mes en Hierro.'));
   else {
-    const fr = ym === nowYm ? Math.max(0.2, new Date().getDate() / new Date(ym > 0 ? Math.floor(ym / 12) : 0, m + 1, 0).getDate()) : 1, r = p.vol > 0 ? a.vol / (p.vol * fr) : p.n > 0 ? a.n / (p.n * fr) : 1; // el mes en curso se compara al mismo ritmo
+    const r = p.vol > 0 ? a.vol / p.vol : p.n > 0 ? a.n / p.n : 1; // el mes en curso ya se compara con el mismo tramo de días
     out.push(r >= 1.25 ? pick(`Mes de subida frente a ${pm}: has apretado bastante más.`, `Mucha más carga que en ${pm}.`) : r >= 1.05 ? pick(`Algo por encima de ${pm}.`, `Un pasito adelante respecto a ${pm}.`) : r > 0.95 ? pick(`Ritmo casi idéntico al de ${pm}.`, `Muy en la línea de ${pm}.`) : r > 0.75 ? pick(`Un poco más suave que ${pm}.`, `Algo por debajo de ${pm}; también se progresa descansando.`) : pick(`Mes tranquilo comparado con ${pm}.`, `Bastante menos carga que en ${pm}.`));
   }
   const byEx = {}; prs.forEach(pr => { byEx[pr.exId] = (byEx[pr.exId] || 0) + 1; });
@@ -3319,14 +3369,20 @@ function monthStory(cur, a, p, ym, nowYm, prs){
   if (cur.length >= 4 && dow.filter(v => v === dm).length === 1) out.push(`Tu día fuerte: el ${DN[dow.indexOf(dm)]}.`);
   return out.join(' ') + (ym === nowYm ? ' El mes aún no ha terminado.' : '');
 }
+function monthCmp(cur, y, m){
+  const d = cur ? Math.min(new Date().getDate(), new Date(y, m, 0).getDate()) : 0;
+  return {pe: d ? new Date(y, m - 1, d + 1).getTime() : new Date(y, m, 1).getTime(), cmpLbl: d ? `${d === 1 ? '1' : '1–' + d} de ${MONTHS[(m + 11) % 12]}` : ''};
+}
 function viewMonth(ym){
   const y = Math.floor(ym / 12), m = ym % 12;
   const s = new Date(y, m, 1).getTime(), e = new Date(y, m + 1, 1).getTime(), ps = new Date(y, m - 1, 1).getTime();
-  const cur = inRange(s, e), prev = inRange(ps, s), a = agg(cur), p = prev.length ? agg(prev) : null;
   const nowYm = new Date().getFullYear() * 12 + new Date().getMonth();
+  // 4.14: el mes en curso se compara con el mismo tramo de días del mes anterior (del 1 al día de hoy)
+  const {pe, cmpLbl} = monthCmp(ym === nowYm, y, m);
+  const cur = inRange(s, e), prev = inRange(ps, pe), a = agg(cur), p = prev.length ? agg(prev) : null;
   let h = `<div class="row between"><button class="iconbtn" data-act="go-month" data-ym="${ym - 1}" data-replace="1" aria-label="Mes anterior">${ICON.back}</button><h2>${monthName(m)} ${y}</h2><button class="iconbtn" data-act="go-month" data-ym="${ym + 1}" data-replace="1" aria-label="Mes siguiente" style="transform:scaleX(-1)" ${ym >= nowYm ? 'disabled' : ''}>${ICON.back}</button></div>`;
   if (!cur.length) return h + `<div class="empty">${EI('🗓️')}<h3>Mes sin entrenos</h3><div>No hay entrenos en ${MONTHS[m]} de ${y}.</div><button class="btn primary" data-act="tab" data-tab="train">Empezar un entreno</button></div>`;
-  h += `<div class="card stack"><div class="stats4">${tile(a.n, 'Entrenos', delta(a.n, p && p.n))}${tile(fmtDurC(a.ms), 'Tiempo', delta(a.ms, p && p.ms))}${tile(fmtKg(a.vol), 'Volumen', delta(a.vol, p && p.vol))}${tile(a.sets, 'Series', delta(a.sets, p && p.sets))}</div><div class="small muted">${monthStory(cur, a, p, ym, nowYm, cur.flatMap(w => w.prs || []))}</div></div>`;
+  h += `<div class="card stack"><div class="stats4">${tile(a.n, 'Entrenos', delta(a.n, p && p.n))}${tile(fmtDurC(a.ms), 'Tiempo', delta(a.ms, p && p.ms))}${tile(fmtKg(a.vol), 'Volumen', delta(a.vol, p && p.vol))}${tile(a.sets, 'Series', delta(a.sets, p && p.sets))}</div>${p && cmpLbl ? `<div class="small muted">Cambios frente al ${cmpLbl}.</div>` : ''}<div class="small muted">${monthStory(cur, a, p, ym, nowYm, cur.flatMap(w => w.prs || []))}</div></div>`;
   const months = [...Array(6)].map((_, i) => { const k = ym - 5 + i, ss = new Date(Math.floor(k / 12), k % 12, 1).getTime(), ee = new Date(Math.floor(k / 12), k % 12 + 1, 1).getTime(); return {label: MON3[k % 12], partial: ee > Date.now(), v: agg(inRange(ss, ee)).vol}; });
   h += `<div class="card stack"><h3>Volumen de los últimos 6 meses</h3>${barChart(months, (v, ax) => ax ? axT(v) : fmtKg(v), null, 1, 'Volumen de los últimos 6 meses')}</div>`;
   const prs = []; cur.forEach(w => (w.prs || []).forEach(pr => prs.push({...pr, w})));
@@ -3336,10 +3392,10 @@ function viewMonth(ym){
   const nd = new Set(cur.map(w => new Date(w.start).getDate())).size;
   h += `<div class="card stack"><div class="row between"><h3>Constancia</h3><span class="small muted">${nd} de ${ym === nowYm ? new Date().getDate() : new Date(y, m + 1, 0).getDate()} días</span></div>${calHTML(y, m)}</div>`;
   const mc = muscleSets(cur), mp = muscleSets(prev);
-  h += `<div class="card stack"><h3>Reparto muscular</h3><div class="small muted">${p ? `Discontinuo: ${MONTHS[(m + 11) % 12]}.` : ''}</div>${radar(groupSets(mc), p ? groupSets(mp) : null)}<div class="bm-lg">${bodyMap(mc)}</div></div>`;
+  h += `<div class="card stack"><h3>Reparto muscular</h3><div class="small muted">${p ? `Discontinuo: ${cmpLbl || MONTHS[(m + 11) % 12]}.` : ''}</div>${radar(groupSets(mc), p ? groupSets(mp) : null)}<div class="bm-lg">${bodyMap(mc)}</div></div>`;
   const ex = {}; cur.forEach(w => w.exercises.forEach(e2 => { ex[e2.exId] = (ex[e2.exId] || 0) + 1; }));
   const top = Object.entries(ex).sort((x, y2) => y2[1] - x[1]).slice(0, 6);
-  h += `<div class="card stack"><h3>Lo que más has hecho</h3>${top.map(([id, n], i) => `<button class="exrow" data-act="open-ex" data-id="${id}"><div><b>${i + 1}. ${esc(exOf(id).name)}</b><small>${n} ${n === 1 ? 'sesión' : 'sesiones'}</small></div></button>`).join('')}</div>`;
+  h += `<div class="card stack"><h3>Lo que más has hecho</h3>${top.map(([id, n], i) => `<button class="exrow" data-act="open-ex" data-id="${id}"><div><b>${i + 1}. ${esc(exOf(id).name)}</b><small>${plural(n, 'sesión', 'sesiones')}</small></div></button>`).join('')}</div>`;
   return h;
 }
 
@@ -3403,7 +3459,7 @@ function renderEditor(keepScroll = true){
   const tot = d.exercises.reduce((a, e) => a + e.sets.length, 0);
   ED.cur = null; if (m === 'active') d.exercises.some((e, ei) => e.sets.some((x, si) => !x.done && (ED.cur = ei + '-' + si)));
   if (m === 'active') h += `<div class="temp"><div class="row between small"><span class="muted">Volumen <b id="edVol" class="num">${fmtKg(s.vol)}</b></span><span class="muted"><b id="edSets" class="num">${s.n}</b> de <b id="edTot" class="num">${tot}</b> series</span></div><div class="track" role="progressbar" aria-label="Series hechas" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${s.n}"><span id="edTemp" style="width:${tot ? Math.min(100, s.n / tot * 100) : 0}%"><i></i></span></div></div>`;
-  if (m === 'past') h += `<div class="grid2 fin"><label class="f">Inicio<input type="datetime-local" id="edStart" value="${toLocalInput(d.start)}"></label><label class="f">Minutos<input type="number" inputmode="numeric" id="edDur" value="${Math.round((d.end - d.start) / 60000)}"></label></div><label class="f">Notas<textarea id="edNotes">${esc(d.notes || '')}</textarea></label>`;
+  if (m === 'past') h += `<div class="grid2 fin"><label class="f">Inicio<input type="datetime-local" id="edStart" max="${toLocalInput(Date.now())}" value="${toLocalInput(d.start)}"></label><label class="f">Minutos<input type="number" inputmode="numeric" id="edDur" min="1" max="1440" value="${Math.round((d.end - d.start) / 60000)}"></label></div><label class="f">Notas<textarea id="edNotes">${esc(d.notes || '')}</textarea></label>`;
   if (!d.exercises.length) h += `<div class="empty">${EI('🏋️')}<h3>${m === 'routine' ? 'Añade los ejercicios de la rutina' : 'Empieza añadiendo un ejercicio'}</h3><div>${m === 'routine' ? 'Busca en la biblioteca o crea uno propio.' : 'Elige de la biblioteca o crea uno propio. Puedes añadir más después.'}</div></div>`;
   d.exercises.forEach((e, ei) => { h += exCardHTML(e, ei); });
   h += `<button class="btn ${m === 'active' && d.exercises.length ? '' : 'primary'} block" data-act="ed-add-ex">${ICON.plus.replace('<svg', '<svg width="20" height="20"')} Añadir ejercicio</button>`;
@@ -3582,8 +3638,14 @@ function coachHTML(){
     + (on ? `<div class="f" role="group" aria-labelledby="coachLbl"><span id="coachLbl">Tono de los mensajes</span><div class="seg">${[['suave', 'Suave'], ['picante', 'Picante']].map(([k, l]) => `<button data-coach-level="${k}" aria-pressed="${lv === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">${lv === 'suave' ? 'Ánimo y buen rollo: «Hoy toca entrenar, vamos a por ello».' : 'Con un poco de guasa: «Vamos vago, te toca entrenar».'}</div></div>` : '');
 }
 // 4.13.2: solo en la app de iOS (native.js crea window.Native): guardar los entrenos terminados en Salud
+let HEALTH_OK = null;
 function healthHTML(){
   if (!(window.Native && window.Native.is && window.Native.health)) return '';
+  if (HEALTH_OK === null) { // se pregunta una vez al sistema; el interruptor solo sale si Salud está disponible
+    HEALTH_OK = false;
+    Promise.resolve(window.Native.health.available()).then(ok => { HEALTH_OK = !!ok; if (HEALTH_OK && tab === 'me' && !cur()) render(); }, () => { HEALTH_OK = false; });
+  }
+  if (!HEALTH_OK) return '';
   const on = localStorage.getItem('hierro.health') === '1';
   return `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setHealth" ${on ? 'checked' : ''}><span>Guardar mis entrenos en Salud<br>`
     + '<span class="small muted" style="font-weight:500">Al terminar un entreno se apunta en la app Salud como entrenamiento de fuerza, con su hora de inicio y fin. Hierro no lee nada de Salud.</span></span></label>';
@@ -3607,14 +3669,21 @@ function startRest(sec, name){
 function drawRest(){
   Push.sync();
   const el = $('#rest');
-  if (!REST) { el.classList.remove('show', 'done'); $('#restLive').textContent = ''; clearInterval(restTimer); restPlace(); return; }
+  if (!REST) { el.classList.remove('show', 'done'); el.innerHTML = ''; $('#restLive').textContent = ''; clearInterval(restTimer); restPlace(); return; }
   const left = (REST.end - Date.now()) / 1000;
   if (left <= 0 && !REST.fired) { REST.fired = true; $('#restLive').textContent = 'Descanso terminado'; beep(); if (Push.okAt !== REST.end) notifyRestEnd(REST.name); setTimeout(() => { if (REST && REST.fired) { REST = null; drawRest(); } }, 4000); }
   el.classList.add('show'); el.classList.toggle('done', left <= 0); el.classList.toggle('up', !(ED && ED.mode === 'active')); restPlace();
+  // 4.14: el DOM se construye una vez por descanso y cada tic solo cambia texto, anillo y aria (si no, los toques se pierden al reconstruirlo)
   const C = 150.8, frac = Math.max(0, Math.min(1, left / REST.total));
-  el.innerHTML = `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="7"/><circle cx="30" cy="30" r="24" fill="none" stroke="${left > 0 ? 'url(#gforja)' : '#fff'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${left > 0 ? (C * (1 - frac)).toFixed(1) : 0}" transform="rotate(-90 30 30)"/></svg>
-    <div class="tm num">${left > 0 ? fmtClock(Math.ceil(left)) : '¡A por la siguiente!'}<small>Descanso</small></div>
+  if (!el.querySelector('.arc')) {
+    el.innerHTML = `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="7"/><circle class="arc" cx="30" cy="30" r="24" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" transform="rotate(-90 30 30)"/></svg>
+    <div class="tm num"><span class="tv"></span><small>Descanso</small></div>
     <button class="btn sm" data-act="rest-add" data-d="-15" aria-label="Quitar 15 segundos">−15</button><button class="btn sm" data-act="rest-add" data-d="15" aria-label="Añadir 15 segundos">+15</button><button class="btn sm primary" data-act="rest-skip">Saltar</button>`;
+  }
+  const arc = el.querySelector('.arc'), tv = el.querySelector('.tv'), txt = left > 0 ? fmtClock(Math.ceil(left)) : '¡A por la siguiente!';
+  arc.setAttribute('stroke', left > 0 ? 'url(#gforja)' : '#fff');
+  arc.setAttribute('stroke-dashoffset', left > 0 ? (C * (1 - frac)).toFixed(1) : 0);
+  if (tv.textContent !== txt) tv.textContent = txt;
 }
 let wlock = null;
 async function wakeLock(on){ try { if (on && navigator.wakeLock && !wlock) { wlock = await navigator.wakeLock.request('screen'); wlock.addEventListener('release', () => wlock = null); } else if (!on && wlock) { await wlock.release(); wlock = null; } } catch (e) {} }
@@ -3709,7 +3778,7 @@ function customExForm(x, fromPicker){
     <label class="f">Material<select id="cxEquip">${Object.entries(EQUIP).map(([k, v]) => `<option value="${k}" ${x && x.equip === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     <label class="f">Qué registras<select id="cxType">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${x && x.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     <div class="small muted">Sin límite de ejercicios propios.</div>`,
-    `<button class="btn primary" data-act="cx-save" data-id="${x ? x.id : ''}" data-picker="${fromPicker ? 1 : ''}">Guardar</button>`);
+    `<button class="btn primary" data-act="cx-save" data-id="${x ? x.id : ''}" data-picker="${fromPicker ? 1 : ''}" data-pmode="${fromPicker && PICK ? PICK.mode : ''}" data-pei="${fromPicker && PICK && PICK.ei != null ? PICK.ei : ''}">Guardar</button>`);
 }
 
 /* ---------- Importar CSV ---------- */
@@ -3803,6 +3872,8 @@ function exIndex(){
   for (const [es, en] of ES_NAMES_MAP) if (!idx.has(es) && idx.has(en)) idx.set(es, idx.get(en));
   return idx;
 }
+/* 4.14: los valores absurdos de un CSV se descartan (la serie se queda sin ese dato) sin bloquear la importación */
+const csvClamp = (v, max, signed) => v != null && (v > max || v < (signed ? -max : 0)) ? null : v;
 function importWorkoutsCSV(text){
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('El archivo está vacío.');
@@ -3826,13 +3897,15 @@ function importWorkoutsCSV(text){
   let added = 0, skipped = 0; const newW = [];
   for (const g of groups.values()) {
     if (existing.has(Math.round(g.start / 60000))) { skipped++; continue; }
+    if (g.start > Date.now() + 864e5) continue; // fechas futuras: se ignoran
     const exercises = [];
     let lastKey = null;
     for (const r of g.rows) {
       const title = get(r, 'exercise_title').trim(); if (!title) continue;
       let exId = idx.get(norm(title));
-      const kgRaw = num(get(r, cW)), reps = num(get(r, 'reps')), dur = num(get(r, 'duration_seconds'));
+      const kgRaw = csvClamp(num(get(r, cW)), SET_MAX.kg / (lbs ? 0.45359237 : 1), true), reps = csvClamp(num(get(r, 'reps')), SET_MAX.reps), dur = csvClamp(num(get(r, 'duration_seconds')), SET_MAX.sec);
       let km = cKm >= 0 ? num(get(r, cKm)) : null; if (km == null && cMi >= 0) { const mi = num(get(r, cMi)); km = mi != null ? mi * 1.609344 : null; }
+      km = csvClamp(km, SET_MAX.km);
       if (!exId) {
         const type = km ? 'cardio' : (dur && !reps) ? 'dur' : (kgRaw == null && reps) ? 'bw' : 'wr';
         const x = {id: 'c-' + rid(), name: title, muscle: guessMuscle(title), equip: guessEquip(title), type, aliases: [], custom: true, src: 'hevy'};
@@ -3850,7 +3923,7 @@ function importWorkoutsCSV(text){
       block.sets.push(s);
     }
     if (!exercises.length) continue;
-    const w = {id: rid(), title: g.title || 'Entreno', start: g.start, end: Math.max(g.end, g.start + 60000), notes: g.notes || '', routineId: null, exercises, prs: []};
+    const w = {id: rid(), title: g.title || 'Entreno', start: g.start, end: Math.min(Math.max(g.end, g.start + 60000), g.start + 864e5), notes: g.notes || '', routineId: null, exercises, prs: []};
     fixDuration(w);
     newW.push(w); added++;
   }
@@ -3967,7 +4040,7 @@ function openSummary(w, fresh){
   const prs = w.prs || [];
   let h = `<div class="wrap"><div class="ehead"><button class="iconbtn" data-act="sum-close" aria-label="Cerrar">${ICON.x}</button><div class="ttl">Resumen</div><button class="btn sm" data-act="share-img" data-id="${w.id}">${ICON.share} Compartir</button></div><div class="ebody">
     <div class="hero ${fresh ? 'fresh' : ''}">${fresh ? '<span class="pill good">¡Entreno completado!</span>' : ''}<div class="big"><small>Nº</small> ${D.num}</div><h2>${esc(w.title || 'Entreno')}</h2><div class="muted small">${fmtDate(w.start)}</div>
-      <div class="pills"><span class="pill">${D.weekN}º de la semana</span><span class="pill">${weekStreak()} sem. seguidas</span>${prs.length ? `<span class="pill gold">${ICON.trophy} ${prs.length} ${prs.length === 1 ? 'chiquipunto' : 'chiquipuntos'}</span>` : ''}${rkSumPill(w)}</div></div>
+      <div class="pills"><span class="pill">${D.weekN}º de la semana</span><span class="pill">${weekStreak() === 1 ? '1 sem. seguida' : weekStreak() + ' sem. seguidas'}</span>${prs.length ? `<span class="pill gold">${ICON.trophy} ${prs.length} ${prs.length === 1 ? 'chiquipunto' : 'chiquipuntos'}</span>` : ''}${rkSumPill(w)}</div></div>
     <div class="card stack"><div class="stats4">${tile(fmtDur(w.end - w.start), 'Duración', D.p && delta(D.a.ms, D.p.ms, '', true))}${tile(fmtKg(D.a.vol), 'Volumen', D.p && delta(D.a.vol, D.p.vol))}${tile(D.a.sets, 'Series', D.p && delta(D.a.sets, D.p.sets))}${tile(D.a.reps, 'Reps', D.p && delta(D.a.reps, D.p.reps))}</div>
       <div class="small muted">${D.prev ? `Comparado con tu «${esc(D.prev.title)}» del ${fmtDate(D.prev.start, false)}.` : 'Primera vez que haces este entreno: la próxima vez verás la comparación.'}</div></div>`;
   if (prs.length) h += `<div class="stack"><h3 class="sech">${ICON.trophy} Chiquipuntos personales</h3>${prs.map(p => `<div class="prcard">${ICON.trophy}<div><b>${esc(exOf(p.exId).name)}</b><small>${p.label}${p.prev ? ' · antes ' + p.prev : ''}</small></div><span class="num">${p.txt}</span></div>`).join('')}</div>`;
@@ -4088,6 +4161,26 @@ async function healthCheck(){
     closeModal(); if (ok === '1') { healthWipe(); toast('Datos corporales borrados'); }
   } // 'Ahora no': no se vuelve a preguntar hasta la próxima vez que se abra la app
 }
+/* 4.13.9 · Bienvenida: 3 pantallas la primera vez (sin entrenos ni entreno en curso). S.settings.welcomed la marca como vista. */
+const WELCOME = [
+  ['🏋️', 'Apunta cada serie en segundos', 'Elige el ejercicio, escribe los kg y las repeticiones y marca la serie. El descanso se cuenta solo.'],
+  ['📈', 'Mira cómo subes', 'Récords al momento, 1RM estimado, gráficas por ejercicio y rangos de fuerza de Hierro a Simétrico.'],
+  ['🔒', 'Tus datos, tuyos', 'Funciona sin conexión, sin publicidad y sin analítica. Tu peso y tus medidas solo si tú quieres, y nunca se publican.']
+];
+const WL = {i: 0};
+function drawWelcome(){
+  const [ico, tit, txt] = WELCOME[WL.i], last = WL.i === WELCOME.length - 1;
+  $('#welcome').innerHTML = `<div class="wl"><button class="btn ghost skip" data-act="wl-end">Saltar</button>
+    <div class="body">${EI(ico)}<h2>${tit}</h2><p>${txt}</p></div>
+    <div class="dots" aria-hidden="true">${WELCOME.map((_, k) => `<i class="${k === WL.i ? 'on' : ''}"></i>`).join('')}</div>
+    <button class="btn primary lg block" data-act="${last ? 'wl-go' : 'wl-next'}">${last ? 'Empezar a entrenar' : 'Siguiente'}</button></div>`;
+}
+function showWelcome(){
+  const el = $('#welcome');
+  if (S.settings.welcomed || S.workouts.length || S.active || el.classList.contains('open') || $('#auth').classList.contains('open') || $('#modal').classList.contains('open')) return;
+  WL.i = 0; drawWelcome(); el.classList.add('open');
+}
+function endWelcome(){ $('#welcome').classList.remove('open'); $('#welcome').innerHTML = ''; S.settings.welcomed = true; Store.mark('meta'); }
 const AUTHUI = {mode: 'in', msg: '', busy: false};
 function showAuth(msg){ AUTHUI.msg = msg || ''; AUTHUI.busy = false; $('#auth').classList.add('open'); drawAuth(); }
 /* Botón «Iniciar sesión» (o aviso si esta copia de la app no tiene cuentas) para los estados sin sesión */
@@ -4102,12 +4195,12 @@ function drawAuth(){
       ${up ? '<label class="f">Tu nombre<input id="auName" autocomplete="name" placeholder="Cómo quieres que te llame la app" maxlength="40"></label>' : ''}
       <label class="f">Email<input id="auEmail" type="email" autocomplete="email" inputmode="email" placeholder="tu@email.com" required></label>
       <label class="f">Contraseña<input id="auPass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Mínimo 6 caracteres' : ''}" minlength="6" required></label>
-      ${up ? `<label class="row small au-age" style="align-items:flex-start;font-weight:600"><input type="checkbox" id="auAge" style="width:auto;margin-top:2px"><span>Tengo 16 años o más y acepto las <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a> y la <a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></span></label>` : ''}
+      ${up ? `<label class="row small au-age" style="align-items:flex-start;font-weight:600"><input type="checkbox" id="auAge"><span>Tengo 16 años o más y acepto las <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a> y la <a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></span></label>` : ''}
       <div id="auMsg" class="small ${AUTHUI.msg.startsWith('✓') ? 'good-t' : 'err'}" role="alert">${esc(AUTHUI.msg)}</div>
       <button class="btn primary lg block" type="submit" id="auGo">${up ? 'Crear cuenta' : 'Entrar'}</button>
     </form>
     ${up ? '' : '<button class="btn ghost" data-act="auth-forgot">He olvidado mi contraseña</button>'}
-    <div class="small muted foot">Funciona sin conexión. Tus entrenos se guardan en tu cuenta y solo los ves tú.</div>${AppCheck.cfg() ? `<div class="small muted foot legal-l rc-l">Protegido por reCAPTCHA: se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones</a> de Google.</div>` : ''}</div>`;
+    <div class="small muted foot">Una vez dentro, funciona sin conexión. Tus entrenos se guardan en tu cuenta y solo los ves tú.</div>${AppCheck.cfg() ? `<div class="small muted foot legal-l rc-l">Protegido por reCAPTCHA: se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones</a> de Google.</div>` : ''}</div>`;
 }
 async function authSubmit(){
   if (AUTHUI.busy) return;
@@ -4116,6 +4209,7 @@ async function authSubmit(){
   if (!email) return msg('Escribe tu email.');
   if (pass.length < 6) return msg('La contraseña tiene que tener al menos 6 caracteres.');
   if (up && !name) return msg('Escribe tu nombre.');
+  if (up && badText(name)) return msg(BAD_MSG);
   if (up && !($('#auAge') || {}).checked) return msg('Para crear la cuenta tienes que tener 16 años o más y aceptar las condiciones.');
   AUTHUI.busy = true; $('#auGo').disabled = true; $('#auGo').textContent = up ? 'Creando cuenta…' : 'Entrando…';
   try { up ? await Cloud.signUp(name, email, pass) : await Cloud.signIn(email, pass); await afterLogin(up); }
@@ -4127,6 +4221,7 @@ async function afterLogin(isNew){
   await Store.load(Cloud.session.uid);
   render();
   Sync.pulledAt = 0; await Sync.run();
+  showWelcome();
   if (isNew) { S.settings.terms = TERMS_V; Store.mark('meta'); }
   if (S.active) restoreActiveBar();
   if (Social.ready()) Social.pollNotifs();
@@ -4137,7 +4232,7 @@ async function afterLogin(isNew){
   if (!legacy) { try { const raw = localStorage.getItem(LS); if (raw) legacy = JSON.parse(raw); } catch (e) {} }
   const lw = legacy && Array.isArray(legacy.workouts) ? legacy.workouts : [];
   if (lw.length && !(await KV.get('legacyDone:' + Cloud.session.uid))) {
-    const r = await ask('Datos de este móvil', `En este móvil hay <b>${lw.length}</b> entrenos guardados de antes de tener cuenta. ¿Los añado a tu cuenta?`, [['no', 'No'], ['yes', 'Añadirlos', 'primary']]);
+    const r = await ask('Datos de este móvil', `En este móvil hay <b>${lw.length}</b> ${lw.length === 1 ? 'entreno guardado' : 'entrenos guardados'} de antes de tener cuenta. ¿Los añado a tu cuenta?`, [['no', 'No'], ['yes', 'Añadirlos', 'primary']]);
     closeModal();
     await KV.set('legacyDone:' + Cloud.session.uid, true);
     if (r === 'yes') {
@@ -4355,7 +4450,7 @@ const Social = {
     const uid = this.myUid(), sp = Store.synced.p || (Store.synced.p = {});
     const pb = this.profileBody(), ph = hashOf(pb);
     if (ph !== Store.synced.prof) items.push([{update: {name: Cloud.name('profiles', uid), fields: fsFields(pb)}}, () => { Store.synced.prof = ph; }]);
-    const want = new Map(); if (this.canPublish()) S.workouts.filter(w => w.shared).forEach(w => want.set(w.id, w));
+    const want = new Map(); if (this.canPublish()) S.workouts.filter(w => w.shared && !badText(w.title) && !badText(w.notes)).forEach(w => want.set(w.id, w)); // 4.14: con texto no permitido no se publica (y si ya estaba, se retira)
     const pp = this.pending(), aud = this.aud();
     for (const [wid, w] of want) {
       const id = this.postId(w), body = this.postBody(w), h = hashOf([body, aud]), cur = sp[wid], pend = wid in pp; // 4.11: el público (aud) entra en el hash: los posts viejos se reescriben una vez
@@ -5028,7 +5123,7 @@ const goneUser = uid => { const u = Social.users.get(uid); return !!(u && u.gone
 const nameOfPost = p => goneUser(p.uid) ? 'Alguien' : String(Social.nameOf(p.uid, p.name) || p.name || 'Alguien');
 const userNameOfPost = p => { const u = Social.userOf(p.uid); return String((u && u.username) || (p.uid === Social.myUid() && Social.me() && Social.me().username) || (goneUser(p.uid) ? '' : p.username) || ''); };
 function postLikeLine(p){
-  const me = Social.myUid(), likes = (Array.isArray(p.likes) ? p.likes : []).filter(x => typeof x === 'string'), mine = likes.includes(me), others = likes.filter(x => x !== me);
+  const me = Social.myUid(), likes = (Array.isArray(p.likes) ? p.likes : []).filter(x => typeof x === 'string' && !isBlocked(x)), mine = likes.includes(me), others = likes.filter(x => x !== me);
   const names = others.map(u => Social.userOf(u)).filter(Boolean).map(u => shortName(u.name || u.username || '')).filter(Boolean), B = n => `<b>${esc(n)}</b>`, N = others.length;
   if (mine) return !N ? 'Te gusta' : N === 1 ? (names[0] ? `Os gusta a ti y a ${B(names[0])}` : 'Os gusta a ti y a 1 más') : `Os gusta a ti y a ${N} más`;
   if (!N) return '';
@@ -5073,22 +5168,26 @@ function postCard(p, opt){ try { return postCardH(p, opt); } catch (e) { return 
 const REPORT_WHY = [['acoso', 'Acoso o insultos'], ['odio', 'Odio o discriminación'], ['sexual', 'Contenido sexual o desnudos'], ['violencia', 'Violencia o amenazas'], ['spam', 'Spam o estafa'], ['suplanta', 'Se hace pasar por otra persona'], ['menor', 'Parece menor de 16 años'], ['copyright', 'Usa fotos o textos ajenos sin permiso'], ['otro', 'Otro motivo']];
 const REPORT_KIND = {post: 'publicación', comment: 'comentario', user: 'perfil', msg: 'mensaje del muro', clan: 'clan'};
 const isBlocked = uid => !!uid && Array.isArray(S.settings.blocked) && S.settings.blocked.includes(uid);
+// Si denunciar o bloquear falla (sin conexión o por permisos), avisa y ofrece escribir a soporte
+function modSupportToast(e, msg){
+  if (e && e.offline) { toast('Necesitas conexión'); return; }
+  toast(msg, {label: 'Escribir a soporte', fn: () => { location.href = 'mailto:soporte.hierro.app@gmail.com?subject=' + encodeURIComponent('Hierro: ' + msg); }}, 7000);
+}
 const Mod = {
-  admin: false, banned: false, off: false, checked: '', reports: null, bans: null, loading: false, err: '',
+  admin: false, banned: false, checked: '', reports: null, bans: null, loading: false, err: '',
   async check(force){ // ¿soy admin? ¿estoy vetado? (2 lecturas por sesión)
     const uid = Cloud.session && Cloud.session.uid; if (!uid || (!force && this.checked === uid)) return;
     this.checked = uid;
     const [a, b] = await Promise.all([Cloud.getDoc('admins', uid).catch(e => e), Cloud.getDoc('bans', uid).catch(e => e)]);
-    const err = x => x instanceof Error, was = [this.admin, this.banned, this.off].join();
+    const err = x => x instanceof Error, was = [this.admin, this.banned].join();
     if (err(a) && a.offline) { this.checked = ''; return; } // sin conexión: se vuelve a mirar más tarde
-    this.off = err(a) && a.status === 403; // reglas antiguas publicadas: los botones de moderación no se enseñan
     this.admin = !!a && !err(a); this.banned = !!b && !err(b);
-    if (was !== [this.admin, this.banned, this.off].join()) render();
+    if (was !== [this.admin, this.banned].join()) render();
   },
-  reset(){ Object.assign(this, {admin: false, banned: false, off: false, checked: '', reports: null, bans: null, loading: false, err: ''}); },
+  reset(){ Object.assign(this, {admin: false, banned: false, checked: '', reports: null, bans: null, loading: false, err: ''}); },
   // Denunciar: kind (post|comment|user|msg|clan), path relativo a documents (p. ej. posts/ID), tuid = autor, snap = texto para revisarlo aunque se borre
   async report(kind, path, tuid, snap){
-    if (!Cloud.session) return;
+    if (!Cloud.session) { toast('Inicia sesión para denunciar'); return; }
     const r = await new Promise(res => {
       modalCb = res;
       modal('Denunciar ' + (REPORT_KIND[kind] || 'contenido'), `<div class="stack" style="gap:10px"><div class="small muted">Lo revisaremos lo antes posible. La otra persona no sabrá quién la ha denunciado.</div>
@@ -5100,7 +5199,7 @@ const Mod = {
     const me = Cloud.session.uid, id = me + '_' + Date.now();
     const body = {by: me, kind, path: String(path).slice(0, 300), tuid: String(tuid || '').slice(0, 128), reason: r, note: note.trim().slice(0, 300), snap: String(snap == null ? '' : snap).slice(0, 500), ts: Date.now()};
     try { await Cloud.commit([{update: {name: Cloud.name('reports', id), fields: fsFields(body)}, currentDocument: {exists: false}}]); }
-    catch (e) { toast(e.offline ? 'Necesitas conexión' : 'No se ha podido enviar la denuncia'); return; }
+    catch (e) { modSupportToast(e, 'No se ha podido enviar la denuncia'); return; }
     if (tuid && tuid !== me && !isBlocked(tuid)) {
       const b = await ask('Denuncia enviada', '¡Gracias! ¿Quieres además bloquear a esta persona? No verás nada suyo y no podrá comentarte, seguirte ni mandarte avisos.', [['0', 'No'], ['1', 'Bloquear', 'danger']]); closeModal();
       if (b === '1') await this.block(tuid, true);
@@ -5119,7 +5218,7 @@ const Mod = {
       // por separado: borrar uno que no existe lo rechazan las reglas y no debe arrastrar al otro
       await Cloud.commit([{delete: Cloud.name('follows', me + '_' + uid)}]).catch(() => {});
       await Cloud.commit([{delete: Cloud.name('follows', uid + '_' + me)}]).catch(() => {});
-    } catch (e) { toast(e.offline ? 'Necesitas conexión' : 'No se ha podido bloquear'); return; }
+    } catch (e) { modSupportToast(e, 'No se ha podido bloquear'); return; }
     S.settings.blocked = [...(S.settings.blocked || []), uid].slice(-500); Store.mark('meta');
     Social.following.delete(uid); Social.followers = (Social.followers || []).filter(x => x !== uid);
     try { Social.onFollowChange(uid, false); } catch (e) {}
@@ -5200,6 +5299,23 @@ function promptText(title, ph, max){
       el => { const t = el.querySelector('#ptText'); if (t) setTimeout(() => t.focus(), 50); });
   }).then(v => { closeModal(); return v; });
 }
+// 4.14: pide la contraseña actual y vuelve a iniciar sesión (sesión fresca) antes de acciones delicadas (borrar la cuenta, cambiar la contraseña).
+// Devuelve true si se ha reautenticado y false si se cancela. Si la contraseña es incorrecta, lo dice y deja reintentar sin tocar nada.
+async function reauth(title, text, okLabel, danger){
+  let err = '';
+  for (;;) {
+    const pw = await new Promise(res => {
+      modalCb = v => res(v === '1' ? (($('#rePass') || {}).value || '') : null);
+      modal(esc(title), `<div>${text}</div><label class="f">Tu contraseña actual<input id="rePass" type="password" autocomplete="current-password"></label><div id="reMsg" class="small err">${esc(err)}</div>`,
+        `<button class="btn" data-act="m-answer" data-v="0">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" data-act="m-answer" data-v="1">${esc(okLabel)}</button>`,
+        el => { const t = el.querySelector('#rePass'); if (t) setTimeout(() => t.focus(), 50); });
+    });
+    if (pw === null) { closeModal(); return false; }
+    if (!pw) { err = 'Escribe tu contraseña.'; continue; }
+    try { await Cloud.signIn(Cloud.session.email, pw); closeModal(); return true; }
+    catch (e) { err = e.message === AUTH_ERRORS.INVALID_PASSWORD ? 'La contraseña no es correcta. No se ha cambiado nada.' : e.message; }
+  }
+}
 function viewMod(){
   if (!Mod.admin) return '<div class="empty">Solo para administradores.</div>';
   if (Mod.reports === null && !Mod.loading && !Mod.err) setTimeout(() => Mod.load(), 0);
@@ -5238,7 +5354,7 @@ function socialSetupHTML(edit){
     <div id="soMsg" class="small err"></div>
     <div class="small muted">3–20 caracteres: minúsculas, números, punto o guion bajo. Tus amigos te buscarán por él.${edit ? ' Cambiar el @ no cambia el nombre de arriba.' : ''}</div>
     <label class="f">Sobre ti (opcional)<input id="soBio" value="${esc(p.bio || '')}" maxlength="120" placeholder="Ej.: objetivo 100 kg en banca"></label>
-    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="soPriv" style="width:auto;margin-top:3px" ${p.private ? 'checked' : ''}><span>Perfil privado<br><span class="small muted" style="font-weight:500">Solo tus seguidores ven tus entrenos y no se publican tus estadísticas. Para seguirte tienen que pedírtelo y tú lo apruebas.</span></span></label>
+    <label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" id="soPriv" style="margin-top:3px" ${p.private ? 'checked' : ''}><span>Perfil privado<br><span class="small muted" style="font-weight:500">Solo tus seguidores ven tus entrenos y no se publican tus estadísticas. Para seguirte tienen que pedírtelo y tú lo apruebas.</span></span></label>
     <button class="btn primary block" data-act="soc-claim">${edit ? 'Guardar perfil' : 'Crear mi perfil'}</button></div>`;
 }
 function socEmpty(emoji, title, text, btns, link){
@@ -5293,6 +5409,7 @@ function detProfiles(uids){
   setTimeout(() => Social.profilesOf(need).then(() => detRender()), 0);
 }
 function detLikeLine(likes, me){
+  likes = likes.filter(x => !isBlocked(x));
   if (!likes.length) return '';
   const mineL = likes.includes(me), others = likes.filter(x => x !== me), named = others.filter(id => Social.userOf(id)).slice(0, mineL ? 2 : 3);
   if (!mineL && !named.length) return `${likes.length} me gusta`;
@@ -5303,7 +5420,7 @@ function detLikeLine(likes, me){
 function cmtHTML(m, p, me, mine){
   const uid = String(m.uid || ''), nm = detName(uid), id = String(m._id || ''), can = uid === me || mine || Mod.admin, open = CMX.has(id);
   if (isBlocked(uid)) return '';
-  return `<div class="comment" data-cid="${esc(id)}">${avatar(nm, 'sm')}<div class="cm-b"><div class="cm-h"><b>${esc(nm)}</b><span class="muted">· ${esc(ago(+m.ts || 0))}</span>${uid !== me && !Mod.off ? `<button class="cm-del${can ? ' cm-rep' : ''}" data-act="soc-report-c" data-id="${esc(p.id)}" data-c="${esc(id)}">Denunciar</button>` : ''}${can ? `<button class="cm-del" data-act="soc-del-comment" data-id="${esc(p.id)}" data-c="${esc(id)}">Borrar</button>` : ''}</div><div class="cm-t${open ? ' open' : ''}">${esc(m.text)}</div><button class="cm-more" data-act="soc-cmt-more" data-c="${esc(id)}" hidden>${open ? 'ver menos' : 'ver más'}</button></div></div>`;
+  return `<div class="comment" data-cid="${esc(id)}">${avatar(nm, 'sm')}<div class="cm-b"><div class="cm-h"><b>${esc(nm)}</b><span class="muted">· ${esc(ago(+m.ts || 0))}</span>${uid !== me ? `<button class="cm-del${can ? ' cm-rep' : ''}" data-act="soc-report-c" data-id="${esc(p.id)}" data-c="${esc(id)}">Denunciar</button>` : ''}${can ? `<button class="cm-del" data-act="soc-del-comment" data-id="${esc(p.id)}" data-c="${esc(id)}">Borrar</button>` : ''}</div><div class="cm-t${open ? ' open' : ''}">${esc(m.text)}</div><button class="cm-more" data-act="soc-cmt-more" data-c="${esc(id)}" hidden>${open ? 'ver menos' : 'ver más'}</button></div></div>`;
 }
 function cmtFit(){ document.querySelectorAll('#comments .cm-t').forEach(t => { const b = t.nextElementSibling; if (b) b.hidden = !(t.classList.contains('open') || t.scrollHeight > t.clientHeight + 1); }); }
 function cmtSync(){ const f = $('#cmtForm'), i = $('#cmtText'); if (f && i) f.querySelector('button').disabled = CMT_BUSY || !i.value.trim(); }
@@ -5391,13 +5508,13 @@ function viewUser(uid){
   if (asks) h += `<div class="card row between"><span class="small"><b>${esc(nm)}</b> quiere seguirte</span><span class="row" style="gap:6px"><button class="btn sm" data-act="soc-rej" data-id="${sid}">Rechazar</button><button class="btn sm primary" data-act="soc-acc" data-id="${sid}">Aceptar</button></span></div>`;
   if (canSee) {
     const ws = weekStart(Date.now()), tIdx = (new Date().getDay() + 6) % 7, tr = new Set(u.posts.filter(x => x.start >= ws).map(x => (new Date(x.start).getDay() + 6) % 7));
-    h += `<div class="card stack uweek"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${isMe ? weekStreak() : clamp(st.streak || 0, 0, 999)}</b> sem. seguidas</span></div>
+    h += `<div class="card stack uweek"><div class="row between"><h3>Esta semana</h3><span class="small muted"><b style="color:var(--acc-t)">${isMe ? weekStreak() : clamp(st.streak || 0, 0, 999)}</b> ${(isMe ? weekStreak() : clamp(st.streak || 0, 0, 999)) === 1 ? 'sem. seguida' : 'sem. seguidas'}</span></div>
       <div class="wk" role="img" aria-label="Días con publicación esta semana: ${tr.size}">${[0, 1, 2, 3, 4, 5, 6].map(i => `<div class="${tr.has(i) ? 'on' : i > tIdx ? 'fut' : ''} ${i === tIdx ? 'today' : ''}"><i>${tr.has(i) ? CHECK_SVG : ''}</i><span>${'LMXJVSD'[i]}</span></div>`).join('')}</div></div>`;
   }
   h += isMe ? `<div class="grid2"><button class="btn" data-act="soc-edit">Editar perfil</button><button class="btn" data-act="soc-invite">Invitar amigos</button></div>`
     : priv ? `<button class="btn block ${fol || req ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : req ? 'soc-unreq' : 'soc-follow'}" data-id="${sid}">${fol ? 'Siguiendo ✓' : req ? 'Solicitado · cancelar' : 'Pedir seguirle'}</button>`
     : `<div class="grid2"><button class="btn ${fol ? '' : 'primary'}" data-act="${fol ? 'soc-unfollow' : 'soc-follow'}" data-id="${sid}">${fol ? 'Siguiendo ✓' : 'Seguir'}</button><button class="btn" data-act="soc-compare" data-id="${sid}">${ICON.compare} Comparar</button></div>`;
-  if (!isMe && !Mod.off) h += `<div class="row ureport"><button class="linkbtn" data-act="soc-report-u" data-id="${sid}">Denunciar perfil</button><button class="linkbtn" data-act="soc-block" data-id="${sid}">Bloquear</button>${Mod.admin ? `<button class="linkbtn danger" data-act="mod-ban-u" data-id="${sid}">Vetar (admin)</button>` : ''}</div>`;
+  if (!isMe) h += `<div class="row ureport"><button class="linkbtn" data-act="soc-report-u" data-id="${sid}">Denunciar perfil</button><button class="linkbtn" data-act="soc-block" data-id="${sid}">Bloquear</button>${Mod.admin ? `<button class="linkbtn danger" data-act="mod-ban-u" data-id="${sid}">Vetar (admin)</button>` : ''}</div>`;
   h += clanProfileHTML(uid);
   if (!isMe && !priv) {
     // «Este mes, frente a frente»: mis entrenos locales del mes frente a sus publicaciones del mes
@@ -5420,17 +5537,18 @@ function viewPeople(uid, kind){
   return ids.map(id => personRow((Social.users.get(id) || {}).profile, id)).join('') || `<div class="empty">${EI('🌱')}<div>Nadie todavía.</div></div>`;
 }
 function personRow(p, uid, opt = {}){
-  const me = Social.myUid(); if (!p) return `<div class="person muted small">Cargando…</div>`;
+  const me = Social.myUid(); if (isBlocked(uid || (p && p.uid))) return ''; // 4.14: sin personas bloqueadas en buscador ni listas
+  if (!p) return `<div class="person muted small">Cargando…</div>`;
   const fol = Social.following.has(p.uid), req = !fol && Social.reqOut.has(p.uid), id = esc(p.uid);
   return `<div class="person"><button class="row who" data-act="soc-user" data-id="${id}">${avatar(p.name, 'sm', n7Of(p.uid))}<span><b>${esc(p.name)}</b><small>@${esc(p.username)}${p.uid !== me && Social.followers.includes(p.uid) ? ' <span class="pill accent">Te sigue</span>' : ''}</small></span></button>${p.uid !== me ? `<button class="btn sm pbtn ${fol ? '' : 'primary'}${opt.wide ? ' wide' : ''}" data-act="${fol ? 'soc-unfollow' : req ? 'soc-unreq' : 'soc-follow'}" data-id="${id}">${fol ? 'Siguiendo' : req ? 'Solicitado' : opt.label || 'Seguir'}</button>` : ''}</div>`;
 }
 function searchResHTML(){
   const s = Social.search, q = nrm(s.q), inv = `<div class="card stack"><h3>Invita a tus amigos</h3><div class="small muted">Mándales el enlace de la app; cuando creen su cuenta y su perfil podrás buscarlos aquí.</div><button class="btn" data-act="soc-invite">Copiar enlace de invitación</button></div>`;
-  if (q.length >= 2) return (s.loading ? '<div class="small muted">Buscando…</div>' : s.res.length ? s.res.map(p => personRow(p)).join('') : '<div class="small muted">No hay nadie que se llame así. Si aún no tiene Hierro, invítale.</div>') + inv;
+  if (q.length >= 2) return (s.loading ? '<div class="small muted">Buscando…</div>' : s.res.filter(p => !isBlocked(p.uid)).length ? s.res.map(p => personRow(p)).join('') : '<div class="small muted">No hay nadie que se llame así. Si aún no tiene Hierro, invítale.</div>') + inv;
   if (q.length === 1) return '<div class="small muted">Escribe al menos 2 letras.</div>' + inv;
-  const ts = Social.teSiguen(), miss = ts.filter(id => !Social.userOf(id)), sg = Social.suggestions().filter(x => x.why === 'descubrir').slice(0, 6).map(x => Social.userOf(x.uid) || x); // los que ya te siguen salen arriba en «Te siguen»
+  const ts = Social.teSiguen(), miss = ts.filter(id => !Social.userOf(id)), sg = Social.suggestions().filter(x => x.why === 'descubrir' && !isBlocked(x.uid || x.id)).slice(0, 6).map(x => Social.userOf(x.uid) || x); // los que ya te siguen salen arriba en «Te siguen»
   if (miss.length && Social._tsKey !== miss.join()) { Social._tsKey = miss.join(); Social.profilesOf(miss).then(() => socRepaint()).catch(() => {}); }
-  const tsp = ts.map(id => Social.userOf(id)).filter(Boolean);
+  const tsp = ts.map(id => Social.userOf(id)).filter(p => p && !isBlocked(p.uid));
   let h = '';
   if (tsp.length) h += `<div class="sect-t">Te siguen</div>${tsp.map(p => personRow(p, p.uid, {label: 'Seguir también', wide: true})).join('')}`;
   if (sg.length) h += `<div class="sect-t">Sugerencias</div>${sg.map(p => personRow(p)).join('')}`;
@@ -5523,6 +5641,7 @@ document.addEventListener('submit', async e => {
   e.preventDefault();
   const input = $('#cmtText'), text = input.value.trim(), p = Social.posts.get(e.target.dataset.id);
   if (!text || !p || CMT_BUSY) return; // un solo envío a la vez
+  if (badText(text)) { toast(BAD_MSG); return; }
   CMT_BUSY = true; cmtSync();
   try {
     const m = await Social.addComment(p, text);
@@ -5600,21 +5719,26 @@ const A = {
       Store.mark('meta'); closeEditor(); if (tab !== 'train') navTo(() => { tab = 'train'; navStack.train = []; }); toast('Rutina guardada');
     } else if (ED.mode === 'past') {
       const old = S.workouts.find(x => x.id === d.id), oldStart = old.start;
-      const st = new Date($('#edStart').value).getTime(); const dur = Math.max(1, num($('#edDur').value) || 1);
+      const st = new Date($('#edStart').value).getTime(), dur = num($('#edDur').value);
+      if (!durOk(dur)) { toast('La duración tiene que estar entre 1 minuto y 24 horas'); return; }
+      if (st && st > Date.now() + 6e4) { toast('La fecha del entreno no puede ser futura'); return; }
+      const kept = d.exercises.map(e => ({...e, sets: e.sets.filter(s => hasData(s, exOf(e.exId).type)).map(({done, ph, ...s}) => s)})).filter(e => e.sets.length);
+      if (!kept.length) { toast('Añade al menos un ejercicio con series, o elimina el entreno'); return; }
       d.title = $('#edTitle').value.trim() || 'Entreno'; d.notes = $('#edNotes').value; if (st) d.start = st; d.end = d.start + dur * 60000;
-      d.exercises = d.exercises.map(e => ({...e, sets: e.sets.filter(s => hasData(s, exOf(e.exId).type)).map(({done, ph, ...s}) => s)})).filter(e => e.sets.length);
+      d.exercises = kept;
       S.workouts[S.workouts.indexOf(old)] = d; sortW(); d.prs = computePRs(d); delete d.rk; // los ascensos de un entreno editado ya no son fiables
-      Store.markMonthOf(oldStart, d.start); closeEditor(); toast('Entreno actualizado');
+      Store.markMonthOf(oldStart, d.start); closeEditor();
+      const wNow = S.workouts.find(x => x.id === d.id); toast(wNow && wNow.shared && (badText(wNow.title) || badText(wNow.notes)) ? 'Guardado, pero no se publicará: el título o las notas tienen un texto no permitido' : 'Entreno actualizado');
     }
   },
   async 'ed-finish'(){
     const w = S.active; w.title = ($('#edTitle').value || '').trim() || w.title || 'Entreno';
     let pending = 0; w.exercises.forEach(e => e.sets.forEach(s => { if (!s.done) pending++; }));
     if (pending) {
-      const r = await ask('Series sin marcar', `Tienes ${pending} ${pending === 1 ? 'serie sin marcar' : 'series sin marcar'}. ¿Qué hacemos con ${pending === 1 ? 'ella' : 'ellas'}?`, [['back', 'Volver'], ['drop', 'Descartarlas', 'danger'], ['fill', 'Marcarlas hechas', 'primary']]);
+      const r = await ask('Series sin marcar', `Tienes ${pending} ${pending === 1 ? 'serie sin marcar' : 'series sin marcar'}. ¿Qué hacemos con ${pending === 1 ? 'ella' : 'ellas'}?`, [['back', 'Volver'], ['drop', pending === 1 ? 'Descartarla' : 'Descartarlas', 'danger'], ['fill', pending === 1 ? 'Marcarla hecha' : 'Marcarlas hechas', 'primary']]);
       closeModal();
       if (r === 'back' || r == null) return;
-      if (r === 'fill') w.exercises.forEach(e => e.sets.forEach((s, si) => { if (!s.done) fillFromPh(e, si); }));
+      if (r === 'fill') w.exercises.forEach(e => e.sets.forEach((s, si) => { if (!s.done) { fillFromPh(e, si); if (hasData(s, exOf(e.exId).type)) s.done = true; } })); // 4.14: si no, al guardar se perdían
     }
     const rt0 = w.routineId && S.routines.find(r => r.id === w.routineId);
     A._rtMerge = rt0 ? {wid: w.id, rid: rt0.id, r: routineMerge(w, rt0)} : null;
@@ -5622,7 +5746,7 @@ const A = {
       exercises: w.exercises.map(e => ({exId: e.exId, notes: e.notes || '', rest: e.rest ?? null, ss: e.ss || null, sets: e.sets.filter(s => s.done && hasData(s, exOf(e.exId).type)).map(({done, ph, ...s}) => s)})).filter(e => e.sets.length)};
     if (!out.exercises.length) { toast('Marca al menos una serie hecha para guardar'); return; }
     modal('Guardar entreno', `<label class="f">Nombre<input id="fnTitle" value="${esc(out.title)}"></label>
-      <div class="grid2 fin"><label class="f">Inicio<input type="datetime-local" id="fnStart" value="${toLocalInput(out.start)}"></label><label class="f">Minutos<input type="number" inputmode="numeric" id="fnDur" value="${Math.max(1, Math.round((out.end - out.start) / 60000))}"></label></div>
+      <div class="grid2 fin"><label class="f">Inicio<input type="datetime-local" id="fnStart" max="${toLocalInput(Date.now())}" value="${toLocalInput(out.start)}"></label><label class="f">Minutos<input type="number" inputmode="numeric" id="fnDur" min="1" max="1440" value="${Math.max(1, Math.round((out.end - out.start) / 60000))}"></label></div>
       <label class="f">¿Cómo ha ido?<textarea id="fnNotes" placeholder="Sensaciones, energía, molestias…"></textarea></label>
       ${Social.ready() ? `<label class="row" style="font-weight:600"><input type="checkbox" id="fnShare" style="width:auto" ${Social.canPublish() ? 'checked' : 'disabled'}> Publicar en el feed de tus amigos${Social.me().private ? ' <span class="small muted">(solo tus seguidores)</span>' : ''}</label>${Social.canPublish() ? `<div id="fnPhotoBox">${fnPhotoHTML()}</div>` : ''}` : ''}`,
       `<button class="btn" data-act="m-close">Volver</button><button class="btn primary" data-act="fn-save">Guardar</button>`);
@@ -5636,9 +5760,13 @@ const A = {
       if (fb) { fb.innerHTML = `<div class="card small fn-need"><b>Para publicar hace falta la foto doble.</b> Sin ella, el entreno se guarda solo para ti.</div><div class="grid2" style="margin-top:8px"><button class="btn primary" data-act="fn-photo">Hacer la foto</button><button class="btn" data-act="fn-nopub">Guardar sin publicar</button></div>`; try { fb.scrollIntoView({block: 'nearest'}); } catch (e) {} return; }
       shBox.checked = false;
     }
+    const st = new Date($('#fnStart').value).getTime(), dur = num($('#fnDur').value);
+    if (!durOk(dur)) { toast('La duración tiene que estar entre 1 minuto y 24 horas'); return; }
+    if (st && st > Date.now() + 6e4) { toast('La fecha del entreno no puede ser futura'); return; }
     out.title = $('#fnTitle').value.trim() || 'Entreno'; out.notes = $('#fnNotes').value.trim(); out.shared = !!($('#fnShare') && $('#fnShare').checked);
-    const st = new Date($('#fnStart').value).getTime(); if (st) out.start = st;
-    out.end = out.start + Math.max(1, num($('#fnDur').value) || 1) * 60000;
+    if (out.shared && (badText(out.title) || badText(out.notes))) { toast('El título o las notas tienen un texto que no está permitido. Cámbialo o no lo publiques.'); return; }
+    if (st) out.start = st;
+    out.end = out.start + dur * 60000;
     const rk0 = rkAll();
     S.workouts.push(out); sortW(); out.prs = computePRs(out);
     rkReset(); const rkUp = rkDiff(rk0, rkAll()); if (rkUp.length) out.rk = rkUp; // ascensos de rango de este entreno
@@ -5717,7 +5845,12 @@ const A = {
     else { const g = a.ss || 's' + rid(); a.ss = g; b.ss = g; }
     closeModal(); renderEditor(); edTouch();
   },
-  'ex-remove'(el){ ED.data.exercises.splice(+el.dataset.ei, 1); closeModal(); renderEditor(); edTouch(); },
+  async 'ex-remove'(el){
+    const ei = +el.dataset.ei, e = ED.data.exercises[ei];
+    if (e && e.sets.some(s => s.done)) { const ok = await ask('Quitar ejercicio', `Se quitará «${esc(exOf(e.exId).name)}» con las series que ya has hecho.`, [['0', 'Cancelar'], ['1', 'Quitar', 'danger']]); closeModal(); if (ok !== '1' || !ED) return; }
+    else closeModal();
+    ED.data.exercises.splice(ei, 1); renderEditor(); edTouch();
+  },
   'ex-rest'(el){
     const ei = +el.dataset.ei;
     modal('Descanso', `<div class="menu"><button data-act="ex-rest-set" data-ei="${ei}" data-s="">Por defecto (${S.settings.rest ? fmtClock(S.settings.rest) : 'desactivado'})</button>${[0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300].map(s => `<button data-act="ex-rest-set" data-ei="${ei}" data-s="${s}">${s ? fmtClock(s) : 'Sin descanso'}</button>`).join('')}</div>`);
@@ -5747,7 +5880,7 @@ const A = {
     if (id) { const x = S.customEx.find(c => c.id === id); Object.assign(x, {name, muscle: $('#cxMuscle').value, equip: $('#cxEquip').value, type: $('#cxType').value}); }
     else S.customEx.push({id: 'c-' + rid(), name, muscle: $('#cxMuscle').value, equip: $('#cxEquip').value, type: $('#cxType').value, aliases: [], custom: true});
     rebuildEx(); Store.mark('meta'); closeModal();
-    if (el.dataset.picker && ED) { const nid = S.customEx[S.customEx.length - 1].id; openPicker('add'); PICK.sel = [nid]; drawPicker(); }
+    if (el.dataset.picker && ED) { const nid = S.customEx[S.customEx.length - 1].id; openPicker(el.dataset.pmode || 'add', el.dataset.pei === '' ? undefined : +el.dataset.pei); PICK.sel = [nid]; drawPicker(); }
     else render();
     toast('Ejercicio guardado');
   },
@@ -5774,6 +5907,8 @@ const A = {
     ['weight', 'fat', 'waist', 'chest', 'arm', 'thigh'].forEach(k => { const i = $('#ms-' + k), v = i ? num(i.value) : null; if (v != null) { m[k] = v; any = true; } });
     if (!any) { toast('Escribe al menos un valor'); return; }
     if (m.weight != null && !okW(m)) { toast('Pon tu peso en kg (30-300)'); return; }
+    if (m.fat != null && (m.fat < 2 || m.fat > 70)) { toast('Revisa la grasa corporal: entre 2 y 70 %'); return; }
+    if (['waist', 'chest', 'arm', 'thigh'].some(k => m[k] != null && (m[k] < 10 || m[k] > 250))) { toast('Revisa las medidas: entre 10 y 250 cm'); return; }
     // rkAll puntúa cada entreno con el último peso anterior (o, si no hay, con el primero): ¿cambia el de algún entreno ya hecho?
     const was = bwPicker(S.measures), now = bwPicker([...S.measures, m]), redo = m.weight != null && S.workouts.some(w => was(w.start) !== now(w.start));
     S.measures.push(m); Store.mark('meta'); closeModal(); render();
@@ -5793,9 +5928,12 @@ const A = {
     const ok = await saveFile(`hierro-copia-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`, JSON.stringify({app: 'hierro', v: 1, ...Store.snapshot(), active: null}), 'application/json');
     if (ok) { S.settings.lastBackup = Date.now(); Store.mark(); render(); toast('Copia lista'); }
   },
-  'export-csv'(){ if (!S.workouts.length) { toast('No hay entrenos que exportar'); return; } saveFile('hierro-entrenos.csv', toCSV(), 'text/csv'); },
+  'export-csv'(){ if (!S.workouts.length) { toast('No hay entrenos que exportar'); return; } saveFile('hierro-entrenos.csv', '\ufeff' + toCSV(), 'text/csv;charset=utf-8'); },
   async install(){ if (!deferredPrompt) return; deferredPrompt.prompt(); try { await deferredPrompt.userChoice; } catch (e) {} deferredPrompt = null; render(); },
   'set-theme'(el){ Theme.set(el.dataset.v); },
+  'wl-next'(){ WL.i++; drawWelcome(); },
+  'wl-end'(){ endWelcome(); },
+  'wl-go'(){ endWelcome(); navTo(() => { tab = 'train'; }); },
   'hide-install'(){ S.settings.hideInstall = true; Store.mark(); render(); },
   async 'do-update'(){
     const w = (SWREG && SWREG.waiting) || (UPDATE && UPDATE.state !== 'redundant' ? UPDATE : null);
@@ -5880,23 +6018,26 @@ const A = {
   'show-auth'(){ showAuth(); },
   'auth-tab'(el){ AUTHUI.mode = el.dataset.k; AUTHUI.msg = ''; drawAuth(); },
   'auth-forgot'(){ const email = ($('#auEmail') || {}).value || ''; modal('Recuperar contraseña', `<div class="small muted">Te enviaremos un email con un enlace para poner una contraseña nueva. Si no llega en un par de minutos, mira en spam.</div><label class="f">Email<input id="rsEmail" type="email" inputmode="email" value="${esc(email)}"></label><div id="rsMsg" class="small err"></div>`, `<button class="btn primary" data-act="auth-reset-send">Enviar email</button>`); },
-  async 'auth-reset-send'(){ const e = $('#rsEmail').value.trim(); if (!e) { $('#rsMsg').textContent = 'Escribe tu email.'; return; } try { await Cloud.reset(e); closeModal(); AUTHUI.msg = '✓ Si hay una cuenta con ese email, te llegará un enlace. Síguelo y luego entra con tu contraseña nueva.'; drawAuth(); } catch (err) { $('#rsMsg').textContent = err.message === AUTH_ERRORS.EMAIL_NOT_FOUND ? 'No hay ninguna cuenta con ese email.' : err.message; } },
+  async 'auth-reset-send'(){ const e = $('#rsEmail').value.trim(); if (!e) { $('#rsMsg').textContent = 'Escribe tu email.'; return; } const done = () => { closeModal(); AUTHUI.msg = '✓ Si existe una cuenta con ese email, te hemos enviado un enlace para poner una contraseña nueva. Síguelo y luego entra con ella. Si no llega en un par de minutos, mira en spam.'; drawAuth(); };
+    try { await Cloud.reset(e); done(); } catch (err) { if (err.message === AUTH_ERRORS.EMAIL_NOT_FOUND) done(); /* no se revela si la cuenta existe */ else $('#rsMsg').textContent = err.message; } },
   'acc-name'(){ modal('Cambiar nombre', `<label class="f">Nombre<input id="acName" value="${esc(Cloud.session.name || '')}" maxlength="40"></label>`, `<button class="btn primary" data-act="acc-name-save">Guardar</button>`); },
-  async 'acc-name-save'(){ const n = $('#acName').value.trim(); if (!n) return; try { await Cloud.setName(n); Store.synced.prof = null; Store.synced.score = null; Store.mark(); closeModal(); render(); toast('Nombre actualizado'); Sync.run().catch(() => {}); /* republica perfil y resumen del clan al instante */ } catch (e) { toast(e.offline ? 'Necesitas conexión para cambiarlo' : e.message); } },
+  async 'acc-name-save'(){ const n = $('#acName').value.trim(); if (!n) return; if (badText(n)) { toast(BAD_MSG); return; } try { await Cloud.setName(n); Store.synced.prof = null; Store.synced.score = null; Store.mark(); closeModal(); render(); toast('Nombre actualizado'); Sync.run().catch(() => {}); /* republica perfil y resumen del clan al instante */ } catch (e) { toast(e.offline ? 'Necesitas conexión para cambiarlo' : 'No se ha podido cambiar el nombre. Inténtalo otra vez.'); } },
   'acc-pass'(){ modal('Cambiar contraseña', `<label class="f">Contraseña nueva<input id="acPass" type="password" autocomplete="new-password" minlength="6"></label><label class="f">Repítela<input id="acPass2" type="password" autocomplete="new-password"></label><div id="acMsg" class="small err"></div>`, `<button class="btn primary" data-act="acc-pass-save">Cambiar</button>`); },
-  async 'acc-pass-save'(){ const a = $('#acPass').value, b = $('#acPass2').value; if (a.length < 6) { $('#acMsg').textContent = 'Mínimo 6 caracteres.'; return; } if (a !== b) { $('#acMsg').textContent = 'Las dos contraseñas no coinciden.'; return; } try { await Cloud.setPassword(a); closeModal(); toast('Contraseña cambiada'); } catch (e) { $('#acMsg').textContent = e.offline ? 'Necesitas conexión.' : e.message; } },
+  async 'acc-pass-save'(){ const a = $('#acPass').value, b = $('#acPass2').value; if (a.length < 6) { $('#acMsg').textContent = 'Mínimo 6 caracteres.'; return; } if (a !== b) { $('#acMsg').textContent = 'Las dos contraseñas no coinciden.'; return; }
+    closeModal(); if (!await reauth('Cambiar contraseña', 'Para cambiarla, escribe tu contraseña actual.', 'Cambiar')) return;
+    try { await Cloud.setPassword(a); toast('Contraseña cambiada'); } catch (e) { toast(e.offline ? 'Necesitas conexión' : 'No se ha podido cambiar la contraseña. Inténtalo otra vez.'); } },
   async logout(){
     let n = Sync.pendingCount();
     if (n) { await Sync.run(); n = Sync.pendingCount(); }
-    const ok = await ask('Cerrar sesión', n ? `Hay <b>${n}</b> cambios sin subir porque no hay conexión. Si cierras sesión ahora se perderán.` : 'Tus datos están guardados en tu cuenta. Podrás entrar desde cualquier móvil.', [['0', 'Cancelar'], ['1', 'Cerrar sesión', n ? 'danger' : 'primary']]);
+    const ok = await ask('Cerrar sesión', n ? `Hay <b>${plural(n, 'cambio', 'cambios')}</b> ${Sync.state === 'offline' ? 'sin subir porque no hay conexión' : 'que no se han podido subir'}. Si cierras sesión ahora se perderán.` : 'Tus datos están guardados en tu cuenta. Podrás entrar desde cualquier móvil.', [['0', 'Cancelar'], ['1', 'Cerrar sesión', n ? 'danger' : 'primary']]);
     closeModal(); if (ok !== '1') return;
     await signOutLocal(); showAuth();
   },
   async 'acc-delete'(){
     const txt = 'Se borrarán tu cuenta y <b>todos tus datos</b>, en la nube y en este móvil: entrenos, rutinas, medidas, publicaciones y seguidores, '
-      + 'y también tus comentarios, tus me gusta y tus mensajes en lo de otras personas. No se puede deshacer. Si quieres conservar tus entrenos, descarga antes una copia.';
-    const ok = await ask('Eliminar cuenta', txt, [['0', 'Cancelar'], ['1', 'Eliminar para siempre', 'danger']]);
-    closeModal(); if (ok !== '1') return;
+      + 'y también tus comentarios, tus me gusta y tus mensajes en lo de otras personas. No se puede deshacer. Si quieres conservar tus entrenos, descarga antes una copia.'
+      + '<br><br>Para confirmar que eres tú, escribe tu contraseña.';
+    if (!await reauth('Eliminar cuenta', txt, 'Eliminar para siempre', true)) return;
     toast('Eliminando…');
     try { await Cloud.deleteEverything(); await signOutLocal(); showAuth('✓ Tu cuenta y tus datos se han eliminado.'); }
     catch (e) {
@@ -5915,7 +6056,7 @@ const A = {
     const id = esc(p.id), mine = p.uid === Social.myUid(), u = Social.userOf(p.uid), B = (act, label, cls) => `<button${cls ? ` class="${cls}"` : ''} data-act="${act}" data-id="${act === 'soc-compare' ? esc(p.uid) : id}">${label}</button>`;
     const items = mine
       ? [B('soc-photo', p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'), B('soc-copytext', 'Copiar como texto'), B('soc-unpublish', 'Dejar de publicar', 'danger')]
-      : [B('soc-copy', 'Hacer este entreno'), B('soc-copy-routine', 'Guardar como rutina'), u && u.private ? '' : B('soc-compare', 'Comparar con ' + esc(shortName(nameOfPost(p)))), B('soc-copytext', 'Copiar como texto'), ...(Mod.off ? [] : [B('soc-report', 'Denunciar publicación', 'danger'), `<button class="danger" data-act="soc-block" data-id="${esc(p.uid)}">Bloquear a ${esc(shortName(nameOfPost(p)))}</button>`])];
+      : [B('soc-copy', 'Hacer este entreno'), B('soc-copy-routine', 'Guardar como rutina'), u && u.private ? '' : B('soc-compare', 'Comparar con ' + esc(shortName(nameOfPost(p)))), B('soc-copytext', 'Copiar como texto'), B('soc-report', 'Denunciar publicación', 'danger'), `<button class="danger" data-act="soc-block" data-id="${esc(p.uid)}">Bloquear a ${esc(shortName(nameOfPost(p)))}</button>`];
     if (Mod.admin && !mine) items.push(B('soc-admin-del', 'Borrar publicación (admin)', 'danger'));
     modal(esc(p.title || 'Entreno'), `<div class="menu">${items.join('')}</div>`);
     const m = $('#modal .menu'); if (m) m.addEventListener('click', () => closeModal()); // cierra la hoja antes de que actúe la opción
@@ -5981,6 +6122,8 @@ const A = {
   async 'soc-claim'(el){
     const u = cleanUser($('#soUser').value), bio = $('#soBio').value.trim(), pv = $('#soPriv').checked, msg = t => { $('#soMsg').textContent = t; };
     if (!USERNAME_RE.test(u)) return msg('El usuario debe tener 3–20 caracteres: minúsculas, números, punto o guion bajo.');
+    const badF = badText(u) ? 'El nombre de usuario' : badText(bio) ? 'La bio' : badText($('#soName') ? $('#soName').value : '') ? 'El nombre' : '';
+    if (badF) return msg(badF + ' tiene un texto que no está permitido en Hierro. Revisa las normas.');
     el.disabled = true; el.textContent = 'Guardando…';
     try {
       const editing = cur() && cur().type === 'socedit', nm = $('#soName') ? $('#soName').value.trim() : '';
@@ -6014,7 +6157,8 @@ const A = {
     const i = syncInfo();
     modal('Sincronización', `<div class="stack" style="gap:10px"><div><b>${esc(i.state)}</b><div class="small muted">Hierro ${esc(i.v)} · última subida ${esc(i.last)}</div></div>
       <div><div class="small muted">Pendiente de subir</div>${i.det.length ? `<ul style="margin:4px 0 0 18px">${i.det.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div>Nada</div>'}</div>
-      ${i.errs.length ? `<div><div class="small muted">Último error</div>${i.errs.map(x => `<div class="small" style="word-break:break-word">${esc(x)}</div>`).join('')}</div>` : ''}</div>`,
+      ${i.rej.length ? `<div><div class="small muted">No se ha podido subir</div><ul style="margin:4px 0 0 18px">${i.rej.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="small muted">El servidor ha rechazado estos cambios y no se reenviarán solos. Si sigue pasando, escribe a soporte.hierro.app@gmail.com.</div></div>` : ''}
+      ${i.errs.length ? `<div><div class="small muted">Último error</div>${i.errs.map(x => `<div class="small" style="word-break:break-word">${esc(x)}</div>`).join('')}<div class="small muted" style="font-size:11px;word-break:break-word;margin-top:4px">Detalle técnico: ${esc(i.tech.join(' · '))}</div></div>` : ''}</div>`,
       `<button class="btn" data-act="sync-copy">Copiar</button><button class="btn primary" data-act="sync-now">Reintentar ahora</button>`);
   },
   async 'sync-now'(){ Sync.tries = 0; Sync.pulledAt = 0; Clan.denied = false; closeModal(); toast('Subiendo…'); await Sync.run(); toast(Sync.pendingCount() ? 'Aún queda algo: toca el estado para ver qué' : 'Todo subido'); },
@@ -6197,7 +6341,11 @@ document.addEventListener('input', ev => {
   if (el.id === 'hQ') { UI.hQuery = el.value; UI.feedN = 15; const l = $('#hList'); if (l) l.innerHTML = historyHTML(); return; }
   if (!ED) return;
   if (el.id === 'edTitle') { syncTitle(); edTouch(); return; }
-  if (el.dataset.act === 'set-in') { const s = ED.data.exercises[+el.dataset.ei].sets[+el.dataset.si]; const f = el.dataset.f; let v = num(el.value); if (v != null && (f === 'reps' || f === 'sec')) v = Math.round(v); s[f] = v; edTouch(); return; }
+  if (el.dataset.act === 'set-in') {
+    const ex = ED.data.exercises[+el.dataset.ei], s = ex.sets[+el.dataset.si], f = el.dataset.f; let v = num(el.value); if (v != null && (f === 'reps' || f === 'sec')) v = Math.round(v);
+    if (!setValOk(f, v, exOf(ex.exId).type)) { el.value = s[f] != null ? String(s[f]).replace('.', ',') : ''; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 400); toast('Ese valor no es razonable (' + ({kg: exOf(ex.exId).type === 'bw' ? 'kg: de -1000 a 1000' : 'kg: 0-1000', reps: 'reps: 0-1000', sec: 'segundos: 0-86400', km: 'km: 0-1000', min: 'minutos: 0-1440'}[f]) + ')'); return; }
+    s[f] = v; edTouch(); return;
+  }
   if (el.dataset.act === 'ex-note') { ED.data.exercises[+el.dataset.ei].notes = el.value; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; edTouch(); }
 });
 document.addEventListener('change', ev => {
@@ -6226,12 +6374,12 @@ $('#fileJson').addEventListener('change', async ev => {
   const f = ev.target.files[0]; if (!f) return;
   try {
     const d = deepSafe(JSON.parse(await f.text())); if (!d || d.app !== 'hierro') throw new Error('Este archivo no es una copia de Hierro.');
-    const ok = await ask('Restaurar copia', `La copia tiene ${Array.isArray(d.workouts) ? d.workouts.length : 0} entrenos y ${Array.isArray(d.routines) ? d.routines.length : 0} rutinas. Sustituirá lo que tienes ahora.`, [['0', 'Cancelar'], ['1', 'Restaurar', 'primary']]); closeModal();
+    const ok = await ask('Restaurar copia', `La copia tiene ${plural(Array.isArray(d.workouts) ? d.workouts.length : 0, 'entreno', 'entrenos')} y ${plural(Array.isArray(d.routines) ? d.routines.length : 0, 'rutina', 'rutinas')}. Sustituirá lo que tienes ahora.`, [['0', 'Cancelar'], ['1', 'Restaurar', 'primary']]); closeModal();
     if (ok !== '1') return;
     const oldMonths = S.workouts.map(w => monthKey(w.start));
     Store.apply({...d, active: S.active});
     Store.mark('meta', ...new Set([...oldMonths, ...S.workouts.map(w => monthKey(w.start))])); render(); toast('Copia restaurada');
-  } catch (e) { ask('No se pudo restaurar', esc(e.message), [['ok', 'Vale']]).then(closeModal); }
+  } catch (e) { ask('No se pudo restaurar', /^Este archivo/.test(e && e.message) ? esc(e.message) : 'Este archivo no es una copia de Hierro o está dañado.', [['ok', 'Vale']]).then(closeModal); }
 });
 /* =========================================================
    Clanes: liga semanal entre amigos
@@ -6607,7 +6755,7 @@ const perThis = per => ({w: 'esta semana', m: 'este mes', y: 'este año'})[per];
 function perSeg(per = Clan.per){ return `<div class="cl-per" role="group" aria-label="Periodo">${PERS.map(([k, l]) => `<button data-act="cl-per" data-k="${k}" aria-pressed="${per === k}">${l}</button>`).join('')}</div>`; }
 // Un clan en un periodo: miembros ordenados, media por miembro activo y medias por categoría
 function relSide(c, per, K = clanKeys()){
-  const rows = Clan.uidsOf(c).map(uid => { const s = Clan.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile; return {uid, me: uid === Social.myUid(), name: s ? s.name : pr ? pr.name : 'Alguien', s, c, v: clanPer(s, per, K), act: clanActive(s, per, K)}; })
+  const rows = Clan.uidsOf(c).map(uid => { const s = Clan.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile; const bl = isBlocked(uid); return {uid, me: uid === Social.myUid(), blocked: bl, name: bl ? 'Usuario bloqueado' : s ? s.name : pr ? pr.name : 'Alguien', s, c, v: clanPer(s, per, K), act: clanActive(s, per, K)}; })
     .sort((x, y) => y.v.pts - x.v.pts || y.v.days - x.v.days || y.v.n - x.v.n || x.name.localeCompare(y.name, 'es'));
   const act = rows.filter(r => r.act), n = act.length, avg = f => n ? act.reduce((a, r) => a + r.v[f], 0) / n : 0;
   return {c, rows, act: n, avg: avg('pts'), tot: rows.reduce((a, r) => a + r.v.pts, 0), days: avg('days'), prs: avg('prs'), impr: avg('impr')};
@@ -6709,7 +6857,7 @@ const Clan = {
   async done(cid, msg){ S.settings.clan = cid; Store.mark(); if (msg) toast(msg); await this.load(true); },
   grant(id, val){ const g = S.settings.logros || {}; if (g[id]) return; S.settings.logros = {...g, [id]: val || Date.now()}; Store.mark(); const l = LOGROS.find(x => x[0] === id); if (l && !STICKY_ACH.has(id)) toast(`${l[1]} ¡Logro desbloqueado! ${l[2]}`); },
   members(c){
-    return (c.members || []).map(uid => { const s = this.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile; return {uid, me: uid === Social.myUid(), name: s ? s.name : pr ? pr.name : 'Alguien', s}; });
+    return (c.members || []).map(uid => { const s = this.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile, bl = isBlocked(uid); return {uid, me: uid === Social.myUid(), blocked: bl, name: bl ? 'Usuario bloqueado' : s ? s.name : pr ? pr.name : 'Alguien', s: bl ? null : s}; });
   },
   // si alguien aparece en dos clanes, cuenta en el que dice su resumen
   uidsOf(c){ const me = Social.myUid(); return (c.members || []).filter(u => { if (u === me) return c._id === this.myCid(); const s = this.scoreOf(u); return !s || !s.clan || s.clan === c._id; }); },
@@ -6772,6 +6920,7 @@ function clanLeft(){
 }
 // Filas de una clasificación. ms: [{uid, me, name, s, c?}]; kind: pts | mip | rel | con; per: w | m | y (rel siempre es la última)
 function clanRankRows(ms, kind, per = Clan.per, opts = {}){
+  ms = ms.filter(m => !m.blocked); // 4.14: las personas bloqueadas no salen en las clasificaciones
   const K = clanKeys();
   const pv = new Map(ms.map(m => [m.uid, clanPer(m.s, per, K)]));
   const val = m => {
@@ -6813,7 +6962,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
   }).join('');
 }
 function clanAwardsHTML(c){
-  const K = clanKeys(), ms = Clan.members(c).filter(m => m.s && m.s.weeks && m.s.weeks[K.prev] && m.s.weeks[K.prev].n > 0);
+  const K = clanKeys(), ms = Clan.members(c).filter(m => !m.blocked && m.s && m.s.weeks && m.s.weeks[K.prev] && m.s.weeks[K.prev].n > 0);
   const best = f => { let b = null; ms.forEach(m => { const v = f(m.s.weeks[K.prev], m); if (v > 0 && (!b || v > b.v)) b = {m, v}; }); return b; };
   // respaldo: si nadie publicó fz la semana pasada pero sí hay nivel actual (formato nuevo), se usa ese
   let fuerte = best(w => clamp(w.fz, 0, CL.maxFz));
@@ -6841,7 +6990,7 @@ function clanVsHTML(T, myId, per = Clan.per){
     ${lastWin && lastWin.prevAvg > 0 ? `<div class="small muted">${per === 'w' ? `La semana ${+K.prev.split('-W')[1]}` : `En ${pm}`} ganó ${esc(lastWin.c.emoji)} <b>${esc(lastWin.c.name)}</b> con ${fmtN(lastWin.prevAvg, 0)} pts por miembro.</div>` : ''}</div>`;
 }
 function clanDiscoverHTML(T){
-  const me = Social.myUid(), list = T.slice().sort((a, b) => (b.c._id === CLAN_INVITE) - (a.c._id === CLAN_INVITE));
+  const me = Social.myUid(), list = T.filter(r => !isBlocked(r.c.owner)).sort((a, b) => (b.c._id === CLAN_INVITE) - (a.c._id === CLAN_INVITE)); // 4.14: sin clanes de personas bloqueadas
   return `<div class="section-h"><h2>Unirse a un clan</h2>${list.length ? `<span class="small muted num">${plural(list.length, 'clan', 'clanes')}</span>` : ''}</div>
     ${list.map(r => { const c = r.c, inv = c._id === CLAN_INVITE, full = r.n >= CL.maxMembers, ban = (c.kicked || []).includes(me);
       return `<div class="card cl-item${inv ? ' next' : ''}"><button class="cl-item-main" data-act="cl-view" data-id="${c._id}"><span class="cl-emo sm" aria-hidden="true">${esc(c.emoji)}</span><span class="cl-nm"><b>${esc(c.name)}</b><small>${inv ? '<span class="pr">Te han invitado</span> · ' : ''}${plural(r.n, 'miembro', 'miembros')} · ${fmtN(r.avg, 0)} pts/miembro</small>${c.desc ? `<small class="cl-desc">${esc(c.desc)}</small>` : ''}</span></button><button class="btn sm ${inv ? 'primary' : ''}" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Expulsado' : full ? 'Lleno' : 'Unirse'}</button></div>`; }).join('') || `<div class="empty" style="padding:16px 12px">${EI('🛡️')}<h3>Aún no hay clanes</h3><div>¡Funda el primero y avisa a tus amigos!</div><button class="btn primary" data-act="cl-new">Crear clan</button></div>`}`;
@@ -6963,6 +7112,7 @@ const Rel = {
   async count(cid, type){ const d = await Cloud.getDoc('clanrels', cid); return d ? (docData(d)[REL_T[type][2]] || []).length : 0; },
   fail(e, what){ toast(e.offline ? 'Necesitas conexión' : e.status === 403 ? 'No tienes permiso para hacer eso' : `No se ha podido ${what}`); },
   async propose(type, cid, msg){
+    if (badText(msg)) { toast(BAD_MSG); return false; }
     const mc = Clan.mine(), oc = this.clan(cid); if (!mc || !oc || !this.owner() || cid === mc._id) return false;
     if (this.with(cid)) { toast('Ya tenéis una relación con ese clan'); return false; }
     if (this.active(type).length >= REL.max) { toast(`Ya tenéis ${REL.max} ${REL_T[type][3]}: termina una antes`); return false; }
@@ -7009,6 +7159,7 @@ const Rel = {
   },
   async post(id, text){
     text = String(text || '').trim().replace(/\s+/g, ' ').slice(0, REL.text); if (!text) return false;
+    if (badText(text)) { toast(BAD_MSG); return false; }
     const mid = rid(), body = {uid: Social.myUid(), name: Social.myName(), clan: this.cid, text, ts: Date.now()};
     try { await Cloud.commit([{update: {name: Cloud.name('relations', id, 'msgs', mid), fields: fsFields(body)}, currentDocument: {exists: false}}]); }
     catch (e) { this.fail(e, 'publicar'); return false; }
@@ -7030,7 +7181,7 @@ function relReqHTML(){
   return `<div class="card stack next rl-reqs" id="clReqs"><div class="row between"><h3>${inc.length === 1 ? 'Os han hecho una propuesta' : `Tenéis ${inc.length} propuestas`}</h3><span class="pill accent">Nueva${inc.length === 1 ? '' : 's'}</span></div>
     ${inc.map(r => { const o = Rel.clan(r.from);
       return `<div class="rl-req"><button class="rl-who" data-act="cl-view" data-id="${o._id}"><span class="cl-emo sm" aria-hidden="true">${esc(o.emoji)}</span><span class="cl-nm"><b>${esc(o.name)}</b><small>${relWhat(r.type)} · ${ago(r.created)}</small></span></button>
-        ${r.msg ? `<div class="rl-quote">«${esc(r.msg)}»</div>` : ''}
+        ${r.msg && !isBlocked(r.by) ? `<div class="rl-quote">«${esc(r.msg)}»</div>` : ''}
         <div class="small muted">${r.type === 'alianza' ? 'Si aceptáis, tendréis una clasificación conjunta.' : 'Si aceptáis, os mediréis cara a cara cada semana, mes y año.'}</div>
         ${own ? `<div class="grid2"><button class="btn primary sm" data-act="cl-rel-ok" data-id="${r._id}">Aceptar</button><button class="btn sm" data-act="cl-rel-no" data-id="${r._id}">Rechazar</button></div>` : '<div class="small muted">Lo decide tu jefe de clan.</div>'}</div>`; }).join('')}</div>`;
 }
@@ -7089,7 +7240,7 @@ function viewPique(id){
   const cats = [['🔥 Días', A.days, B.days, v => fmtN(v)], ['✨ Chiquipuntos', A.prs, B.prs, v => fmtN(v)], ['📈 Mejora', A.impr, B.impr, v => '+' + fmtN(v) + ' %'], ['Puntos', A.avg, B.avg, v => fmtN(v)]];
   h += `<div class="card stack"><div class="row between"><h3>Por categorías</h3><span class="small muted">media por activo</span></div><div class="cmp pq-cmp"><div class="a hd">${esc(mine.emoji)} ${esc(mine.name)}</div><span></span><div class="b hd">${esc(o.name)} ${esc(o.emoji)}</div>${cats.map(([l, x, y, f]) => { const mx = Math.max(x, y, 1e-9); return `<div class="a${x > y ? ' w' : ''}">${f(x)}<i style="width:${Math.round(56 * x / mx)}px"></i></div><span>${l}</span><div class="b${y > x ? ' w' : ''}"><i style="width:${Math.round(56 * y / mx)}px"></i>${f(y)}</div>`; }).join('')}</div></div>`;
   // cara a cara: 1.º contra 1.º…
-  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}" data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(m.uid)}">${avatar(m.name, 'xs')}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
+  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}"${m.blocked ? '' : ` data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(m.uid)}"`}>${avatar(m.name, 'xs')}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
   const pairs = [...Array(n)].map((_, i) => { const x = A.rows[i], y = B.rows[i], t = x.v.pts + y.v.pts, p = t ? Math.round(x.v.pts / t * 100) : 50;
     return `<div class="pq-pair">${side(x, 'l', x.v.pts > y.v.pts)}<span class="pq-pos num">${i + 1}.º</span>${side(y, 'r', y.v.pts > x.v.pts)}<i class="pq-mini${t ? '' : ' none'}"><span style="width:${p}%"></span></i></div>`; }).join('');
   const rest = [...A.rows.slice(n), ...B.rows.slice(n)];
@@ -7110,7 +7261,7 @@ function viewPique(id){
     ${can ? `<form id="wallForm" class="row" data-id="${r._id}"><input id="wallText" maxlength="${REL.text}" placeholder="Pica al otro clan…" autocomplete="off" enterkeyhint="send"><button class="btn primary sm" type="submit">Enviar</button></form>
       <div class="chips pq-taunts" aria-label="Piques rápidos">${TAUNTS.map((t, i) => `<button class="chip" data-act="cl-taunt" data-id="${r._id}" data-i="${i}">${esc(t)}</button>`).join('')}</div>` : ''}
     ${w.err ? `<div class="small muted">${esc(w.err)}</div>` : !w.loaded ? '<div class="small muted">Cargando…</div>' : w.list.filter(m => !isBlocked(m.uid)).length ? `<div class="pq-msgs">${w.list.filter(m => !isBlocked(m.uid)).map(m => { const c = m.clan === o._id ? o : mine, del = m.uid === me || own || Mod.admin;
-      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(m.name, 'xs')}<div class="pq-mb"><div class="pq-mh"><b>${esc(m.name)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${m.uid !== me && !Mod.off ? `<button class="iconbtn" data-act="cl-wall-report" data-id="${r._id}" data-m="${m._id}" aria-label="Denunciar mensaje" title="Denunciar">⚑</button>` : ''}${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
+      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(m.name, 'xs')}<div class="pq-mb"><div class="pq-mh"><b>${esc(m.name)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${m.uid !== me ? `<button class="iconbtn" data-act="cl-wall-report" data-id="${r._id}" data-m="${m._id}" aria-label="Denunciar mensaje" title="Denunciar">⚑</button>` : ''}${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
   if (own) h += `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">${r.status === 'activa' ? 'Terminar el pique' : 'Cancelar el pique'}</button>`;
   return h;
 }
@@ -7125,7 +7276,7 @@ function viewClanV(id){
   if (mine && mine._id === id) act = `<button class="btn block" data-act="cl-view" data-id="${id}">Ir a mi clan</button>`;
   else if (!mine) { const full = (c.members || []).length >= CL.maxMembers, ban = (c.kicked || []).includes(me); act = `<button class="btn primary block" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Te expulsaron de este clan' : full ? 'Este clan está lleno' : 'Unirme a este clan'}</button>`; }
   else if (r && r.status === 'pendiente' && r.from === mine._id) act = `<div class="small muted">Les habéis propuesto ${r.type === 'alianza' ? 'una alianza' : 'un pique'}. Esperando su respuesta…</div>${own ? `<button class="btn block" data-act="cl-rel-cancel" data-id="${r._id}">Cancelar la propuesta</button>` : ''}`;
-  else if (r && r.status === 'pendiente') act = `<div class="small">${relWhat(r.type)}${r.msg ? `: <span class="muted">«${esc(r.msg)}»</span>` : ''}</div>${own ? `<div class="grid2"><button class="btn primary" data-act="cl-rel-ok" data-id="${r._id}">Aceptar</button><button class="btn" data-act="cl-rel-no" data-id="${r._id}">Rechazar</button></div>` : '<div class="small muted">Lo decide tu jefe de clan.</div>'}`;
+  else if (r && r.status === 'pendiente') act = `<div class="small">${relWhat(r.type)}${r.msg && !isBlocked(r.by) ? `: <span class="muted">«${esc(r.msg)}»</span>` : ''}</div>${own ? `<div class="grid2"><button class="btn primary" data-act="cl-rel-ok" data-id="${r._id}">Aceptar</button><button class="btn" data-act="cl-rel-no" data-id="${r._id}">Rechazar</button></div>` : '<div class="small muted">Lo decide tu jefe de clan.</div>'}`;
   else if (r && r.type === 'pique') act = `<button class="btn primary block" data-act="cl-pique" data-id="${r._id}">⚔️ Ver el pique</button>`;
   else if (r) act = own ? `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">Romper la alianza</button>` : '';
   else if (own && !Rel.denied) act = `<div class="stack" style="gap:8px"><button class="btn primary block" data-act="cl-rel-form" data-k="pique" data-id="${c._id}">⚔️ Lanzar un pique</button><button class="btn block" data-act="cl-rel-form" data-k="alianza" data-id="${c._id}">🤝 Proponer una alianza</button></div>`;
@@ -7134,7 +7285,7 @@ function viewClanV(id){
       ${c.desc ? `<div class="cl-desc2">${esc(c.desc)}</div>` : ''}${pill ? `<div class="row">${pill}</div>` : ''}${act}</div>
     <div class="card stack"><div class="row between"><h3>Clasificación</h3>${perSeg(per)}</div><div class="small muted cl-cap">${perName(per, K)}</div>
       <div class="cl-list">${clanRankRows(S1.rows, 'pts', per) || '<div class="small muted" style="padding:0 8px">Este clan aún no tiene a nadie compitiendo.</div>'}</div></div>
-    ${(!mine || mine._id !== id) && !Mod.off ? `<div class="row ureport"><button class="linkbtn" data-act="cl-report" data-id="${esc(id)}">Denunciar clan</button>${Mod.admin ? `<button class="linkbtn danger" data-act="cl-admin-del" data-id="${esc(id)}">Borrar clan (admin)</button>` : ''}</div>` : ''}`;
+    ${(!mine || mine._id !== id) ? `<div class="row ureport"><button class="linkbtn" data-act="cl-report" data-id="${esc(id)}">Denunciar clan</button>${Mod.admin ? `<button class="linkbtn danger" data-act="cl-admin-del" data-id="${esc(id)}">Borrar clan (admin)</button>` : ''}</div>` : ''}`;
 }
 // Tú contra otra persona en el periodo elegido (hoja rápida desde cualquier clasificación)
 function clanCmpHTML(uid){
@@ -7192,6 +7343,7 @@ Object.assign(A, {
   async 'cl-save'(el){
     const name = $('#clName').value.trim().replace(/\s+/g, ' '), desc = $('#clDesc').value.trim().slice(0, 120), id = el.dataset.id, me = Social.myUid();
     if (name.length < 3 || name.length > 24) { $('#clMsg').textContent = 'El nombre debe tener entre 3 y 24 caracteres.'; return; }
+    if (badText(name) || badText(desc)) { $('#clMsg').textContent = BAD_MSG; return; }
     if (!id && Clan.clans.some(c => norm(c.name) === norm(name))) { $('#clMsg').textContent = 'Ya hay un clan con ese nombre.'; return; }
     el.disabled = true;
     if (id) {
@@ -7316,18 +7468,27 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.13.8';
+const APP_VERSION = '4.14.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
 const IS_MOBILE = IS_IOS || IS_ANDROID;
+/* 4.14 · App de tienda: iOS (Capacitor) y Android (TWA, que solo se ve en el referrer de la primera carga: se guarda en sessionStorage) */
+const IS_NATIVE = !!(window.Native && window.Native.is) || /HierroiOS/.test(UA);
+const IS_TWA = (() => {
+  try {
+    if (sessionStorage.getItem('hierro.twa') === '1') return true;
+    if (document.referrer.startsWith('android-app://')) { sessionStorage.setItem('hierro.twa', '1'); return true; }
+  } catch (e) { /* sin sessionStorage: se mira solo el referrer */ return document.referrer.startsWith('android-app://'); }
+  return false;
+})();
 const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 let deferredPrompt = null, UPDATE = null, STUCK = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; render(); });
 window.addEventListener('appinstalled', () => { deferredPrompt = null; toast('Hierro instalada'); render(); });
 function backupStale(){ return S.workouts.length >= 5 && (!S.settings.lastBackup || Date.now() - S.settings.lastBackup > 30 * 864e5); }
 function installCard(force){
-  if (isStandalone() || (!force && S.settings.hideInstall)) return '';
+  if (IS_NATIVE || IS_TWA || isStandalone() || (!force && S.settings.hideInstall)) return '';
   const share = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v8h14v-8"/></svg>';
   let how;
   if (deferredPrompt) how = `<button class="btn primary block" data-act="install">Instalar Hierro</button>`;
@@ -7392,8 +7553,9 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !SWREG) return;
   if (UPDATE) autoUpdate(); else SWREG.update().catch(() => {});
 });
-function updateCard(){ return UPDATE || STUCK ? `<div class="card next row between"><div><b>Hay una versión nueva</b><div class="small muted">Tus datos se mantienen.</div></div><button class="btn primary sm" data-act="do-update">Actualizar</button></div>` : ''; }
+function updateCard(){ return !IS_NATIVE && (UPDATE || STUCK) ? `<div class="card next row between"><div><b>Hay una versión nueva</b><div class="small muted">Tus datos se mantienen.</div></div><button class="btn primary sm" data-act="do-update">Actualizar</button></div>` : ''; }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  const hadController = !!navigator.serviceWorker.controller; // primera visita: clients.claim() no debe recargar la página
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
       SWREG = reg;
@@ -7404,7 +7566,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       setTimeout(() => { if (!UPDATE) checkUpdate(false).then(st => { if (st === 'update' || st === 'stuck') autoUpdate(); }); }, 20000);
     }).catch(() => {});
     let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; safeReload(() => location.reload()); });
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading || !hadController) return; reloading = true; safeReload(() => location.reload()); });
   });
 }
 
@@ -7418,7 +7580,7 @@ function pullRefresh(){
   const upd = checkUpdate(true).then(st => {
     if (st === 'busy') { toast('Descargando la versión nueva…'); return; }
     if (st !== 'update' && st !== 'stuck') return;
-    if (S.active) { toast('Hay una versión nueva: toca «Actualizar»'); return; }
+    if (S.active) { if (!IS_NATIVE) toast('Hay una versión nueva: toca «Actualizar»'); return; }
     toast('Actualizando a la versión nueva…'); autoUpdate(true);
   }).catch(() => {});
   const job = (async () => {
@@ -7538,6 +7700,7 @@ rebuildEx();
   fixDurations(); if (!Cloud.enabled()) { fixImportedMuscles(); mergeImportedEx(); }
   render();
   if (S.active) { restoreActiveBar(); wakeLock(true); }
+  showWelcome();
   autoUpdate();
   // si se actualizó con el entreno abierto, se vuelve a abrir donde estaba
   try { if (sessionStorage.getItem('hierro.reopen') === '1') { sessionStorage.removeItem('hierro.reopen'); if (S.active && !ED) openEditor('active'); } } catch (e) {}
@@ -7550,6 +7713,42 @@ rebuildEx();
   const sch = () => { if (!q) q = requestAnimationFrame(upd); };
   document.addEventListener('scroll', sch, true); addEventListener('resize', sch);
   new MutationObserver(sch).observe(document.body, {childList: true, subtree: true}); sch();
+})();
+/* 4.14 · Botón/gesto Atrás (Android): una sola entrada de historial «centinela» mientras haya algo que cerrar
+   (ventana, resumen, editor, subvista o pestaña distinta de Inicio). Atrás cierra lo de encima y, en Inicio sin nada abierto,
+   no hay centinela y la app se cierra. Si se cierra por la UI, el centinela se retira con history.back() (sin duplicar entradas). */
+const BackNav = (() => {
+  let armed = false, pending = false;
+  const open = id => $('#' + id).classList.contains('open');
+  const cam = () => document.querySelector('.dcam');
+  const depth = () => (cam() ? 1 : 0) + (open('modal') ? 1 : 0) + (open('summary') ? 1 : 0) + (ED ? 1 : 0) + ((navStack[tab] || []).length) + (tab !== 'home' ? 1 : 0);
+  function sync(){
+    if (pending) return;
+    const want = depth() > 0 && !open('auth') && !open('welcome');
+    try {
+      if (want && !armed) { history.pushState({hb: 1}, ''); armed = true; }
+      else if (!want && armed) { armed = false; pending = true; history.back(); setTimeout(() => { if (pending) { pending = false; sync(); } }, 400); }
+    } catch (e) { /* sin History API: Atrás sale de la app como siempre */ }
+  }
+  function onPop(){
+    if (pending) { pending = false; sync(); return; }
+    if (!armed) return;
+    armed = false; // el centinela ya se ha consumido
+    if (cam()) { const x = cam().querySelector('[data-dc=x]'); if (x) x.click(); } // la cámara doble va encima de todo
+    else if (open('modal')) A['m-close']();
+    else if (open('summary')) A['sum-close']();
+    else if (ED) { if (ED.mode === 'active') A['ed-min'](); else A['ed-cancel'](); } // en rutina o entreno pasado pregunta, igual que la X
+    else if ((navStack[tab] || []).length) back();
+    else if (tab !== 'home') navTo(() => { tab = 'home'; });
+    sync();
+  }
+  addEventListener('popstate', onPop);
+  try { armed = !!(history.state && history.state.hb); } catch (e) { armed = false; /* sin History API */ } // recarga con el centinela puesto
+  const mo = new MutationObserver(sync);
+  ['modal', 'summary', 'editor', 'auth', 'welcome'].forEach(id => mo.observe($('#' + id), {attributes: true, attributeFilter: ['class']}));
+  mo.observe($('#view'), {childList: true});
+  mo.observe(document.body, {childList: true}); // la cámara doble (.dcam) se añade al body
+  return {sync};
 })();
 </script>
 </body>

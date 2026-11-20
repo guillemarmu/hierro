@@ -79,5 +79,7 @@
     } catch (e) { /* sin nativo */ }
   });
 
-  window.Native = {is: true, platform: 'ios', health: salud};
+  let plataforma = 'ios';
+  try { if (typeof cap.getPlatform === 'function') plataforma = cap.getPlatform() || 'ios'; } catch (e) { /* se queda en ios */ }
+  window.Native = {is: true, platform: plataforma, health: salud};
 })();
