@@ -52,8 +52,21 @@ jobs:
           P: ${{ secrets.ASC_KEY_P8 }}
         run: |
           umask 077
-          printf '%s\n' "$P" > "$RUNNER_TEMP/asc.p8"
-          grep -q 'BEGIN PRIVATE KEY' "$RUNNER_TEMP/asc.p8" || { echo "::error::ASC_KEY_P8 no parece un .p8 (falta BEGIN PRIVATE KEY)"; exit 1; }
+          F="$RUNNER_TEMP/asc.p8"
+          # Acepta el .p8 tal cual, el .p8 en base64 o solo el cuerpo (sin las líneas BEGIN/END)
+          printf '%s\n' "$P" | tr -d '\r' > "$F"
+          if ! grep -q 'BEGIN PRIVATE KEY' "$F"; then
+            if printf '%s' "$P" | tr -d ' \r\n' | base64 -D 2>/dev/null | grep -q 'BEGIN PRIVATE KEY'; then
+              printf '%s' "$P" | tr -d ' \r\n' | base64 -D > "$F"
+            else
+              B=$(printf '%s' "$P" | tr -d ' \r\n' | sed 's/-----[A-Z ]*-----//g')
+              { echo '-----BEGIN PRIVATE KEY-----'; printf '%s\n' "$B" | fold -w 64; echo '-----END PRIVATE KEY-----'; } > "$F"
+            fi
+          fi
+          if ! openssl pkey -in "$F" -noout 2>/dev/null; then
+            echo "::error::ASC_KEY_P8 no es una clave .p8 válida (${#P} caracteres; líneas con guiones: $(printf '%s' "$P" | grep -c -- '-----')). Pega el contenido entero del archivo AuthKey_U85TUDM496.p8."
+            exit 1
+          fi
       - name: Archivar (firmado)
         working-directory: tiendas/ios/ios/App
         env:
