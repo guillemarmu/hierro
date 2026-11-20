@@ -50,10 +50,10 @@ if [ "${SIN_ENTITLEMENTS:-0}" != 1 ]; then
   grep -q 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements' "$PBX" || { echo "No se pudo enlazar App.entitlements." >&2; exit 1; }
 fi
 
-# Icono: el de la PWA ampliado a 1024 px (para la tienda hace falta uno de 1024 px sin transparencia)
+# Icono: assets/icon-1024.png (1024 px, sin canal alfa y con el fondo de la marca, como exige la tienda)
 ICONO="$APP/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
-if [ -f ../../hierro-pwa/icons/icon-512.png ] && [ -d "$(dirname "$ICONO")" ]; then
-  sips -z 1024 1024 ../../hierro-pwa/icons/icon-512.png --out "$ICONO" >/dev/null
+if [ -f assets/icon-1024.png ] && [ -d "$(dirname "$ICONO")" ]; then
+  cp assets/icon-1024.png "$ICONO"
 fi
 
 echo "Listo: proyecto en tiendas/ios/$APP"

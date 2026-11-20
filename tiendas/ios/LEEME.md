@@ -33,7 +33,7 @@ La carpeta `ios/` que genera Capacitor **no se guarda** en el repo (`.gitignore`
 
 GitHub › Actions › **iOS** › Run workflow (también se lanza al cambiar `tiendas/ios/`). Ejecuta `preparar.sh` y `xcodebuild … -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build`. Solo comprueba que compila; no genera `.ipa` ni sirve para instalar en un iPhone.
 
-`preparar.sh` hace: `npm install` (o `npm ci` si hay `package-lock.json`), `npx cap add ios` (si no existe), `npx cap sync ios`, parchea `Info.plist` con PlistBuddy, copia `App.entitlements` y lo enlaza con `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` en el proyecto, y amplía el icono de la PWA a 1024 px. Si el enlace de entitlements diera problemas al compilar sin firmar, `SIN_ENTITLEMENTS=1 ./preparar.sh` lo salta; al firmar de verdad hay que quitar esa variable.
+`preparar.sh` hace: `npm install` (o `npm ci` si hay `package-lock.json`), `npx cap add ios` (si no existe), `npx cap sync ios`, parchea `Info.plist` con PlistBuddy, copia `App.entitlements` y lo enlaza con `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` en el proyecto, y copia `assets/icon-1024.png` (1024 px, opaco) como icono de la app. Si el enlace de entitlements diera problemas al compilar sin firmar, `SIN_ENTITLEMENTS=1 ./preparar.sh` lo salta; al firmar de verdad hay que quitar esa variable.
 
 ## Permisos (texto exacto de `Info.plist`)
 
@@ -57,4 +57,4 @@ Para App Review: la interfaz de la app tiene que ofrecer el interruptor de Salud
 
 ## Sin verificar
 
-No hay macOS aquí: la compilación real (SPM, plugin Swift, entitlements, PlistBuddy) solo se ve en Actions. Puntos a vigilar en el primer run: que `xcodebuild` resuelva el paquete local `HierroHealth`, que `limitsNavigationsToAppBoundDomains` no bloquee reCAPTCHA/Firebase (solo los dominios de la lista pueden usar el service worker y la inyección de scripts; el resto de iframes cargan sin ellos) y el icono (el de la PWA tiene transparencia: para la tienda hace falta uno de 1024 px opaco, p. ej. con `@capacitor/assets` desde `assets/icon-only.png`).
+No hay macOS aquí: la compilación real (SPM, plugin Swift, entitlements, PlistBuddy) solo se ve en Actions. Puntos a vigilar en el primer run: que `xcodebuild` resuelva el paquete local `HierroHealth`, que `limitsNavigationsToAppBoundDomains` no bloquee reCAPTCHA/Firebase (solo los dominios de la lista pueden usar el service worker y la inyección de scripts; el resto de iframes cargan sin ellos) y el icono (`assets/icon-1024.png` es opaco y de 1024 px; sale de `hierro-pwa/icons/favicon.svg` sin esquinas redondeadas).
