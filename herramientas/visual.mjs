@@ -49,7 +49,7 @@ function seed(){
       exercises: ex.slice(k, k + 3).map((e, j) => ({exId: e, notes: '', sets: [{t: 'w', kg: 20, reps: 12, done: true}, ...[0, 1, 2].map(i => ({t: 'n', kg: 50 + j * 15 + (36 - d) * .8 + i * 2.5, reps: 10 - i, done: true}))]})), prs: []});
   }
   S.measures = [0, 1, 2, 3, 4, 5].map(i => ({id: 'm' + i, date: now - i * 14 * day, weight: 82 - i * .6, waist: 86 - i * .3}));
-  Object.assign(S.settings, {sex: 'm', height: 180, healthOk: now, weekGoal: 4});
+  Object.assign(S.settings, {sex: 'm', height: 180, healthOk: now, weekGoal: 4, welcomed: true}); document.querySelector('#welcome')?.classList.remove('open'); // los datos de ejemplo son de un usuario que ya entrena
   S.routines = [{id: 'r1', name: 'Torso pesado', exercises: ex.slice(0, 3).map(e => ({exId: e, sets: [{t: 'n', kg: 60, reps: 8}, {t: 'n', kg: 60, reps: 8}]}))}];
   try { rkReset(); } catch (e) { /* sin caché de rangos todavía */ }
   Store.mark(); Store.mark('meta');
