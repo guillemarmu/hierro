@@ -17,7 +17,7 @@ env:
 jobs:
   testflight:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -84,7 +84,8 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" AD_HOC_CODE_SIGNING_ALLOWED=YES PROVISIONING_PROFILE_SPECIFIER="" PROVISIONING_PROFILE="" \
             MARKETING_VERSION="${{ steps.v.outputs.ver }}" CURRENT_PROJECT_VERSION="${{ steps.v.outputs.build }}" \
             archive | tee "$RUNNER_TEMP/archive.log" | tail -n 60
-      - name: Exportar y subir a App Store Connect
+      - name: Exportar firmado (.ipa)
+        timeout-minutes: 15
         env:
           KID: ${{ secrets.ASC_KEY_ID }}
           ISS: ${{ secrets.ASC_ISSUER_ID }}
@@ -94,7 +95,7 @@ jobs:
             '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
             '<plist version="1.0"><dict>' \
             '<key>method</key><string>app-store-connect</string>' \
-            '<key>destination</key><string>upload</string>' \
+            '<key>destination</key><string>export</string>' \
             "<key>teamID</key><string>${TEAM_ID}</string>" \
             '<key>signingStyle</key><string>automatic</string>' \
             '<key>uploadSymbols</key><true/>' \
@@ -106,9 +107,24 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
             | tee "$RUNNER_TEMP/export.log" | tail -n 60
+          ls -la "$RUNNER_TEMP/export"
+      # Subida aparte con altool (la subida dentro de -exportArchive se quedó colgada en «Sending SPI analysis»)
+      - name: Subir a App Store Connect
+        timeout-minutes: 20
+        env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          mkdir -p ~/.appstoreconnect/private_keys
+          cp "$RUNNER_TEMP/asc.p8" ~/.appstoreconnect/private_keys/AuthKey_${KID}.p8
+          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+          [ -n "$IPA" ] || { echo "::error::No se ha generado el .ipa"; exit 1; }
+          xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$KID" --apiIssuer "$ISS" --output-format normal 2>&1 | tee "$RUNNER_TEMP/upload.log"
+          grep -qiE 'No errors uploading|UPLOAD SUCCEEDED|successfully uploaded' "$RUNNER_TEMP/upload.log" || { echo "::error::La subida no confirmó éxito (ver el log)"; exit 1; }
       - name: Borrar la clave
         if: always()
-        run: rm -f "$RUNNER_TEMP/asc.p8"
+        run: rm -f "$RUNNER_TEMP/asc.p8" ~/.appstoreconnect/private_keys/*.p8
       - name: Resumen
         if: success()
         run: |
@@ -123,4 +139,5 @@ jobs:
           path: |
             ${{ runner.temp }}/archive.log
             ${{ runner.temp }}/export.log
+            ${{ runner.temp }}/upload.log
           retention-days: 7
