@@ -56,4 +56,10 @@ if [ -f assets/icon-1024.png ] && [ -d "$(dirname "$ICONO")" ]; then
   cp assets/icon-1024.png "$ICONO"
 fi
 
+# Solo iPhone (21 nov): sin capturas de iPad en la ficha y sin Salud en iPad (HealthKit no existe allí)
+PBX="$APP/App.xcodeproj/project.pbxproj"
+perl -pi -e 's/TARGETED_DEVICE_FAMILY = "?1,2"?;/TARGETED_DEVICE_FAMILY = 1;/g' "$PBX"
+grep -q 'TARGETED_DEVICE_FAMILY = "\?1,2' "$PBX" && { echo "No se pudo dejar la app solo para iPhone." >&2; exit 1; }
+grep -q 'TARGETED_DEVICE_FAMILY = 1;' "$PBX" || { echo "No encuentro TARGETED_DEVICE_FAMILY en el proyecto." >&2; exit 1; }
+
 echo "Listo: proyecto en tiendas/ios/$APP"
