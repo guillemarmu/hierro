@@ -933,6 +933,12 @@ button.stat{text-align:left;min-height:44px}
 .cl-emos button{aspect-ratio:1;border-radius:14px;background:var(--sup-2);font-size:24px;display:flex;align-items:center;justify-content:center}
 .cl-emos button[aria-pressed="true"]{background:var(--acc-soft);box-shadow:inset 0 0 0 2px var(--acc)}
 .cl-people .person:last-child{border-bottom:0}
+.cl-people button.who{flex:1;min-width:0;background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer}
+.cl-people .cl-rq-b{gap:6px;flex-shrink:0}
+#clPeople h3{margin:0}
+.cl-reqs small{display:block;margin-top:2px}
+.cl-lock{font-size:.8em;margin-left:2px}
+#modal input.sw[type=checkbox]:checked{background:var(--acc)} /* 4.16: #modal input le quitaba el color al interruptor encendido */
 .lg-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .lg-card{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 6px 10px;border-radius:18px;background:var(--sup-2);min-width:0}
 .lg-card i{font-style:normal;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:25px;background:var(--grad-d);box-shadow:0 8px 18px -8px var(--glow);margin-bottom:2px}
@@ -4913,6 +4919,7 @@ const Social = {
       }
       this.notifs = list; this.notifLoaded = true; n.err = '';
       if (got.some(x => x.type === 'freq' && !this.reqIn.includes(x.from))) this.loadReqs().catch(() => {}); // 4.11: solicitud nueva
+      if (got.some(x => (x.type === 'creq' || x.type === 'cok') && x.ts > last)) Clan.at = 0; // 4.16: te piden entrar o te han aceptado: la liga se recarga al abrirla
       if (got.some(x => x.type === 'fok' && !this.following.has(x.from))) { got.filter(x => x.type === 'fok').forEach(x => this.reqOut.delete(x.from)); this.followsAt = 0; } // te han aceptado: se recargan los seguidos
       KV.set('socn:' + uid, {list, full: n.full, ts: Date.now()});
       this.notifCount(); renderTabs();
@@ -5662,6 +5669,7 @@ function viewNotifs(){
     const x = g.items[0], dot = isNew ? '<i class="ndot" role="img" aria-label="Nuevo"></i>' : '', tail = `<span class="nt-time">${ago(g.ts)}</span>`;
     const chev = `<span class="nchev" aria-hidden="true">${ICON.chev}</span>`;
     if (x.rel) return `<div class="nrow"><button class="notif" data-act="cl-goto" data-id="${esc(x.rel)}"><span class="cl-emo sm" aria-hidden="true">${esc(x.cemoji || '🛡️')}</span><span class="nb"><span class="nt"><b>${esc(cut(x.cname || 'Un clan', 30))}</b> ${T[x.type] || ''}${x.text ? `: <span class="muted">«${esc(cut(x.text, 80))}»</span>` : ''}</span>${tail}</span>${dot}${chev}</button></div>`;
+    if (g.type === 'creq' || g.type === 'cok') return `<div class="nrow"><button class="notif" data-act="cl-home" data-k="${g.type === 'creq' ? 'req' : ''}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${nameB(x)} ${g.type === 'creq' ? 'quiere unirse a' : 'te ha aceptado en'} <b>${esc(cut(`${x.cemoji || '🛡️'} ${x.cname || 'tu clan'}`, 34))}</b></span>${tail}</span>${dot}${chev}</button></div>`;
     if (g.type === 'freq' || g.type === 'fok') return `<div class="nrow"><button class="notif" data-act="soc-user" data-id="${esc(x.from)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${nameB(x)} ${g.type === 'fok' ? 'ha aceptado tu solicitud: ya ves sus entrenos' : 'te ha pedido seguirte'}</span>${tail}</span>${dot}${chev}</button></div>`;
     if (g.type === 'follow') {
       const fol = Social.following.has(x.from);
@@ -6466,7 +6474,7 @@ $('#fileJson').addEventListener('change', async ev => {
    Todo se calcula en el móvil; en la nube solo hay un resumen público por persona (scores/{uid}) y los clanes (clans/{cid}),
    protegidos por las reglas de Firestore. El peso corporal nunca sale del móvil: de la fuerza relativa solo se publica el cociente.
    ========================================================= */
-const CL = {maxMembers: 30, weeks: 8, day: 10, maxDays: 5, pr: 3, maxPr: 10, perPct: 2, capEx: 10, maxImpr: 20, minSets: 3, lookback: 8, relWeeks: 12, maxRel: 5, minSes: 2, maxFz: 300};
+const CL = {maxMembers: 30, maxReq: 50, weeks: 8, day: 10, maxDays: 5, pr: 3, maxPr: 10, perPct: 2, capEx: 10, maxImpr: 20, minSets: 3, lookback: 8, relWeeks: 12, maxRel: 5, minSes: 2, maxFz: 300};
 const CLAN_EMOJIS = ['🐺', '🦁', '🐻', '🦍', '🐂', '🦅', '🦈', '🐉', '🔥', '⚡', '💀', '🚀'];
 const REL_LIFTS = [['banca', 'x-press-banca-barra', 'Press banca'], ['sentadilla', 'x-sentadilla-barra', 'Sentadilla'], ['muerto', 'x-peso-muerto-barra', 'Peso muerto'], ['militar', 'x-press-militar-barra', 'Press militar']];
 /* Fuerza por grupo muscular (desde 4.5.4). Cada ejercicio con peso tiene un estándar: el 1RM de alguien de nivel intermedio,
@@ -6914,8 +6922,10 @@ const Clan = {
       // la lista de miembros del clan es la que manda
       const cid = this.myCid();
       if (cid && !clans.some(c => c._id === cid && (c.members || []).includes(me))) { const c = clans.find(x => x._id === cid); S.settings.clan = ''; Store.mark(); toast(c ? `Ya no estás en ${c.name}` : 'Tu clan se ha disuelto'); }
-      if (!this.myCid()) { const c = clans.find(x => (x.members || []).includes(me)); if (c) { S.settings.clan = c._id; Store.mark(); } }
+      if (!this.myCid()) { const c = clans.find(x => (x.members || []).includes(me)); if (c) { S.settings.clan = c._id; Store.mark(); if (this.asked.has(c._id)) toast(`¡Te han aceptado en ${c.emoji} ${c.name}!`); } }
       const mc = this.mine();
+      this.asked = new Set(clans.filter(c => (c.requests || []).includes(me)).map(c => c._id));
+      if (mc) this.tidy(mc, clans);
       if (mc) {
         const miss = mc.members.filter(u => u !== me && !this.scores.has(u));
         if (miss.length) {
@@ -6927,16 +6937,50 @@ const Clan = {
       this.loaded = true; this.err = null; this.at = Date.now();
     } catch (e) { this.err = e.offline ? 'Sin conexión. Conéctate para ver la liga.' : 'No se ha podido cargar la liga.'; if (!e.offline) console.warn('clan', e); }
     this.loading = false; clanRender();
-    if (this.loaded && !this.err && this.mine()) Rel.load(true); // piques y alianzas (con los resúmenes recién cargados)
+    if (this.loaded && !this.err && this.mine()) { Rel.load(true); this.key(this.mine()).catch(() => {}); } // piques y alianzas; la clave del enlace, para compartirlo sin esperas
   },
-  async commit(writes){
+  asked: new Set(),
+  // 4.16: ya tienes clan: retira tus solicitudes a otros y sal de los clanes en los que te aceptaron a la vez (un clan por persona)
+  tidy(mc, clans){
+    const me = Social.myUid(), w = [];
+    clans.forEach(c => {
+      if (c._id === mc._id) return;
+      const f = [];
+      if ((c.requests || []).includes(me)) f.push({fieldPath: 'requests', removeAllFromArray: {values: [fsv(me)]}});
+      if ((c.members || []).includes(me) && c.owner !== me) f.push({fieldPath: 'members', removeAllFromArray: {values: [fsv(me)]}});
+      if (f.length) { w.push({transform: {document: Cloud.name('clans', c._id), fieldTransforms: f}, currentDocument: {exists: true}}); c.requests = (c.requests || []).filter(u => u !== me); if (c.owner !== me) c.members = (c.members || []).filter(u => u !== me); }
+    });
+    this.asked.clear();
+    if (w.length) Cloud.commit(w).catch(() => {});
+  },
+  async commit(writes, deny){
+    this.fail = null;
     try { await Cloud.commit(writes); return true; }
-    catch (e) { toast(e.offline ? 'Necesitas conexión' : e.status === 403 ? 'No tienes permiso para hacer eso' : e.status === 409 ? 'Ese clan ya existe' : 'No se ha podido completar'); return false; }
+    catch (e) { this.fail = e.offline ? 'offline' : e.status; toast(e.offline ? 'Necesitas conexión' : e.status === 403 ? deny || 'No tienes permiso para hacer eso' : e.status === 409 ? 'Ese clan ya existe' : 'No se ha podido completar'); return false; }
+  },
+  // 4.16: quién puede entrar. Un clan sin «open» (los de antes también) pide permiso al jefe; con la clave del enlace se entra directo.
+  isOpen(c){ return c.open === true; },
+  reqd(c){ return (c.requests || []).includes(Social.myUid()); },
+  invKey(cid){ return CLAN_INV && CLAN_INV.c === cid ? CLAN_INV.k : ''; },
+  canEnter(c){ return this.isOpen(c) || !!this.invKey(c._id); },
+  invDone(){ try { localStorage.removeItem('hierro.clinv'); } catch (e) { /* sin localStorage no hay nada guardado */ } if (CLAN_INV) CLAN_INV.k = ''; },
+  // Clave del enlace de invitación (clankeys/{cid}: la leen los miembros). Si aún no existe, la crea; renew la cambia (solo el jefe).
+  keys: new Map(),
+  async key(c, renew){
+    if (!renew) {
+      if (this.keys.has(c._id)) return this.keys.get(c._id);
+      const d = await Cloud.getDoc('clankeys', c._id), k = d ? docData(d).key : '';
+      if (/^[a-z0-9]{20,32}$/.test(k || '')) { this.keys.set(c._id, k); return k; }
+    }
+    const k = clanKeyGen();
+    await Cloud.commit([{update: {name: Cloud.name('clankeys', c._id), fields: fsFields({key: k})}, ...(renew ? {} : {currentDocument: {exists: false}})}]);
+    this.keys.set(c._id, k); return k;
   },
   async done(cid, msg){ S.settings.clan = cid; Store.mark(); if (msg) toast(msg); await this.load(true); },
   grant(id, val){ const g = S.settings.logros || {}; if (g[id]) return; S.settings.logros = {...g, [id]: val || Date.now()}; Store.mark(); const l = LOGROS.find(x => x[0] === id); if (l && !STICKY_ACH.has(id)) toast(`${l[1]} ¡Logro desbloqueado! ${l[2]}`); },
-  members(c){
-    return (c.members || []).map(uid => { const s = this.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile, bl = isBlocked(uid); return {uid, me: uid === Social.myUid(), blocked: bl, name: bl ? 'Usuario bloqueado' : s ? s.name : pr ? pr.name : 'Alguien', s: bl ? null : s}; });
+  members(c){ return this.people(c.members || []); },
+  people(uids){
+    return uids.map(uid => { const s = this.scoreOf(uid), pr = (Social.users.get(uid) || {}).profile, bl = isBlocked(uid); return {uid, me: uid === Social.myUid(), blocked: bl, name: bl ? 'Usuario bloqueado' : s ? s.name : pr ? pr.name : 'Alguien', s: bl ? null : s}; });
   },
   // si alguien aparece en dos clanes, cuenta en el que dice su resumen
   uidsOf(c){ const me = Social.myUid(); return (c.members || []).filter(u => { if (u === me) return c._id === this.myCid(); const s = this.scoreOf(u); return !s || !s.clan || s.clan === c._id; }); },
@@ -6954,8 +6998,20 @@ const Clan = {
     }).sort((x, y) => y.avg - x.avg || y.act - x.act || x.c.name.localeCompare(y.c.name, 'es'));
   }
 };
-const CLAN_INVITE = (location.hash.match(/clan=([A-Za-z0-9_-]{4,40})/) || [])[1] || null;
-if (CLAN_INVITE) { tab = 'clan'; try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) {} }
+// 4.16: el enlace de invitación lleva la clave del clan (#clan=<id>&k=<clave>) y deja entrar sin pedir permiso. Se guarda 14 días en el
+// móvil para que siga valiendo después de crear la cuenta o de recargar.
+const CLAN_INV = (() => {
+  const m = location.hash.match(/clan=([a-z0-9]{6,24})(?:&k=([a-z0-9]{20,32}))?/);
+  try {
+    if (m) { const v = {c: m[1], k: m[2] || '', at: Date.now()}; localStorage.setItem('hierro.clinv', JSON.stringify(v)); return v; }
+    const v = JSON.parse(localStorage.getItem('hierro.clinv') || 'null');
+    if (isObj(v) && typeof v.c === 'string' && typeof v.k === 'string' && Date.now() - v.at < 14 * 864e5) return v;
+  } catch (e) { /* sin localStorage: el enlace vale solo en esta visita */ if (m) return {c: m[1], k: m[2] || '', at: Date.now()}; }
+  return null;
+})();
+const CLAN_INVITE = CLAN_INV ? CLAN_INV.c : null;
+if (/[#&]clan=/.test(location.hash)) { tab = 'clan'; try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) {} }
+const clanKeyGen = () => [...crypto.getRandomValues(new Uint8Array(24))].map(b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('');
 function clanRender(){ if ((tab === 'clan' || tab === 'social') && !ED) { const sc = $('#view').scrollTop; render(); $('#view').scrollTop = sc; } }
 
 /* ---------- Vistas de clanes ---------- */
@@ -6975,6 +7031,7 @@ function clanHowHTML(){
     <p><b>📈 Mejora.</b> Tu mejor marca de la semana en cada ejercicio (1RM estimado, repeticiones o tiempo) frente a tu mejor marca de las 8 semanas anteriores. Cada 1 % de mejora son 2 puntos; como mucho un 10 % por ejercicio y 40 puntos a la semana. Solo cuentan ejercicios que hayas hecho al menos 2 veces en esas 8 semanas, así que bajar peso a propósito no sirve de nada.</p>
     <p><b>💪 Fuerza relativa (si quieres).</b> Tu 1RM estimado de las últimas 12 semanas dividido entre tu peso. Solo se publica el resultado (por ejemplo 1,35×), nunca tu peso.</p>
     <p><b>📅 Semana, mes y año.</b> Cada semana cuenta entera en el mes en que cae su lunes (la del 29 de diciembre al 4 de enero es de diciembre). El mes suma sus semanas y el año suma sus meses, así que el mes que ves es el de la semana en curso.</p>
+    <p><b>🔒 Entrar en un clan.</b> Si el clan pide permiso, su jefe acepta o rechaza tu solicitud. Con el enlace de invitación de un miembro entras directo. Solo se puede estar en un clan.</p>
     <p><b>🛡️ Clan contra clan.</b> Media de puntos por miembro activo (quien ha entrenado en las últimas 4 semanas o en el periodo): un clan de 3 compite igual que uno de 20.</p>
     <p><b>⚔️ Piques y 🤝 alianzas.</b> Los propone el jefe de un clan y los acepta el jefe del otro (como mucho ${REL.max} de cada). En un pique gana la mejor media por miembro activo y en el cara a cara se emparejan por puesto: 1.º contra 1.º, 2.º contra 2.º… Una alianza junta las clasificaciones de los clanes aliados.</p>
     <p class="muted">Máximo ${CL_MAXPTS} puntos por semana. Los premios de la semana se reparten al cerrar el domingo.</p></div></details>`;
@@ -7068,11 +7125,21 @@ function clanVsHTML(T, myId, per = Clan.per){
     <div class="cl-list">${T.slice(0, 12).map((r, i) => `<button class="cl-row${r.c._id === myId ? ' me' : ''}" data-act="cl-view" data-id="${r.c._id}"><b class="cl-pos${i < 3 && r.avg > 0 ? ' md' : ''}">${i < 3 && r.avg > 0 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span class="cl-emo xs" aria-hidden="true">${esc(r.c.emoji)}</span><span class="cl-nm"><b>${esc(r.c.name)}</b><small>${plural(r.n, 'miembro', 'miembros')} · ${plural(r.act, 'activo', 'activos')}${tag(r.c._id)}</small><i class="cl-bar"><span style="width:${Math.round(r.avg / max * 100)}%"></span></i></span><span class="cl-val num">${fmtN(r.avg, 0)}<small>pts</small></span></button>`).join('')}</div>
     ${lastWin && lastWin.prevAvg > 0 ? `<div class="small muted">${per === 'w' ? `La semana ${+K.prev.split('-W')[1]}` : `En ${pm}`} ganó ${esc(lastWin.c.emoji)} <b>${esc(lastWin.c.name)}</b> con ${fmtN(lastWin.prevAvg, 0)} pts por miembro.</div>` : ''}</div>`;
 }
+// 4.16: botón para entrar en un clan: «Unirse» si es abierto o traes su enlace; si no, «Solicitar» (y «Solicitado» para retirarla)
+function clanJoinBtn(c, big){
+  const me = Social.myUid(), full = (c.members || []).length >= CL.maxMembers, ban = (c.kicked || []).includes(me), go = Clan.canEnter(c);
+  const cls = big ? 'btn block' : 'btn sm', attr = `data-act="cl-join" data-id="${c._id}"`;
+  if (ban) return `<button class="${cls}" ${attr} disabled>${big ? 'Te expulsaron de este clan' : 'Expulsado'}</button>`;
+  if (Clan.reqd(c) && !go) return `<button class="${cls}" data-act="cl-unreq" data-id="${c._id}" aria-label="Solicitud enviada. Retirarla">${big ? 'Solicitud enviada · Retirar' : 'Solicitado'}</button>`;
+  if (full) return `<button class="${cls}" ${attr} disabled>${big ? 'Este clan está lleno' : 'Lleno'}</button>`;
+  return `<button class="${cls}${big || c._id === CLAN_INVITE ? ' primary' : ''}" ${attr}>${go ? (big ? 'Unirme a este clan' : 'Unirse') : (big ? 'Pedir unirme' : 'Solicitar')}</button>`;
+}
+const clanLock = c => Clan.isOpen(c) ? '' : ' <span class="cl-lock" role="img" aria-label="Hay que pedir permiso al jefe" title="Hay que pedir permiso al jefe">🔒</span>';
 function clanDiscoverHTML(T){
-  const me = Social.myUid(), list = T.filter(r => !isBlocked(r.c.owner)).sort((a, b) => (b.c._id === CLAN_INVITE) - (a.c._id === CLAN_INVITE)); // 4.14: sin clanes de personas bloqueadas
+  const list = T.filter(r => !isBlocked(r.c.owner)).sort((a, b) => (b.c._id === CLAN_INVITE) - (a.c._id === CLAN_INVITE)); // 4.14: sin clanes de personas bloqueadas
   return `<div class="section-h"><h2>Unirse a un clan</h2>${list.length ? `<span class="small muted num">${plural(list.length, 'clan', 'clanes')}</span>` : ''}</div>
-    ${list.map(r => { const c = r.c, inv = c._id === CLAN_INVITE, full = r.n >= CL.maxMembers, ban = (c.kicked || []).includes(me);
-      return `<div class="card cl-item${inv ? ' next' : ''}"><button class="cl-item-main" data-act="cl-view" data-id="${c._id}"><span class="cl-emo sm" aria-hidden="true">${esc(c.emoji)}</span><span class="cl-nm"><b>${esc(c.name)}</b><small>${inv ? '<span class="pr">Te han invitado</span> · ' : ''}${plural(r.n, 'miembro', 'miembros')} · ${fmtN(r.avg, 0)} pts/miembro</small>${c.desc ? `<small class="cl-desc">${esc(c.desc)}</small>` : ''}</span></button><button class="btn sm ${inv ? 'primary' : ''}" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Expulsado' : full ? 'Lleno' : 'Unirse'}</button></div>`; }).join('') || `<div class="empty" style="padding:16px 12px">${EI('🛡️')}<h3>Aún no hay clanes</h3><div>¡Funda el primero y avisa a tus amigos!</div><button class="btn primary" data-act="cl-new">Crear clan</button></div>`}`;
+    ${list.map(r => { const c = r.c, inv = c._id === CLAN_INVITE;
+      return `<div class="card cl-item${inv ? ' next' : ''}"><button class="cl-item-main" data-act="cl-view" data-id="${c._id}"><span class="cl-emo sm" aria-hidden="true">${esc(c.emoji)}</span><span class="cl-nm"><b>${esc(c.name)}${clanLock(c)}</b><small>${inv ? '<span class="pr">Te han invitado</span> · ' : ''}${plural(r.n, 'miembro', 'miembros')} · ${fmtN(r.avg, 0)} pts/miembro</small>${c.desc ? `<small class="cl-desc">${esc(c.desc)}</small>` : ''}</span></button>${clanJoinBtn(c)}</div>`; }).join('') || `<div class="empty" style="padding:16px 12px">${EI('🛡️')}<h3>Aún no hay clanes</h3><div>¡Funda el primero y avisa a tus amigos!</div><button class="btn primary" data-act="cl-new">Crear clan</button></div>`}`;
 }
 function viewClan(){
   const L = myLeague();
@@ -7090,7 +7157,7 @@ function viewClan(){
   const ranked = Clan.members(c).map(m => ({m, v: clanPts(((m.s || {}).weeks || {})[K.cur])})).sort((a, b) => b.v - a.v);
   const myPos = ranked.findIndex(x => x.m.me) + 1, clanPos = T.findIndex(r => r.c._id === c._id) + 1, cw = L.cur;
   const parts = [['Constancia', clamp(cw.days, 0, CL.maxDays) * CL.day, CL.maxDays * CL.day, 'var(--acc)'], ['Chiquipuntos', clamp(cw.prs, 0, CL.maxPr) * CL.pr, CL.maxPr * CL.pr, 'var(--rosa)'], ['Mejora', Math.round(clamp(cw.impr, 0, CL.maxImpr) * CL.perPct), CL.maxImpr * CL.perPct, 'var(--violeta)']];
-  let h = errH + relReqHTML() + `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}</h2><div class="small muted">${plural(c.members.length, 'miembro', 'miembros')}${clanPos ? ` · ${clanPos}.º de ${plural(T.length, 'clan', 'clanes')}` : ''}${owner ? ' · eres el jefe' : ''}</div></div>${owner ? `<button class="iconbtn" data-act="cl-menu" aria-label="Opciones del clan">${ICON.dots}</button>` : ''}</div>
+  let h = errH + (owner ? clanReqHTML(c) : '') + relReqHTML() + `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}</h2><div class="small muted">${plural(c.members.length, 'miembro', 'miembros')}${clanPos ? ` · ${clanPos}.º de ${plural(T.length, 'clan', 'clanes')}` : ''}${owner ? ' · eres el jefe' : ''}</div></div>${owner ? `<button class="iconbtn" data-act="cl-menu" aria-label="Opciones del clan">${ICON.dots}</button>` : ''}</div>
     ${c.desc ? `<div class="cl-desc2">${esc(c.desc)}</div>` : ''}
     <div class="cl-me"><div class="row between" style="align-items:flex-end"><div><div class="small muted">Tus puntos esta semana</div><div class="cl-big num">${cw.pts}<small> / ${CL_MAXPTS}</small></div></div>
       <div class="cl-when"><span class="pill accent">${clanLeft()}</span><span class="small muted">${cw.pts > 0 ? `Vas ${myPos}.º de ${c.members.length}` : 'Aún sin puntos esta semana'}</span></div></div>
@@ -7255,6 +7322,10 @@ const Rel = {
 /* ---------- Vistas de relaciones ---------- */
 const relWhat = t => t === 'alianza' ? 'Os propone una alianza 🤝' : 'Os lanza un pique ⚔️';
 // Propuestas que han llegado a tu clan: el jefe acepta o rechaza; el resto lo ve
+function clanReqHTML(c){
+  const n = (c.requests || []).length; if (!n) return '';
+  return `<div class="card next row between cl-reqs"><span><b>${n === 1 ? '1 persona quiere' : `${n} personas quieren`} unirse</b><small class="small muted">Tú decides quién entra en el clan.</small></span><button class="btn sm primary" data-act="cl-people">Revisar</button></div>`;
+}
 function relReqHTML(){
   const inc = Rel.incoming(); if (!inc.length) return '';
   const own = Rel.owner();
@@ -7357,14 +7428,14 @@ function viewClanV(id){
   const pill = !r ? '' : r.status === 'pendiente' ? '<span class="pill">⏳ Propuesta pendiente</span>' : r.type === 'alianza' ? '<span class="pill accent">🤝 Aliados</span>' : '<span class="pill gold">⚔️ Rivales</span>';
   let act = '';
   if (mine && mine._id === id) act = `<button class="btn block" data-act="cl-view" data-id="${id}">Ir a mi clan</button>`;
-  else if (!mine) { const full = (c.members || []).length >= CL.maxMembers, ban = (c.kicked || []).includes(me); act = `<button class="btn primary block" data-act="cl-join" data-id="${c._id}" ${full || ban ? 'disabled' : ''}>${ban ? 'Te expulsaron de este clan' : full ? 'Este clan está lleno' : 'Unirme a este clan'}</button>`; }
+  else if (!mine) act = clanJoinBtn(c, true) + (Clan.canEnter(c) || (c.kicked || []).includes(me) ? '' : `<div class="small muted">${Clan.reqd(c) ? 'Esperando a que el jefe te acepte.' : 'El jefe del clan tiene que aceptarte.'}</div>`);
   else if (r && r.status === 'pendiente' && r.from === mine._id) act = `<div class="small muted">Les habéis propuesto ${r.type === 'alianza' ? 'una alianza' : 'un pique'}. Esperando su respuesta…</div>${own ? `<button class="btn block" data-act="cl-rel-cancel" data-id="${r._id}">Cancelar la propuesta</button>` : ''}`;
   else if (r && r.status === 'pendiente') act = `<div class="small">${relWhat(r.type)}${r.msg && !isBlocked(r.by) ? `: <span class="muted">«${esc(r.msg)}»</span>` : ''}</div>${own ? `<div class="grid2"><button class="btn primary" data-act="cl-rel-ok" data-id="${r._id}">Aceptar</button><button class="btn" data-act="cl-rel-no" data-id="${r._id}">Rechazar</button></div>` : '<div class="small muted">Lo decide tu jefe de clan.</div>'}`;
   else if (r && r.type === 'pique') act = `<button class="btn primary block" data-act="cl-pique" data-id="${r._id}">⚔️ Ver el pique</button>`;
   else if (r) act = own ? `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">Romper la alianza</button>` : '';
   else if (own && !Rel.denied) act = `<div class="stack" style="gap:8px"><button class="btn primary block" data-act="cl-rel-form" data-k="pique" data-id="${c._id}">⚔️ Lanzar un pique</button><button class="btn block" data-act="cl-rel-form" data-k="alianza" data-id="${c._id}">🤝 Proponer una alianza</button></div>`;
   else if (!Rel.denied) act = '<div class="small muted">Solo el jefe de tu clan puede proponer alianzas o lanzar piques.</div>';
-  return `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}</h2><div class="small muted">${plural((c.members || []).length, 'miembro', 'miembros')} · ${fmtN(S1.avg, 0)} pts por activo ${perThis(per)}</div></div></div>
+  return `<div class="card cl-head stack"><div class="row" style="gap:14px"><span class="cl-emo" aria-hidden="true">${esc(c.emoji)}</span><div style="flex:1;min-width:0"><h2 class="cl-title">${esc(c.name)}${clanLock(c)}</h2><div class="small muted">${plural((c.members || []).length, 'miembro', 'miembros')} · ${fmtN(S1.avg, 0)} pts por activo ${perThis(per)}</div></div></div>
       ${c.desc ? `<div class="cl-desc2">${esc(c.desc)}</div>` : ''}${pill ? `<div class="row">${pill}</div>` : ''}${act}</div>
     <div class="card stack"><div class="row between"><h3>Clasificación</h3>${perSeg(per)}</div><div class="small muted cl-cap">${perName(per, K)}</div>
       <div class="cl-list">${clanRankRows(S1.rows, 'pts', per) || '<div class="small muted" style="padding:0 8px">Este clan aún no tiene a nadie compitiendo.</div>'}</div></div>
@@ -7411,7 +7482,8 @@ function clanForm(c){
   modal(c ? 'Editar clan' : 'Crear clan', `<label class="f">Nombre<input id="clName" maxlength="24" value="${esc(c ? c.name : '')}" placeholder="p. ej. Los del hierro" autocomplete="off"></label>
     <div class="f"><span>Emblema</span><div class="cl-emos" role="group" aria-label="Emblema">${CLAN_EMOJIS.map(e => `<button data-act="cl-emo" data-e="${e}" aria-pressed="${e === Clan.emo}">${e}</button>`).join('')}</div></div>
     <label class="f">Descripción (opcional)<input id="clDesc" maxlength="120" value="${esc(c ? c.desc || '' : '')}" placeholder="p. ej. Los de la sala de pesas de las 7" autocomplete="off"></label>
-    ${c ? '' : '<div class="small muted">El clan es abierto: cualquiera con cuenta puede unirse (máximo 30). Tú serás el jefe: puedes editarlo y expulsar a gente.</div>'}<div id="clMsg" class="small err"></div>`,
+    <label class="row cl-share"><input type="checkbox" class="sw" id="clAsk" ${c && Clan.isOpen(c) ? '' : 'checked'}><span><b>Pedir permiso para entrar</b><br><span class="small muted">Tú aceptas a quien lo pida. Con el enlace de «Invitar al clan» se entra directo. Si lo quitas, cualquiera con cuenta puede unirse.</span></span></label>
+    ${c ? '' : '<div class="small muted">Máximo 30 miembros. Tú serás el jefe: puedes editarlo, aceptar solicitudes y expulsar a gente.</div>'}<div id="clMsg" class="small err"></div>`,
     `<button class="btn primary" data-act="cl-save" data-id="${c ? c._id : ''}">${c ? 'Guardar' : 'Crear clan'}</button>`);
 }
 Object.assign(A, {
@@ -7424,16 +7496,16 @@ Object.assign(A, {
   'cl-new'(){ clanForm(null); },
   'cl-emo'(el){ Clan.emo = el.dataset.e; document.querySelectorAll('.cl-emos button').forEach(b => b.setAttribute('aria-pressed', b.dataset.e === Clan.emo)); },
   async 'cl-save'(el){
-    const name = $('#clName').value.trim().replace(/\s+/g, ' '), desc = $('#clDesc').value.trim().slice(0, 120), id = el.dataset.id, me = Social.myUid();
+    const name = $('#clName').value.trim().replace(/\s+/g, ' '), desc = $('#clDesc').value.trim().slice(0, 120), id = el.dataset.id, me = Social.myUid(), open = !$('#clAsk').checked;
     if (name.length < 3 || name.length > 24) { $('#clMsg').textContent = 'El nombre debe tener entre 3 y 24 caracteres.'; return; }
     if (badText(name) || badText(desc)) { $('#clMsg').textContent = BAD_MSG; return; }
     if (!id && Clan.clans.some(c => norm(c.name) === norm(name))) { $('#clMsg').textContent = 'Ya hay un clan con ese nombre.'; return; }
     el.disabled = true;
     if (id) {
-      if (await Clan.commit([{update: {name: Cloud.name('clans', id), fields: fsFields({name, emoji: Clan.emo, desc})}, updateMask: {fieldPaths: ['name', 'emoji', 'desc']}, currentDocument: {exists: true}}])) { closeModal(); await Clan.done(id, 'Clan actualizado'); }
+      if (await Clan.commit([{update: {name: Cloud.name('clans', id), fields: fsFields({name, emoji: Clan.emo, desc, open})}, updateMask: {fieldPaths: ['name', 'emoji', 'desc', 'open']}, currentDocument: {exists: true}}])) { closeModal(); await Clan.done(id, 'Clan actualizado'); }
     } else {
       const cid = rid();
-      if (await Clan.commit([{update: {name: Cloud.name('clans', cid), fields: fsFields({name, emoji: Clan.emo, desc, owner: me, members: [me], created: Date.now()})}, currentDocument: {exists: false}}])) { closeModal(); await Clan.done(cid, `¡Clan ${name} fundado!`); }
+      if (await Clan.commit([{update: {name: Cloud.name('clans', cid), fields: fsFields({name, emoji: Clan.emo, desc, owner: me, members: [me], created: Date.now(), open})}, currentDocument: {exists: false}}])) { closeModal(); await Clan.done(cid, `¡Clan ${name} fundado!`); }
     }
     el.disabled = false;
   },
@@ -7441,9 +7513,26 @@ Object.assign(A, {
     const c = Clan.clans.find(x => x._id === el.dataset.id); if (!c) return;
     if (Clan.mine()) { toast('Ya estás en un clan'); return; }
     if ((c.members || []).length >= CL.maxMembers) { toast('Este clan está lleno'); return; }
+    const me = Social.myUid(), ref = Cloud.name('clans', c._id), k = Clan.isOpen(c) ? '' : Clan.invKey(c._id);
     el.disabled = true;
-    if (await Clan.commit([{transform: {document: Cloud.name('clans', c._id), fieldTransforms: [{fieldPath: 'members', appendMissingElements: {values: [fsv(Social.myUid())]}}]}, currentDocument: {exists: true}}])) await Clan.done(c._id, `Ya eres de ${c.emoji} ${c.name}`);
-    else el.disabled = false;
+    if (Clan.isOpen(c) || k) {
+      // con el enlace: primero se apunta la clave en clanjoins/{yo} y las reglas la comparan con la del clan en el mismo commit
+      const w = [{transform: {document: ref, fieldTransforms: [{fieldPath: 'members', appendMissingElements: {values: [fsv(me)]}}, {fieldPath: 'requests', removeAllFromArray: {values: [fsv(me)]}}]}, currentDocument: {exists: true}}];
+      if (k) w.unshift({update: {name: Cloud.name('clanjoins', me), fields: fsFields({clan: c._id, key: k})}});
+      if (await Clan.commit(w, k ? 'El enlace de invitación ya no vale. Pide entrar al jefe.' : '')) { Clan.invDone(); await Clan.done(c._id, `Ya eres de ${c.emoji} ${c.name}`); return; }
+      if (k && (Clan.fail === 403 || Clan.fail === 404)) { Clan.invDone(); clanRender(); return; } // sin conexión el enlace se guarda
+    } else if ((c.requests || []).length >= CL.maxReq) toast('Este clan tiene demasiadas solicitudes pendientes. Prueba más tarde.');
+    else if (await Clan.commit([{transform: {document: ref, fieldTransforms: [{fieldPath: 'requests', appendMissingElements: {values: [fsv(me)]}}]}, currentDocument: {exists: true}}])) {
+      Social.notify(c.owner, 'creq', `${me}_creq_${c._id}`, {clan: c._id, cname: c.name, cemoji: c.emoji});
+      toast(`Solicitud enviada a ${c.emoji} ${c.name}`); await Clan.load(true); return;
+    }
+    el.disabled = false;
+  },
+  async 'cl-unreq'(el){
+    const c = Clan.clans.find(x => x._id === el.dataset.id); if (!c) return;
+    const ok = await ask('Retirar la solicitud', `¿Dejar de pedir entrar en «${esc(c.name)}»?`, [['0', 'Cancelar'], ['1', 'Retirar', 'danger']]);
+    closeModal(); if (ok !== '1') return;
+    if (await Clan.commit([{transform: {document: Cloud.name('clans', c._id), fieldTransforms: [{fieldPath: 'requests', removeAllFromArray: {values: [fsv(Social.myUid())]}}]}, currentDocument: {exists: true}}])) { toast('Solicitud retirada'); await Clan.load(true); }
   },
   async 'cl-leave'(){
     const c = Clan.mine(); if (!c) return;
@@ -7454,16 +7543,52 @@ Object.assign(A, {
     if (owner && !rest.length) await Rel.dissolve();
     const w = owner ? (rest.length ? {update: {name: ref, fields: fsFields({owner: rest[0], members: rest})}, updateMask: {fieldPaths: ['owner', 'members']}, currentDocument: {exists: true}} : {delete: ref})
       : {transform: {document: ref, fieldTransforms: [{fieldPath: 'members', removeAllFromArray: {values: [fsv(me)]}}]}, currentDocument: {exists: true}};
-    if (await Clan.commit([w])) await Clan.done('', 'Has dejado el clan');
+    if (await Clan.commit(w.delete ? [{delete: Cloud.name('clankeys', c._id)}, w] : [w])) await Clan.done('', 'Has dejado el clan');
   },
   'cl-menu'(){
-    modal('Tu clan', `<div class="menu"><button data-act="cl-edit">Editar nombre, emblema y descripción</button><button data-act="cl-people">Gestionar miembros</button><button class="danger" data-act="cl-del">Eliminar el clan</button></div>`);
+    modal('Tu clan', `<div class="menu"><button data-act="cl-edit">Editar el clan y quién puede entrar</button><button data-act="cl-people">Solicitudes y miembros</button><button data-act="cl-newkey">Renovar el enlace de invitación</button><button class="danger" data-act="cl-del">Eliminar el clan</button></div>`);
   },
   'cl-edit'(){ closeModal(); const c = Clan.mine(); if (c) clanForm(c); },
-  'cl-people'(){
-    closeModal(); const c = Clan.mine(); if (!c) return;
-    const ms = Clan.members(c).filter(m => !m.me);
-    modal('Miembros', ms.length ? `<div class="cl-people">${ms.map(m => `<div class="person"><div class="row who">${avatar(m.name, 'sm')}<span><b>${esc(m.name)}</b><small>${m.s && m.s.username ? '@' + esc(m.s.username) : ''}</small></span></div><button class="btn sm danger" data-act="cl-kick" data-id="${esc(m.uid)}">Expulsar</button></div>`).join('')}</div><div class="small muted">Quien expulses no podrá volver a unirse.</div>` : '<div class="small muted">Todavía estás tú solo. Invita a tus amigos.</div>');
+  'cl-people'(el, again){
+    if (!again) closeModal();
+    const c = Clan.mine(); if (!c || c.owner !== Social.myUid()) return;
+    const ms = Clan.members(c).filter(m => !m.me), rq = Clan.people(c.requests || []);
+    const who = m => `<button class="row who" data-act="cl-prof" data-id="${esc(m.uid)}">${avatar(m.name, 'sm')}<span><b>${esc(m.name)}</b><small>${m.s && m.s.username ? '@' + esc(m.s.username) : ''}</small></span></button>`;
+    const reqH = rq.length ? `<h3>Quieren unirse</h3><div class="cl-people">${rq.map(m => `<div class="person">${who(m)}<div class="row cl-rq-b"><button class="btn sm" data-act="cl-rej" data-id="${esc(m.uid)}">Rechazar</button><button class="btn sm primary" data-act="cl-acc" data-id="${esc(m.uid)}">Aceptar</button></div></div>`).join('')}</div>` : '';
+    const memH = ms.length ? `${rq.length ? '<h3>Miembros</h3>' : ''}<div class="cl-people">${ms.map(m => `<div class="person">${who(m)}<button class="btn sm danger" data-act="cl-kick" data-id="${esc(m.uid)}">Expulsar</button></div>`).join('')}</div><div class="small muted">Quien expulses no podrá volver a unirse.</div>` : '<div class="small muted">Todavía estás tú solo. Invita a tus amigos.</div>';
+    modal('Solicitudes y miembros', `<div class="stack" id="clPeople">${reqH}${memH}</div>`);
+    // nombres de quien lo pide (aún no están en la liga): se piden sus perfiles una vez y se vuelve a pintar
+    const miss = rq.filter(m => !m.s && !(Social.users.get(m.uid) || {}).profile).map(m => m.uid);
+    if (miss.length && !again) Social.profilesOf(miss).then(() => { if ($('#clPeople')) A['cl-people'](null, true); }).catch(() => {});
+  },
+  async 'cl-acc'(el){
+    const c = Clan.mine(), uid = el.dataset.id; if (!c || c.owner !== Social.myUid()) return;
+    if ((c.members || []).length >= CL.maxMembers) { toast('El clan está lleno (máximo 30)'); return; }
+    const m = Clan.people([uid])[0]; el.disabled = true;
+    if (await Clan.commit([{transform: {document: Cloud.name('clans', c._id), fieldTransforms: [{fieldPath: 'members', appendMissingElements: {values: [fsv(uid)]}}, {fieldPath: 'requests', removeAllFromArray: {values: [fsv(uid)]}}]}, currentDocument: {exists: true}}], 'Esa solicitud ya no está')) {
+      Social.notify(uid, 'cok', `${Social.myUid()}_cok_${c._id}`, {clan: c._id, cname: c.name, cemoji: c.emoji});
+      toast(`${m.name} ya es del clan`);
+    }
+    await Clan.load(true); if ($('#clPeople')) A['cl-people'](null, true);
+  },
+  async 'cl-rej'(el){
+    const c = Clan.mine(), uid = el.dataset.id; if (!c || c.owner !== Social.myUid()) return;
+    el.disabled = true;
+    if (await Clan.commit([{transform: {document: Cloud.name('clans', c._id), fieldTransforms: [{fieldPath: 'requests', removeAllFromArray: {values: [fsv(uid)]}}]}, currentDocument: {exists: true}}])) toast('Solicitud rechazada');
+    await Clan.load(true); if ($('#clPeople')) A['cl-people'](null, true);
+  },
+  async 'cl-newkey'(){
+    closeModal(); const c = Clan.mine(); if (!c || c.owner !== Social.myUid()) return;
+    const ok = await ask('Renovar el enlace', 'Los enlaces de invitación que ya hayáis enviado dejarán de servir para entrar sin permiso (con ellos tendrán que pedirlo).', [['0', 'Cancelar'], ['1', 'Renovar']]);
+    closeModal(); if (ok !== '1') return;
+    try { await Clan.key(c, true); toast('Enlace renovado. Compártelo con «Invitar al clan»'); } catch (e) { toast(e.offline ? 'Necesitas conexión' : 'No se ha podido renovar el enlace'); }
+  },
+  // desde los avisos: ir al clan (y, si eres el jefe y te piden entrar, abrir las solicitudes)
+  async 'cl-home'(el){
+    const rq = el.dataset.k === 'req';
+    navTo(() => { tab = 'clan'; navStack.clan = []; });
+    await Clan.load(true); const c = Clan.mine();
+    if (rq && c && c.owner === Social.myUid() && tab === 'clan') A['cl-people']();
   },
   async 'cl-kick'(el){
     const c = Clan.mine(), uid = el.dataset.id; if (!c) return;
@@ -7477,7 +7602,7 @@ Object.assign(A, {
     const ok = await ask('Eliminar el clan', `Se borrará «${esc(c.name)}» para todos sus miembros, con sus piques y alianzas. Los entrenos y logros de cada uno no se tocan.`, [['0', 'Cancelar'], ['1', 'Eliminar', 'danger']]);
     closeModal(); if (ok !== '1') return;
     await Rel.dissolve();
-    if (await Clan.commit([{delete: Cloud.name('clans', c._id)}])) await Clan.done('', 'Clan eliminado');
+    if (await Clan.commit([{delete: Cloud.name('clankeys', c._id)}, {delete: Cloud.name('clans', c._id)}])) await Clan.done('', 'Clan eliminado');
   },
   'cl-per'(el){ Clan.per = el.dataset.k; const m = $('#clCmp'); if (m) m.outerHTML = clanCmpHTML(m.dataset.id); clanRender(); },
   'cl-view'(el){ const id = el.dataset.id; closeModal(); if (id === Clan.myCid() && Clan.mine()) { navTo(() => { navStack.clan = []; tab = 'clan'; }); return; } go({type: 'clanv', id}); },
@@ -7533,25 +7658,34 @@ Object.assign(A, {
   async 'cl-wall-del'(el){ if (await Rel.delMsg(el.dataset.id, el.dataset.m)) clanRender(); },
   async 'cl-invite'(){
     const c = Clan.mine(); if (!c) return;
-    const url = location.href.split('#')[0] + '#clan=' + c._id;
-    try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: `Únete a mi clan ${c.emoji} ${c.name} en Hierro y competimos cada semana 💪`, url}); else { await navigator.clipboard.writeText(url); toast('Enlace del clan copiado'); } } catch (e) {}
+    let k = Clan.keys.get(c._id) || ''; // precargada al abrir el clan (sin esperas, para que el móvil deje compartir)
+    if (!k) try { k = await Clan.key(c); } catch (e) { /* sin clave: el enlace lleva al clan, pero habrá que pedir permiso */ }
+    const url = location.href.split('#')[0] + '#clan=' + c._id + (k ? '&k=' + k : '');
+    const copy = async () => { try { await navigator.clipboard.writeText(url); toast('Enlace del clan copiado'); } catch (e) { toast('No se ha podido copiar el enlace'); } };
+    try { if (IS_MOBILE && navigator.share) await navigator.share({title: 'Hierro', text: `Únete a mi clan ${c.emoji} ${c.name} en Hierro y competimos cada semana 💪`, url}); else await copy(); }
+    catch (e) { if (e.name === 'NotAllowedError') await copy(); } // 4.16: si el móvil no deja compartir (tras esperar la clave), se copia; cancelar no hace nada
   }
 });
 document.addEventListener('change', ev => { if (ev.target.id === 'clRel') { S.settings.relShare = ev.target.checked; Store.mark(); clanRender(); toast(ev.target.checked ? 'Compartes tu nivel de fuerza (nunca tu peso)' : 'Ya no compartes tu fuerza'); } });
 // Al borrar la cuenta: salir del clan (o pasarlo a otro / borrarlo si eres el jefe)
 async function clanOnDelete(){
-  const me = Social.myUid(), cid = S.settings.clan; if (!me || !cid) return;
+  const me = Social.myUid(), cid = S.settings.clan; if (!me) return;
+  // 4.16: tus solicitudes pendientes y la clave que usaste para entrar
+  const rq = (Clan.clans || []).filter(c => (c.requests || []).includes(me)).map(c => ({transform: {document: Cloud.name('clans', c._id), fieldTransforms: [{fieldPath: 'requests', removeAllFromArray: {values: [fsv(me)]}}]}, currentDocument: {exists: true}}));
+  await Cloud.commit([{delete: Cloud.name('clanjoins', me)}]).catch(() => {});
+  if (rq.length) await Cloud.commit(rq).catch(() => {}); // aparte: un clan ya borrado no impide borrar clanjoins
+  if (!cid) return;
   const d = await Cloud.getDoc('clans', cid); if (!d) return;
   const c = docData(d), rest = (c.members || []).filter(u => u !== me), ref = Cloud.name('clans', cid);
   if (c.owner === me && !rest.length) await Rel.dissolve().catch(() => {});
-  if (c.owner === me) await Cloud.commit([rest.length ? {update: {name: ref, fields: fsFields({owner: rest[0], members: rest})}, updateMask: {fieldPaths: ['owner', 'members']}} : {delete: ref}]);
+  if (c.owner === me) await Cloud.commit(rest.length ? [{update: {name: ref, fields: fsFields({owner: rest[0], members: rest})}, updateMask: {fieldPaths: ['owner', 'members']}}] : [{delete: Cloud.name('clankeys', cid)}, {delete: ref}]);
   else if ((c.members || []).includes(me)) await Cloud.commit([{transform: {document: ref, fieldTransforms: [{fieldPath: 'members', removeAllFromArray: {values: [fsv(me)]}}]}}]);
 }
 window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.15.2';
+const APP_VERSION = '4.16.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
