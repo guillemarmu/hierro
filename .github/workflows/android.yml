@@ -2,6 +2,9 @@
 # Se lanza a mano (Actions › Android › Run workflow) o al cambiar tiendas/android.
 # Con los secretos ANDROID_KEYSTORE_B64 y ANDROID_KEYSTORE_PASS firma con la clave de subida de verdad;
 # sin ellos usa una clave de prueba de usar y tirar (sirve para comprobar que compila, no para subir a Play).
+# Con «Subir a Google Play» marcado, sube el .aab firmado a la prueba cerrada (canal alpha) sin claves guardadas:
+# GitHub se identifica en Google Cloud con Workload Identity (grupo «github», proveedor «github-actions»)
+# y actúa como la cuenta de servicio hierro-play@, invitada en Play Console solo para lanzar en canales de prueba.
 name: Android
 on:
   workflow_dispatch:
@@ -9,11 +12,19 @@ on:
       codigo:
         description: 'Código de versión (vacío = 100 + número de ejecución)'
         required: false
+      play:
+        description: 'Subir a Google Play (prueba cerrada)'
+        type: boolean
+        default: false
+      notas:
+        description: 'Notas de la versión para los testers (español)'
+        required: false
   push:
     branches: [main]
     paths: ['tiendas/android/**', '.github/workflows/android.yml']
 permissions:
   contents: read
+  id-token: write
 jobs:
   compilar:
     runs-on: ubuntu-latest
@@ -80,3 +91,34 @@ jobs:
           name: hierro-android-${{ env.NOMBRE }}-${{ env.TIPO }}
           path: ${{ runner.temp }}/salida/
           retention-days: 30
+      - name: Entrar en Google Cloud (Workload Identity)
+        id: gauth
+        if: ${{ inputs.play && env.TIPO == 'firmada' }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/57797821956/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: hierro-play@ascendant-talon-449510-r9.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+      - name: Subir a Google Play (prueba cerrada)
+        if: ${{ inputs.play && env.TIPO == 'firmada' }}
+        env:
+          TOK: ${{ steps.gauth.outputs.access_token }}
+          NOTAS: ${{ inputs.notas }}
+        run: |
+          set -euo pipefail
+          PKG=io.github.guillemarmu.hierro
+          API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PKG"
+          AAB="$RUNNER_TEMP/salida/hierro-$NOMBRE-firmada.aab"
+          H=(-H "Authorization: Bearer $TOK")
+          EDIT=$(curl -sS --fail-with-body "${H[@]}" -X POST "$API/edits" | jq -r .id)
+          VC=$(curl -sS --fail-with-body "${H[@]}" -H "Content-Type: application/octet-stream" --data-binary @"$AAB" \
+            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/$PKG/edits/$EDIT/bundles?uploadType=media" | jq -r .versionCode)
+          [ "$VC" = "$CODIGO" ] || { echo "::error::Play ha recibido el código $VC y esperaba $CODIGO"; exit 1; }
+          [ -n "$NOTAS" ] || NOTAS="Hierro $NOMBRE: mejoras y correcciones."
+          jq -n --arg n "$CODIGO ($NOMBRE)" --arg vc "$VC" --arg t "$NOTAS" \
+            '{track:"alpha",releases:[{name:$n,versionCodes:[$vc],status:"completed",releaseNotes:[{language:"es-ES",text:$t}]}]}' > "$RUNNER_TEMP/track.json"
+          curl -sS --fail-with-body "${H[@]}" -H "Content-Type: application/json" -X PUT --data @"$RUNNER_TEMP/track.json" "$API/edits/$EDIT/tracks/alpha" > /dev/null
+          curl -sS --fail-with-body "${H[@]}" -X POST "$API/edits/$EDIT:commit" > /dev/null
+          echo "Subida a Google Play: prueba cerrada, código $VC ($NOMBRE). Google la revisa antes de llegar a los testers." >> "$GITHUB_STEP_SUMMARY"
