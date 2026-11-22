@@ -2081,7 +2081,7 @@ const Sync = {
       // 4.13.5: si solo cambia el entreno en curso y se bajó hace menos de 2 min, solo se sube (cada serie costaba unas 3 lecturas)
       if (!this.onlyActive()) { if (await this.pull()) { render(); if (S.active && !ED) restoreActiveBar(); } this.pulledAt = Date.now(); }
       await this.push();
-      this.last = Date.now(); this.state = 'ok'; this.err('datos');
+      this.last = Date.now(); this.state = 'ok'; this.err('datos'); ErrLog.upload();
     } catch (e) {
       if (e && e.session) { this.state = 'expired'; sessionExpired(); }
       else { this.state = e && e.offline ? 'offline' : 'error'; this.timer = setTimeout(() => { this.timer = null; this.run(); }, 30000); if (!(e && e.offline)) { console.warn('Sync', e); this.err('datos', e); } }
@@ -2100,7 +2100,7 @@ const Sync = {
       const d = this.diff(), si = Social.pushItems(), ci = Clan.pushItems();
       if (!(d.w.length + d.del.length + (d.meta ? 1 : 0) + (d.active ? 1 : 0) + si.length + ci.length)) return;
       this.diagAt = Date.now();
-      let dev = 'x'; try { dev = localStorage.getItem('hierro.dev') || ''; if (!dev) localStorage.setItem('hierro.dev', dev = Math.random().toString(36).slice(2, 8)); } catch (e) {}
+      const dev = devId();
       const M = metaObj(), parts = {}, sk = {}; for (const k in M) parts[k] = hashOf(M[k]); for (const k in S.settings) sk[k] = hashOf(S.settings[k]);
       const nm = w => String(w.delete || (w.update && w.update.name) || '').split('/documents/')[1] + (w.updateMask ? ' [' + w.updateMask.fieldPaths.join(',') + ']' : '');
       const info = {v: APP_VERSION, at: Date.now(), ua: navigator.userAgent.slice(0, 160), sa: isStandalone(), text: syncInfo().text, errs: this.errs,
@@ -2110,6 +2110,45 @@ const Sync = {
     } catch (e) { console.warn('diag', e); }
   }
 };
+// Identificador corto y aleatorio de este móvil (para los informes de diagnóstico y de errores)
+function devId(){
+  let dev = 'x'; try { dev = localStorage.getItem('hierro.dev') || ''; if (!dev) localStorage.setItem('hierro.dev', dev = Math.random().toString(36).slice(2, 8)); } catch (e) { dev = dev || 'x'; }
+  return dev;
+}
+/* 4.15.2 · Registro de errores: los fallos de JavaScript se apuntan en el móvil (los 10 últimos, sin repetir) y, con cuenta,
+   se suben a users/{uid}/state/diag-e{móvil} (las reglas solo dejan ids diag-*) (solo lo lee el dueño; como mucho cada 10 min y solo si hay algo nuevo).
+   Así nos enteramos de que algo se rompe sin esperar a que alguien se queje. Sin servicios de fuera. */
+const ErrLog = {
+  KEY: 'hierro.errs', MAX: 10, GAP: 10 * 60e3, at: 0, busy: false,
+  list(){ try { const v = JSON.parse(localStorage.getItem(this.KEY) || '[]'); return Array.isArray(v) ? v.filter(isObj) : []; } catch (e) { return []; } },
+  // ruido que no es nuestro: scripts de otros dominios sin detalle, extensiones, reCAPTCHA, red caída y peticiones canceladas
+  noise(msg, src){ return !msg || /^Script error\.?$/i.test(msg) || /extension:\/\/|recaptcha|gstatic/i.test(src || '') || /AbortError|Failed to fetch|NetworkError|Load failed|ResizeObserver loop/i.test(msg); },
+  add(msg, src, line, col, stack){
+    msg = String(msg || '').slice(0, 200);
+    if (this.noise(msg, src)) return;
+    src = String(src || '').split('?')[0].split('/').pop().slice(0, 40);
+    let v = '?', tb = ''; try { v = APP_VERSION; tb = typeof tab === 'string' ? tab : ''; } catch (e) { /* arranque a medias: APP_VERSION o tab aún sin inicializar */ }
+    const l = this.list(), k = msg + '|' + src + ':' + (line || 0), old = l.find(x => x.k === k), now = Date.now();
+    if (old) { old.n = (old.n || 1) + 1; old.at = now; old.v = v; }
+    else l.push({k, msg, src, line: line || 0, col: col || 0, stack: String(stack || '').slice(0, 600), v, tab: tb, first: now, at: now, n: 1});
+    l.sort((a, b) => b.at - a.at);
+    try { localStorage.setItem(this.KEY, JSON.stringify(l.slice(0, this.MAX))); } catch (e) { /* almacenamiento lleno: no se apunta */ }
+  },
+  async upload(){ // se vuelve a subir solo si hay errores nuevos o de otra versión, no por cada repetición
+    if (this.busy || !Cloud.session || Date.now() - this.at < this.GAP) return;
+    const l = this.list(), h = hashOf(l.map(x => x.k + '|' + x.v)); let sent = ''; try { sent = localStorage.getItem(this.KEY + '.up') || ''; } catch (e) { /* sin localStorage: se sube igual */ }
+    if (!l.length || String(h) === sent) return;
+    this.busy = true; this.at = Date.now();
+    try {
+      const info = {v: APP_VERSION, at: Date.now(), ua: navigator.userAgent.slice(0, 160), sa: isStandalone(), list: l};
+      await Cloud.commit([Cloud.write(['users', Cloud.session.uid, 'state', 'diag-e' + devId()], {json: info})]);
+      try { localStorage.setItem(this.KEY + '.up', String(h)); } catch (e) { /* se volverá a subir: inofensivo */ }
+    } catch (e) { console.warn('errlog', e); }
+    this.busy = false;
+  }
+};
+window.addEventListener('error', e => { if (e.target && e.target !== window) return; ErrLog.add(e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack); });
+window.addEventListener('unhandledrejection', e => { const r = e.reason; if (r && (r.offline || r.session)) return; ErrLog.add(r && r.message ? r.message : String(r), r && r.stack ? (String(r.stack).match(/(https?:[^\s)]+)/) || [])[1] : '', 0, 0, r && r.stack); });
 // Qué queda por subir, en palabras (para la ventana que se abre al tocar el estado de la sincronización)
 function syncDetail(){
   const out = []; if (!Sync.on()) return out;
@@ -7512,7 +7551,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.15.1';
+const APP_VERSION = '4.15.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
