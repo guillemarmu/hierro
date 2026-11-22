@@ -1754,7 +1754,7 @@ const AUTH_ERRORS = {
   EMAIL_NOT_FOUND: 'Email o contraseña incorrectos.',
   INVALID_PASSWORD: 'Email o contraseña incorrectos.',
   INVALID_LOGIN_CREDENTIALS: 'Email o contraseña incorrectos.',
-  WEAK_PASSWORD: 'La contraseña tiene que tener al menos 6 caracteres.',
+  WEAK_PASSWORD: 'La contraseña tiene que tener al menos 8 caracteres.',
   INVALID_EMAIL: 'Ese email no es válido.',
   MISSING_PASSWORD: 'Escribe la contraseña.',
   MISSING_EMAIL: 'Escribe tu email.',
@@ -4224,7 +4224,7 @@ function drawAuth(){
     <form id="authForm" class="stack" style="width:100%" novalidate>
       ${up ? '<label class="f">Tu nombre<input id="auName" autocomplete="name" placeholder="Cómo quieres que te llame la app" maxlength="40"></label>' : ''}
       <label class="f">Email<input id="auEmail" type="email" autocomplete="email" inputmode="email" placeholder="tu@email.com" required></label>
-      <label class="f">Contraseña<input id="auPass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Mínimo 6 caracteres' : ''}" minlength="6" required></label>
+      <label class="f">Contraseña<input id="auPass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Mínimo 8 caracteres' : ''}" minlength="${up ? 8 : 1}" required></label>
       ${up ? `<label class="row small au-age" style="align-items:flex-start;font-weight:600"><input type="checkbox" id="auAge"><span>Tengo 16 años o más y acepto las <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a> y la <a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></span></label>` : ''}
       <div id="auMsg" class="small ${AUTHUI.msg.startsWith('✓') ? 'good-t' : 'err'}" role="alert">${esc(AUTHUI.msg)}</div>
       <button class="btn primary lg block" type="submit" id="auGo">${up ? 'Crear cuenta' : 'Entrar'}</button>
@@ -4237,7 +4237,8 @@ async function authSubmit(){
   const up = AUTHUI.mode === 'up', email = $('#auEmail').value.trim(), pass = $('#auPass').value, name = up ? $('#auName').value.trim() : '';
   const msg = t => { AUTHUI.msg = t; $('#auMsg').className = 'small err'; $('#auMsg').textContent = t; };
   if (!email) return msg('Escribe tu email.');
-  if (pass.length < 6) return msg('La contraseña tiene que tener al menos 6 caracteres.');
+  // 4.15.1: 8 caracteres para cuentas y contraseñas nuevas; para entrar vale la que ya tenías
+  if (up ? pass.length < 8 : !pass) return msg(up ? 'La contraseña tiene que tener al menos 8 caracteres.' : 'Escribe tu contraseña.');
   if (up && !name) return msg('Escribe tu nombre.');
   if (up && badText(name)) return msg(BAD_MSG);
   if (up && !($('#auAge') || {}).checked) return msg('Para crear la cuenta tienes que tener 16 años o más y aceptar las condiciones.');
@@ -6060,8 +6061,8 @@ const A = {
     try { await Cloud.reset(e); done(); } catch (err) { if (err.message === AUTH_ERRORS.EMAIL_NOT_FOUND) done(); /* no se revela si la cuenta existe */ else $('#rsMsg').textContent = err.message; } },
   'acc-name'(){ modal('Cambiar nombre', `<label class="f">Nombre<input id="acName" value="${esc(Cloud.session.name || '')}" maxlength="40"></label>`, `<button class="btn primary" data-act="acc-name-save">Guardar</button>`); },
   async 'acc-name-save'(){ const n = $('#acName').value.trim(); if (!n) return; if (badText(n)) { toast(BAD_MSG); return; } try { await Cloud.setName(n); Store.synced.prof = null; Store.synced.score = null; Store.mark(); closeModal(); render(); toast('Nombre actualizado'); Sync.run().catch(() => {}); /* republica perfil y resumen del clan al instante */ } catch (e) { toast(e.offline ? 'Necesitas conexión para cambiarlo' : 'No se ha podido cambiar el nombre. Inténtalo otra vez.'); } },
-  'acc-pass'(){ modal('Cambiar contraseña', `<label class="f">Contraseña nueva<input id="acPass" type="password" autocomplete="new-password" minlength="6"></label><label class="f">Repítela<input id="acPass2" type="password" autocomplete="new-password"></label><div id="acMsg" class="small err"></div>`, `<button class="btn primary" data-act="acc-pass-save">Cambiar</button>`); },
-  async 'acc-pass-save'(){ const a = $('#acPass').value, b = $('#acPass2').value; if (a.length < 6) { $('#acMsg').textContent = 'Mínimo 6 caracteres.'; return; } if (a !== b) { $('#acMsg').textContent = 'Las dos contraseñas no coinciden.'; return; }
+  'acc-pass'(){ modal('Cambiar contraseña', `<label class="f">Contraseña nueva<input id="acPass" type="password" autocomplete="new-password" minlength="8"></label><label class="f">Repítela<input id="acPass2" type="password" autocomplete="new-password"></label><div id="acMsg" class="small err"></div>`, `<button class="btn primary" data-act="acc-pass-save">Cambiar</button>`); },
+  async 'acc-pass-save'(){ const a = $('#acPass').value, b = $('#acPass2').value; if (a.length < 8) { $('#acMsg').textContent = 'Mínimo 8 caracteres.'; return; } if (a !== b) { $('#acMsg').textContent = 'Las dos contraseñas no coinciden.'; return; }
     closeModal(); if (!await reauth('Cambiar contraseña', 'Para cambiarla, escribe tu contraseña actual.', 'Cambiar')) return;
     try { await Cloud.setPassword(a); toast('Contraseña cambiada'); } catch (e) { toast(e.offline ? 'Necesitas conexión' : 'No se ha podido cambiar la contraseña. Inténtalo otra vez.'); } },
   async logout(){
@@ -7192,7 +7193,8 @@ const Rel = {
   wall(id){ let w = this.walls.get(id); if (!w) this.walls.set(id, w = {list: [], loading: false, loaded: false, err: null}); return w; },
   async loadWall(id){
     const w = this.wall(id); if (w.loading) return; w.loading = true;
-    try { const res = await Cloud.query(['relations', id], {from: [{collectionId: 'msgs'}], orderBy: [{field: {fieldPath: 'ts'}, direction: 'DESCENDING'}], limit: REL.wall}); w.list = (res || []).filter(x => x.document).map(x => docData(x.document)); w.loaded = true; w.err = null; }
+    try { const res = await Cloud.query(['relations', id], {from: [{collectionId: 'msgs'}], orderBy: [{field: {fieldPath: 'ts'}, direction: 'DESCENDING'}], limit: REL.wall}); w.list = (res || []).filter(x => x.document).map(x => docData(x.document)); w.loaded = true; w.err = null;
+      await Social.profilesOf([...new Set(w.list.map(m => String(m.uid || '')).filter(Boolean))]); }
     catch (e) { w.err = e.offline ? 'Sin conexión.' : 'No se ha podido cargar el muro.'; w.loaded = true; }
     w.loading = false; clanRender();
   },
@@ -7260,6 +7262,8 @@ function relAllianceHTML(K){
     ${pend ? `<div class="rl-list">${pend}</div>` : ''}${add}</div>`;
 }
 // Pantalla del pique: marcador, categorías, cara a cara, historial y muro
+// 4.15.1: nombre de quien escribe en un muro: perfil, si no su resumen de clan; nunca el name del mensaje (lo pone quien escribe)
+function wallName(uid){ uid = String(uid || ''); const p = Social.userOf(uid), s = Clan.scoreOf(uid); return (p && p.name) || (s && s.name) || 'Alguien'; }
 function viewPique(id){
   Rel.check(); const r = Rel.get(id);
   if (!r) { if (!Rel.loaded) { if (!Rel.loading && Clan.loaded) setTimeout(() => Rel.load(), 0); return '<div class="empty">Cargando el pique…</div>'; } return '<div class="empty">Este pique ya no existe. Quizá lo ha terminado uno de los jefes.</div>'; }
@@ -7300,7 +7304,8 @@ function viewPique(id){
     ${can ? `<form id="wallForm" class="row" data-id="${r._id}"><input id="wallText" maxlength="${REL.text}" placeholder="Pica al otro clan…" autocomplete="off" enterkeyhint="send"><button class="btn primary sm" type="submit">Enviar</button></form>
       <div class="chips pq-taunts" aria-label="Piques rápidos">${TAUNTS.map((t, i) => `<button class="chip" data-act="cl-taunt" data-id="${r._id}" data-i="${i}">${esc(t)}</button>`).join('')}</div>` : ''}
     ${w.err ? `<div class="small muted">${esc(w.err)}</div>` : !w.loaded ? '<div class="small muted">Cargando…</div>' : w.list.filter(m => !isBlocked(m.uid)).length ? `<div class="pq-msgs">${w.list.filter(m => !isBlocked(m.uid)).map(m => { const c = m.clan === o._id ? o : mine, del = m.uid === me || own || Mod.admin;
-      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(m.name, 'xs')}<div class="pq-mb"><div class="pq-mh"><b>${esc(m.name)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${m.uid !== me ? `<button class="iconbtn" data-act="cl-wall-report" data-id="${r._id}" data-m="${m._id}" aria-label="Denunciar mensaje" title="Denunciar">⚑</button>` : ''}${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
+      const nm = wallName(m.uid);
+      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(nm, 'xs')}<div class="pq-mb"><div class="pq-mh"><b>${esc(nm)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${m.uid !== me ? `<button class="iconbtn" data-act="cl-wall-report" data-id="${r._id}" data-m="${m._id}" aria-label="Denunciar mensaje" title="Denunciar">⚑</button>` : ''}${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
   if (own) h += `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">${r.status === 'activa' ? 'Terminar el pique' : 'Cancelar el pique'}</button>`;
   return h;
 }
@@ -7507,7 +7512,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.15.0';
+const APP_VERSION = '4.15.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
