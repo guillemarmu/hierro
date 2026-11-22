@@ -201,6 +201,16 @@ service cloud.firestore {
       let fok = d.type == 'fok' && !d.keys().hasAny(['pid', 'rel', 'cname', 'cemoji'])
         && nid == me() + '_fok'
         && exists(/databases/$(database)/documents/follows/$(uid + '_' + me()));
+      // 4.16: solicitud para entrar en un clan (de quien está en «requests» a su jefe) y aceptación (del jefe a quien ya es miembro)
+      let cpath = /databases/$(database)/documents/clans/$(d.get('clan', 'x'));
+      let creq = d.type == 'creq' && d.get('clan', '').matches('^[a-z0-9]{6,24}$') && !d.keys().hasAny(['pid', 'rel'])
+        && nid == me() + '_creq_' + d.clan
+        && getAfter(cpath).data.owner == uid
+        && me() in getAfter(cpath).data.get('requests', []);
+      let cok = d.type == 'cok' && d.get('clan', '').matches('^[a-z0-9]{6,24}$') && !d.keys().hasAny(['pid', 'rel'])
+        && nid == me() + '_cok_' + d.clan
+        && getAfter(cpath).data.owner == me()
+        && uid in getAfter(cpath).data.members;
       // alianzas y piques: de jefe de un clan a jefe del otro clan de esa relación (el id de la relación es «clanA_clanB»)
       let rl = d.type in ['rel-alianza', 'rel-pique', 'rel-ok-alianza', 'rel-ok-pique', 'rel-no']
         && relIdOk(d.get('rel', null)) && !('pid' in d)
@@ -210,11 +220,11 @@ service cloud.firestore {
         && ((clanOwner(d.rel.split('_')[0]) == me() && clanOwner(d.rel.split('_')[1]) == uid)
             || (clanOwner(d.rel.split('_')[1]) == me() && clanOwner(d.rel.split('_')[0]) == uid));
       return d.from == me()
-        && d.keys().hasOnly(['from', 'name', 'username', 'type', 'ts', 'pid', 'title', 'text', 'rel', 'cname', 'cemoji'])
+        && d.keys().hasOnly(['from', 'name', 'username', 'type', 'ts', 'pid', 'title', 'text', 'rel', 'cname', 'cemoji', 'clan'])
         && d.type is string && d.ts is number && d.ts >= nowMs() - 600000 && d.ts <= nowMs() + 600000
         && optStr(d, 'name', 80) && optStr(d, 'username', 20) && optStr(d, 'title', 300) && optStr(d, 'text', 300)
-        && optStr(d, 'cname', 40) && optStr(d, 'cemoji', 16)
-        && (like || cmt || fol || frq || fok || rl);
+        && optStr(d, 'cname', 40) && optStr(d, 'cemoji', 16) && optStr(d, 'clan', 24)
+        && (like || cmt || fol || frq || fok || rl || creq || cok);
     }
     match /notifs/{uid}/items/{nid} {
       allow read: if signed() && me() == uid;
@@ -235,7 +245,43 @@ service cloud.firestore {
         && d.members is list && d.members.size() <= 30
         && d.members.toSet().size() == d.members.size() // 4.9.1: sin duplicados (rellenaban los 30 huecos y el clan quedaba «lleno»)
         && d.get('kicked', []) is list && d.get('kicked', []).size() <= 100
-        && d.get('kicked', []).join(',').size() <= 13000; // 4.9.2: 100 uids; antes cada elemento podía ser enorme (clan de 1 MiB)
+        && d.get('kicked', []).join(',').size() <= 13000 // 4.9.2: 100 uids; antes cada elemento podía ser enorme (clan de 1 MiB)
+        // 4.16: «open» = se entra sin pedir permiso (sin el campo, hay que pedirlo); «requests» = quien lo ha pedido (máx. 50, sin duplicados)
+        && d.get('open', false) is bool
+        && d.get('requests', []) is list && d.get('requests', []).size() <= 50
+        && d.get('requests', []).join(',').size() <= 6500
+        && d.get('requests', []).toSet().size() == d.get('requests', []).size();
+    }
+    // 4.16: el jefe solo mete a quien lo había pedido (y sale de las solicitudes); no puede apuntar a nadie en ellas
+    function clanOwnerOk(o, n) {
+      let added = n.members.toSet().difference(o.members.toSet());
+      let oReq = o.get('requests', []).toSet();
+      let nReq = n.get('requests', []).toSet();
+      return added.difference(oReq).size() == 0
+        && added.intersection(nReq).size() == 0
+        && nReq.difference(oReq).size() == 0
+        && n.owner in n.members;
+    }
+    // 4.16: los demás solo se meten o se sacan a sí mismos de «members» y de «requests».
+    // Entrar: si el clan es abierto o con la clave del enlace (clanjoins/{yo} escrito en el mismo commit = clankeys/{cid}).
+    // Pedirlo: sin estar dentro. En los dos casos, nunca si te expulsaron.
+    function clanSelfOk(cid, o, n) {
+      let oM = o.members.toSet();
+      let nM = n.members.toSet();
+      let oR = o.get('requests', []).toSet();
+      let nR = n.get('requests', []).toSet();
+      let joins = me() in nM && !(me() in oM);
+      let asks = me() in nR && !(me() in oR);
+      let kicked = me() in o.get('kicked', []);
+      return n.diff(o).affectedKeys().hasOnly(['members', 'requests'])
+        && nM.difference(oM).hasOnly([me()]) && oM.difference(nM).hasOnly([me()])
+        && nR.difference(oR).hasOnly([me()]) && oR.difference(nR).hasOnly([me()])
+        && (!joins || (!kicked && !(me() in nR) && (o.get('open', false) == true || clanKeyOk(cid))))
+        && (!asks || (!kicked && !(me() in nM)));
+    }
+    function clanKeyOk(cid) {
+      let j = getAfter(/databases/$(database)/documents/clanjoins/$(me())).data;
+      return j.clan == cid && j.key == get(/databases/$(database)/documents/clankeys/$(cid)).data.key;
     }
     match /clans/{cid} {
       allow read: if signed();
@@ -243,23 +289,38 @@ service cloud.firestore {
       // cualquier cuenta ejecutaba código en el móvil de todos los que abren la pestaña Clan. Solo ids tipo rid() (a-z0-9).
       allow create: if signed() && cid.matches('^[a-z0-9]{6,24}$')
                     && request.resource.data.owner == me() && request.resource.data.members == [me()]
-                    && request.resource.data.keys().hasOnly(['name', 'emoji', 'desc', 'owner', 'members', 'created'])
+                    && request.resource.data.keys().hasOnly(['name', 'emoji', 'desc', 'owner', 'members', 'created', 'open'])
                     && optNum(request.resource.data, 'created')
                     && validClan(request.resource.data) && !banned();
       allow update: if signed() && validClan(request.resource.data) && (
-        // el jefe: cambia nombre, emblema y descripción, expulsa (no puede meter a nadie) y puede pasar el mando a otro miembro
+        // el jefe: cambia nombre, emblema, descripción y si es abierto, acepta o rechaza solicitudes, expulsa y puede pasar el mando
         (resource.data.owner == me()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'emoji', 'desc', 'members', 'owner', 'kicked'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'emoji', 'desc', 'members', 'owner', 'kicked', 'open', 'requests'])
           // 4.9.1: un jefe vetado no sigue publicando texto (nombre, emblema, descripción); sí puede expulsar, pasar el mando o irse
           && (!banned() || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'emoji', 'desc']))
-          && request.resource.data.members.toSet().difference(resource.data.members.toSet()).size() == 0
-          && request.resource.data.owner in request.resource.data.members)
-        // cualquier otro: solo entrar o salir él mismo (y no puede volver si le expulsaron)
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
-          && request.resource.data.members.toSet().difference(resource.data.members.toSet()).hasOnly([me()])
-          && resource.data.members.toSet().difference(request.resource.data.members.toSet()).hasOnly([me()])
-          && (!(me() in request.resource.data.members) || !(me() in resource.data.get('kicked', [])))));
+          && clanOwnerOk(resource.data, request.resource.data))
+        // cualquier otro: entrar, pedirlo o salir él mismo (ver clanSelfOk)
+        || clanSelfOk(cid, resource.data, request.resource.data));
       allow delete: if signed() && (resource.data.owner == me() || admin());
+    }
+    // 4.16: clave del enlace de invitación de cada clan. La leen y la crean los miembros; la cambia el jefe; se borra con el clan.
+    function validClanKey(d) { return d.keys().hasOnly(['key']) && d.key is string && d.key.matches('^[a-z0-9]{20,32}$'); }
+    match /clankeys/{cid} {
+      allow get: if signed() && me() in get(/databases/$(database)/documents/clans/$(cid)).data.members;
+      allow create: if signed() && !banned() && validClanKey(request.resource.data)
+                    && me() in get(/databases/$(database)/documents/clans/$(cid)).data.members;
+      allow update: if signed() && validClanKey(request.resource.data)
+                    && get(/databases/$(database)/documents/clans/$(cid)).data.owner == me();
+      allow delete: if signed() && (!exists(/databases/$(database)/documents/clans/$(cid))
+                    || get(/databases/$(database)/documents/clans/$(cid)).data.owner == me() || admin());
+    }
+    // 4.16: la clave con la que entras (solo tuya): las reglas de clans la comparan con clankeys en el mismo commit
+    match /clanjoins/{uid} {
+      allow get, delete: if signed() && me() == uid;
+      allow create, update: if signed() && me() == uid
+        && request.resource.data.keys().hasOnly(['clan', 'key'])
+        && request.resource.data.clan is string && request.resource.data.clan.matches('^[a-z0-9]{6,24}$')
+        && request.resource.data.key is string && request.resource.data.key.matches('^[a-z0-9]{20,32}$');
     }
 
     // Resumen público de la liga (puntos por semana, racha, logros y, si la persona lo activa, el cociente de fuerza relativa).
