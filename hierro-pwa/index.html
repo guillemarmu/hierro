@@ -939,6 +939,13 @@ button.stat{text-align:left;min-height:44px}
 .cl-reqs small{display:block;margin-top:2px}
 .cl-lock{font-size:.8em;margin-left:2px}
 #modal input.sw[type=checkbox]:checked{background:var(--acc)} /* 4.16: #modal input le quitaba el color al interruptor encendido */
+/* 4.16.1: ojo para ver la contraseña */
+.pw{position:relative;display:block}
+.pw input{padding-right:52px}
+.pw input::-ms-reveal{display:none}
+.pw-eye{position:absolute;top:50%;transform:translateY(-50%);right:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:var(--apagado);border-radius:14px}
+.pw-eye svg{width:22px;height:22px}
+.pw-eye[aria-pressed=true]{color:var(--acc)}
 .lg-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .lg-card{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 6px 10px;border-radius:18px;background:var(--sup-2);min-width:0}
 .lg-card i{font-style:normal;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:25px;background:var(--grad-d);box-shadow:0 8px 18px -8px var(--glow);margin-bottom:2px}
@@ -4257,6 +4264,15 @@ function showWelcome(){
 }
 function endWelcome(){ $('#welcome').classList.remove('open'); $('#welcome').innerHTML = ''; S.settings.welcomed = true; Store.mark('meta'); }
 const AUTHUI = {mode: 'in', msg: '', busy: false};
+/* 4.16.1: campo de contraseña con ojo para verla (pw-eye) */
+const PW_EYE = ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 5.2A9.6 9.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.6 3.5M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.5 9.5 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>'];
+/* El ojo va fuera del <label> para que no se sume al nombre del campo; sin mayúsculas ni autocorrector al verla */
+const pwField = (label, id, attrs) => `<div class="f"><label for="${id}">${label}</label><span class="pw"><input type="password" id="${id}" ${attrs} autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="pw-eye" data-act="pw-eye" aria-label="Mostrar contraseña" aria-pressed="false">${PW_EYE[0]}</button></span></div>`;
+/* Vuelve a ocultarlas (antes de enviar, para que el llavero ofrezca guardarla) */
+function pwHide(root){ root.querySelectorAll('.pw-eye[aria-pressed="true"]').forEach(b => { b.previousElementSibling.type = 'password'; b.setAttribute('aria-pressed', 'false'); b.innerHTML = PW_EYE[0]; }); }
+// El campo no pierde el foco al tocar el ojo (en iOS el teclado bajaría y subiría)
+document.addEventListener('mousedown', ev => { if (ev.target.closest && ev.target.closest('.pw-eye')) ev.preventDefault(); });
 function showAuth(msg){ AUTHUI.msg = msg || ''; AUTHUI.busy = false; $('#auth').classList.add('open'); drawAuth(); }
 /* Botón «Iniciar sesión» (o aviso si esta copia de la app no tiene cuentas) para los estados sin sesión */
 const authBtn = (label, cls = 'primary') => Cloud.enabled() ? `<button class="btn ${cls}" data-act="show-auth">${label}</button>` : '';
@@ -4269,7 +4285,7 @@ function drawAuth(){
     <form id="authForm" class="stack" style="width:100%" novalidate>
       ${up ? '<label class="f">Tu nombre<input id="auName" autocomplete="name" placeholder="Cómo quieres que te llame la app" maxlength="40"></label>' : ''}
       <label class="f">Email<input id="auEmail" type="email" autocomplete="email" inputmode="email" placeholder="tu@email.com" required></label>
-      <label class="f">Contraseña<input id="auPass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Mínimo 8 caracteres' : ''}" minlength="${up ? 8 : 1}" required></label>
+      ${pwField('Contraseña', 'auPass', `autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Mínimo 8 caracteres' : ''}" minlength="${up ? 8 : 1}" required`)}
       ${up ? `<label class="row small au-age" style="align-items:flex-start;font-weight:600"><input type="checkbox" id="auAge"><span>Tengo 16 años o más y acepto las <a href="${LEGAL}condiciones.html" target="_blank" rel="noopener">Condiciones y normas</a> y la <a href="${LEGAL}privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></span></label>` : ''}
       <div id="auMsg" class="small ${AUTHUI.msg.startsWith('✓') ? 'good-t' : 'err'}" role="alert">${esc(AUTHUI.msg)}</div>
       <button class="btn primary lg block" type="submit" id="auGo">${up ? 'Crear cuenta' : 'Entrar'}</button>
@@ -4279,6 +4295,7 @@ function drawAuth(){
 }
 async function authSubmit(){
   if (AUTHUI.busy) return;
+  pwHide($('#authForm'));
   const up = AUTHUI.mode === 'up', email = $('#auEmail').value.trim(), pass = $('#auPass').value, name = up ? $('#auName').value.trim() : '';
   const msg = t => { AUTHUI.msg = t; $('#auMsg').className = 'small err'; $('#auMsg').textContent = t; };
   if (!email) return msg('Escribe tu email.');
@@ -5383,7 +5400,7 @@ async function reauth(title, text, okLabel, danger){
   for (;;) {
     const pw = await new Promise(res => {
       modalCb = v => res(v === '1' ? (($('#rePass') || {}).value || '') : null);
-      modal(esc(title), `<div>${text}</div><label class="f">Tu contraseña actual<input id="rePass" type="password" autocomplete="current-password"></label><div id="reMsg" class="small err">${esc(err)}</div>`,
+      modal(esc(title), `<div>${text}</div>${pwField('Tu contraseña actual', 'rePass', 'autocomplete="current-password"')}<div id="reMsg" class="small err">${esc(err)}</div>`,
         `<button class="btn" data-act="m-answer" data-v="0">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" data-act="m-answer" data-v="1">${esc(okLabel)}</button>`,
         el => { const t = el.querySelector('#rePass'); if (t) setTimeout(() => t.focus(), 50); });
     });
@@ -6102,13 +6119,14 @@ const A = {
   async 'share-go'(){ if (!SHARE) return; try { const f = new File([SHARE.blob], SHARE.name, {type: 'image/png'}); if (navigator.canShare && navigator.canShare({files: [f]})) await navigator.share({files: [f]}); else A['share-dl'](); } catch (e) {} },
   'share-dl'(){ if (!SHARE) return; const a = document.createElement('a'); a.href = SHARE.url; a.download = SHARE.name; document.body.appendChild(a); a.click(); a.remove(); toast('Imagen guardada'); },
   'show-auth'(){ showAuth(); },
+  'pw-eye'(el){ const i = el.previousElementSibling, show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.setAttribute('aria-pressed', show); el.innerHTML = PW_EYE[show ? 1 : 0]; if (document.activeElement !== i) i.focus({preventScroll: true}); },
   'auth-tab'(el){ AUTHUI.mode = el.dataset.k; AUTHUI.msg = ''; drawAuth(); },
   'auth-forgot'(){ const email = ($('#auEmail') || {}).value || ''; modal('Recuperar contraseña', `<div class="small muted">Te enviaremos un email con un enlace para poner una contraseña nueva. Si no llega en un par de minutos, mira en spam.</div><label class="f">Email<input id="rsEmail" type="email" inputmode="email" value="${esc(email)}"></label><div id="rsMsg" class="small err"></div>`, `<button class="btn primary" data-act="auth-reset-send">Enviar email</button>`); },
   async 'auth-reset-send'(){ const e = $('#rsEmail').value.trim(); if (!e) { $('#rsMsg').textContent = 'Escribe tu email.'; return; } const done = () => { closeModal(); AUTHUI.msg = '✓ Si existe una cuenta con ese email, te hemos enviado un enlace para poner una contraseña nueva. Síguelo y luego entra con ella. Si no llega en un par de minutos, mira en spam.'; drawAuth(); };
     try { await Cloud.reset(e); done(); } catch (err) { if (err.message === AUTH_ERRORS.EMAIL_NOT_FOUND) done(); /* no se revela si la cuenta existe */ else $('#rsMsg').textContent = err.message; } },
   'acc-name'(){ modal('Cambiar nombre', `<label class="f">Nombre<input id="acName" value="${esc(Cloud.session.name || '')}" maxlength="40"></label>`, `<button class="btn primary" data-act="acc-name-save">Guardar</button>`); },
   async 'acc-name-save'(){ const n = $('#acName').value.trim(); if (!n) return; if (badText(n)) { toast(BAD_MSG); return; } try { await Cloud.setName(n); Store.synced.prof = null; Store.synced.score = null; Store.mark(); closeModal(); render(); toast('Nombre actualizado'); Sync.run().catch(() => {}); /* republica perfil y resumen del clan al instante */ } catch (e) { toast(e.offline ? 'Necesitas conexión para cambiarlo' : 'No se ha podido cambiar el nombre. Inténtalo otra vez.'); } },
-  'acc-pass'(){ modal('Cambiar contraseña', `<label class="f">Contraseña nueva<input id="acPass" type="password" autocomplete="new-password" minlength="8"></label><label class="f">Repítela<input id="acPass2" type="password" autocomplete="new-password"></label><div id="acMsg" class="small err"></div>`, `<button class="btn primary" data-act="acc-pass-save">Cambiar</button>`); },
+  'acc-pass'(){ modal('Cambiar contraseña', `${pwField('Contraseña nueva', 'acPass', 'autocomplete="new-password" minlength="8"')}${pwField('Repítela', 'acPass2', 'autocomplete="new-password"')}<div id="acMsg" class="small err"></div>`, `<button class="btn primary" data-act="acc-pass-save">Cambiar</button>`); },
   async 'acc-pass-save'(){ const a = $('#acPass').value, b = $('#acPass2').value; if (a.length < 8) { $('#acMsg').textContent = 'Mínimo 8 caracteres.'; return; } if (a !== b) { $('#acMsg').textContent = 'Las dos contraseñas no coinciden.'; return; }
     closeModal(); if (!await reauth('Cambiar contraseña', 'Para cambiarla, escribe tu contraseña actual.', 'Cambiar')) return;
     try { await Cloud.setPassword(a); toast('Contraseña cambiada'); } catch (e) { toast(e.offline ? 'Necesitas conexión' : 'No se ha podido cambiar la contraseña. Inténtalo otra vez.'); } },
@@ -7685,7 +7703,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.16.0';
+const APP_VERSION = '4.16.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
