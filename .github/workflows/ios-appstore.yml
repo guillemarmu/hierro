@@ -1,0 +1,50 @@
+# Tareas de App Store Connect con la API (tiendas/ios/asc.py). Se lanza a mano: Actions › «iOS App Store» › Run workflow.
+# - testflight-publico: grupo externo «Público» con enlace público + última compilación + revisión beta.
+# - revision: versión APP_VERSION del App Store con su última compilación, enviada a revisión (publicación manual).
+# Usa los mismos secretos que «iOS TestFlight» (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8). Antes de «revision», sube la compilación con «iOS TestFlight».
+name: iOS App Store
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: 'Qué hacer'
+        type: choice
+        options: [testflight-publico, revision]
+        default: testflight-publico
+      notas:
+        description: 'Notas para los testers o «Novedades» de la versión (vacío = texto genérico)'
+        required: false
+permissions:
+  contents: read
+jobs:
+  asc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clave de la API
+        env:
+          P: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          umask 077
+          F="$RUNNER_TEMP/asc.p8"
+          printf '%s\n' "$P" | tr -d '\r' > "$F"
+          if ! grep -q 'BEGIN PRIVATE KEY' "$F"; then
+            if printf '%s' "$P" | tr -d ' \r\n' | base64 -d 2>/dev/null | grep -q 'BEGIN PRIVATE KEY'; then
+              printf '%s' "$P" | tr -d ' \r\n' | base64 -d > "$F"
+            else
+              { echo '-----BEGIN PRIVATE KEY-----'; printf '%s' "$P" | tr -d ' \r\n' | fold -w 64; echo; echo '-----END PRIVATE KEY-----'; } > "$F"
+            fi
+          fi
+          openssl pkey -in "$F" -noout 2>/dev/null || { echo "::error::ASC_KEY_P8 no es una clave privada válida"; exit 1; }
+          echo "ASC_KEY_FILE=$F" >> "$GITHUB_ENV"
+      - name: App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          NOTAS: ${{ inputs.notas }}
+          ACCION: ${{ inputs.accion }}
+        run: |
+          pip install -q 'pyjwt[crypto]==2.10.1'
+          export APP_VERSION=$(grep -o "APP_VERSION = '[0-9.]*'" hierro-pwa/index.html | head -1 | grep -o "[0-9.]*")
+          python3 tiendas/ios/asc.py "$ACCION"
