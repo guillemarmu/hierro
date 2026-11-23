@@ -42,12 +42,8 @@ struct HierroLiveWidget: Widget {
                     .padding(.leading, 4)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(st.start, style: .timer)
-                        .monospacedDigit()
-                        .font(.subheadline)
-                        .foregroundColor(tenue)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 72, alignment: .trailing)
+                    Reloj(st: st, stale: ctx.isStale, ancho: 72)
+                        .font(.subheadline.weight(.semibold))
                         .padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -82,31 +78,53 @@ private func partes(_ d: String) -> (serie: String, valor: String) {
     return (String(d[..<r.lowerBound]), String(d[r.upperBound...]))
 }
 
-/// Pantalla de bloqueo (23 nov, como la de la foto de Guillermo): arriba Hierro y el tiempo del entreno;
-/// en medio el ejercicio y «Serie 2 de 3»; abajo, grande, el peso × repes con el ✓ a la derecha.
+/// Tiempo de la esquina: la cuenta atrás del descanso si lo hay; si no, lo que lleva el entreno.
+struct Reloj: View {
+    let st: HierroWorkoutAttributes.ContentState
+    let stale: Bool
+    let ancho: CGFloat
+
+    var body: some View {
+        Group {
+            if let r = descanso(st, stale) {
+                Text(timerInterval: r, countsDown: true).foregroundColor(.white)
+            } else {
+                Text(st.start, style: .timer).foregroundColor(tenue)
+            }
+        }
+        .monospacedDigit()
+        .multilineTextAlignment(.trailing)
+        .frame(maxWidth: ancho, alignment: .trailing)
+    }
+}
+
+/// Pantalla de bloqueo (23 nov, como la de la foto de Guillermo). iOS corta la Live Activity a unos 160 pt de alto,
+/// así que va compacta: arriba Hierro y el reloj (descanso o entreno) con la barra del descanso; luego el ejercicio
+/// y «Serie 2 de 3»; abajo, grande, el peso × repes con el ✓.
 struct PantallaBloqueo: View {
     let st: HierroWorkoutAttributes.ContentState
     let stale: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let rango = descanso(st, stale)
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Image(systemName: "dumbbell.fill").font(.caption).foregroundColor(lila)
-                Text(st.title.isEmpty ? "Hierro" : "Hierro · \(st.title)")
+                Image(systemName: "dumbbell.fill").font(.caption2).foregroundColor(lila)
+                Text(rango != nil ? "Descanso" : (st.title.isEmpty ? "Hierro" : "Hierro · \(st.title)"))
                     .font(.footnote.weight(.semibold))
                     .foregroundColor(tenue)
                     .lineLimit(1)
-                Spacer(minLength: 8)
-                Text(st.start, style: .timer)
-                    .monospacedDigit()
-                    .font(.footnote.weight(.semibold))
-                    .foregroundColor(tenue)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 80, alignment: .trailing)
+                Spacer(minLength: 6)
+                Reloj(st: st, stale: stale, ancho: 70).font(.footnote.weight(.bold))
+            }
+            if let r = rango {
+                ProgressView(timerInterval: r, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
+                    .tint(azul)
             }
             Detalle(st: st, stale: stale, grande: true)
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .foregroundColor(.white)
     }
 }
@@ -117,52 +135,25 @@ struct Detalle: View {
     let grande: Bool
 
     var body: some View {
-        let rango = descanso(st, stale)
         let p = partes(st.detail)
-        VStack(alignment: .leading, spacing: grande ? 10 : 6) {
-            if let r = rango {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Descanso").font(.caption.weight(.semibold)).foregroundColor(tenue)
-                        Spacer(minLength: 4)
-                        Text(timerInterval: r, countsDown: true)
-                            .monospacedDigit()
-                            .font(.system(size: grande ? 22 : 18, weight: .bold, design: .rounded))
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 90, alignment: .trailing)
-                    }
-                    ProgressView(timerInterval: r, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
-                        .tint(azul)
+        let serie = !p.serie.isEmpty ? p.serie : (st.total > 0 ? "\(st.done) de \(st.total) series" : "")
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(st.exercise.isEmpty ? "Entreno en curso" : st.exercise)
+                    .font(grande ? .subheadline.weight(.semibold) : .footnote.weight(.semibold))
+                    .lineLimit(1)
+                if !serie.isEmpty {
+                    Text(serie).font(.caption).foregroundColor(stale && st.restEnd != nil ? lila : tenue).lineLimit(1)
                 }
-            } else if stale && st.restEnd != nil {
-                Text("¡A por la siguiente!").font(.caption.weight(.semibold)).foregroundColor(lila)
-            }
-            HStack(alignment: .center, spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    if rango != nil && !st.exercise.isEmpty {
-                        Text("Siguiente").font(.caption).foregroundColor(tenue)
-                    }
-                    Text(st.exercise.isEmpty ? "Entreno en curso" : st.exercise)
-                        .font(grande ? .headline : .subheadline.weight(.semibold))
-                        .lineLimit(2)
-                    if !p.serie.isEmpty {
-                        Text(p.serie).font(.subheadline).foregroundColor(tenue).lineLimit(1)
-                    } else if st.total > 0 {
-                        Text("\(st.done) de \(st.total) series").font(.subheadline).monospacedDigit().foregroundColor(tenue)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            if !p.valor.isEmpty || st.next?.first?.ok == true {
-                HStack(alignment: .center, spacing: 10) {
+                if !p.valor.isEmpty {
                     Text(p.valor)
-                        .font(.system(size: grande ? 26 : 20, weight: .bold, design: .rounded))
+                        .font(.system(size: grande ? 24 : 18, weight: .bold, design: .rounded))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Spacer(minLength: 4)
-                    BotonSerie(st: st)
+                        .minimumScaleFactor(0.6)
                 }
             }
+            Spacer(minLength: 4)
+            BotonSerie(st: st)
         }
     }
 }
@@ -178,7 +169,7 @@ struct BotonSerie: View {
                     Image(systemName: "checkmark")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40)
                         .background(Circle().fill(azul))
                 }
                 .buttonStyle(.plain)
