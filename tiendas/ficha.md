@@ -26,7 +26,7 @@ Textos y respuestas listos para copiar en Google Play Console y App Store Connec
 >
 > **Progresa**
 > • Récords («chiquipuntos») al momento, 1RM estimado y gráficas por ejercicio.
-> • Rangos de fuerza de Hierro a Simétrico, ajustados a tu peso, sexo y altura.
+> • Rangos de fuerza de Hierro a Titán, ajustados a tu peso, sexo y altura.
 > • Calendario, rachas, meta semanal y resumen de cada entreno.
 >
 > **Con tus amigos**
