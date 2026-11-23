@@ -3635,20 +3635,68 @@ function beep(){
 const notifOK = () => 'Notification' in window && Notification.permission === 'granted' && S.settings.notif !== false && 'serviceWorker' in navigator;
 /* Siguiente serie pendiente del entreno en curso, para los avisos de la pantalla de bloqueo (desde 4.5.6):
    {name, n, total, val: '35 kg × 10 reps'}; usa lo apuntado o, si está vacía, lo sugerido (rutina o última vez). */
+function setInfoAt(e, si){
+  const x = exOf(e.exId), s = e.sets[si]; let ph = {}; try { ph = phFor(e, si) || {}; } catch (err) { ph = {}; /* serie sin sugerencia */ }
+  const v = f => s[f] != null && s[f] !== '' ? s[f] : ph[f];
+  const kg = v('kg'), reps = v('reps'), sec = v('sec'), km = v('km'), min = v('min');
+  const val = x.type === 'dur' ? (sec ? fmtClock(sec) : '') : x.type === 'cardio' ? [km ? fmtN(km, 2) + ' km' : '', min ? fmtN(min) + ' min' : ''].filter(Boolean).join(' · ')
+    : [kg ? fmtN(kg, 2) + ' kg' : '', reps ? reps + ' reps' : ''].filter(Boolean).join(' × ');
+  // Como en la tabla: el calentamiento no cuenta (Serie 1 de 4 tras un calentamiento).
+  return {name: x.name, w: s.t === 'w', n: e.sets.slice(0, si + 1).filter(isWork).length, total: e.sets.filter(isWork).length, val};
+}
 function nextSetInfo(){
   const W = ED && ED.mode === 'active' ? ED.data : S.active; if (!W || !W.exercises) return null;
   for (const e of W.exercises) {
     const si = e.sets.findIndex(s => !s.done); if (si < 0) continue;
-    const x = exOf(e.exId), s = e.sets[si]; let ph = {}; try { ph = (ED && ED.mode === 'active' ? phFor(e, si) : s.ph) || {}; } catch (err) {}
-    const v = f => s[f] != null && s[f] !== '' ? s[f] : ph[f];
-    const kg = v('kg'), reps = v('reps'), sec = v('sec'), km = v('km'), min = v('min');
-    const val = x.type === 'dur' ? (sec ? fmtClock(sec) : '') : x.type === 'cardio' ? [km ? fmtN(km, 2) + ' km' : '', min ? fmtN(min) + ' min' : ''].filter(Boolean).join(' · ')
-      : [kg ? fmtN(kg, 2) + ' kg' : '', reps ? reps + ' reps' : ''].filter(Boolean).join(' × ');
-    // Como en la tabla: el calentamiento no cuenta (Serie 1 de 4 tras un calentamiento).
-    return {name: x.name, w: s.t === 'w', n: e.sets.slice(0, si + 1).filter(isWork).length, total: e.sets.filter(isWork).length, val};
+    return setInfoAt(e, si);
   }
   return null;
 }
+// 4.20 · Live Activity de iOS (native.js): las próximas series para completarlas desde la pantalla de bloqueo, en el orden en
+// que se hacen (las superseries por rondas: A1, B1, A2, B2…). rest = descanso que arranca al marcarla (como set-done: solo
+// en el último ejercicio del grupo). ok = con su sugerencia tiene datos (hasData) y se puede marcar sin abrir la app;
+// la lista para en la primera que no.
+function liveNext(max = 5){
+  const W = S.active; if (!W || !Array.isArray(W.exercises)) return [];
+  const out = [], X = W.exercises;
+  for (let a = 0; a < X.length && out.length < max;) {
+    let b = a; while (X[a].ss && b + 1 < X.length && X[b + 1].ss === X[a].ss) b++;
+    const rounds = Math.max(...X.slice(a, b + 1).map(e => e.sets.length));
+    for (let r = 0; r < rounds && out.length < max; r++) for (let ei = a; ei <= b && out.length < max; ei++) {
+      const e = X[ei], s = e.sets[r]; if (!s || s.done) continue;
+      const i = setInfoAt(e, r), x = exOf(e.exId), ph = phFor(e, r) || {}, c = {...s};
+      ['kg', 'reps', 'sec', 'km', 'min'].forEach(f => { if (c[f] == null && ph[f] != null) c[f] = ph[f]; });
+      const ok = hasData(c, x.type);
+      out.push({k: W.start + ':' + ei + ':' + r, name: i.name, detail: (i.w ? 'Calentamiento' : 'Serie ' + i.n + ' de ' + i.total) + (i.val ? ' · ' + i.val : ''), rest: ei === b ? Number(e.rest ?? S.settings.rest) || 0 : 0, ok});
+      if (!ok) return out;
+    }
+    a = b + 1;
+  }
+  return out;
+}
+// Series marcadas en la pantalla de bloqueo mientras la app no estaba delante ({k, t, r}: clave, hora y descanso).
+// Se marcan como con el botón (con sugerencias y chiquipuntos) y, si el descanso de la última sigue en marcha, sigue aquí también.
+// Devuelve las claves ya tratadas (marcadas o descartadas a propósito) para que iOS las quite de su cola; sin entreno, ninguna.
+function liveApply(items){
+  const W = S.active; if (!W || !Array.isArray(W.exercises) || !Array.isArray(items)) return [];
+  let n = 0, last = null; const prs = [], hechas = [];
+  items.filter(it => it && typeof it.k === 'string').sort((a, b) => (+a.t || 0) - (+b.t || 0)).forEach(it => {
+    hechas.push(it.k);
+    const m = /^(\d+):(\d+):(\d+)$/.exec(it.k); if (!m || +m[1] !== W.start) return;
+    const e = W.exercises[+m[2]], si = +m[3], s = e && e.sets[si]; if (!s || s.done) return;
+    fillFromPh(e, si); if (!hasData(s, exOf(e.exId).type)) return;
+    s.done = true; n++; last = {it, name: exOf(e.exId).name};
+    const pr = setPR(W, +m[2], si); if (pr) prs.push(pr);
+  });
+  if (!n) return hechas;
+  const r = Number(last.it.r) || 0, end = (Number(last.it.t) || 0) + r * 1000;
+  if (r > 0 && end > Date.now() + 1000) { startRest(r, last.name); REST.end = end; REST.next = nextSetInfo(); drawRest(); }
+  Store.mark('active');
+  if (ED && ED.mode === 'active') { renderEditor(); edTouch(); } else render();
+  toast(prs.length ? `🏆 ¡Chiquipunto! ${prs[0].label}: ${prs[0].txt}` : n === 1 ? 'Serie marcada desde la pantalla de bloqueo' : `${n} series marcadas desde la pantalla de bloqueo`);
+  return hechas;
+}
+window.HierroVivo = {next: liveNext, apply: liveApply}; // los usa native.js (iOS)
 const nextSetText = nx => nx ? `${nx.name} · ${nx.w ? 'Calentamiento' : `Serie ${nx.n} de ${nx.total}`}${nx.val ? ' · ' + nx.val : ''}` : '';
 // El aviso fijo al bloquear el móvil («Descanso · termina a las…», 4.5.6) se quitó en 4.5.11 a petición de Guillermo.
 // Esto solo cierra el que pudiera quedar de una versión anterior; el aviso de fin de descanso sigue igual.
@@ -7771,7 +7819,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.19.0';
+const APP_VERSION = '4.20.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);

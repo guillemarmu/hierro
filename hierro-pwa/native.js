@@ -80,52 +80,81 @@
   });
 
   // Entreno en curso en la pantalla de bloqueo y la Dynamic Island (Live Activity) + aviso local de fin del descanso.
-  // Lee el estado de la app (S.active, REST, nextSetInfo de index.html) una vez por segundo y solo avisa a iOS si cambia.
+  // Lee el estado de la app (S.active, REST, nextSetInfo y liveNext de index.html) una vez por segundo y solo avisa a iOS si cambia.
+  // Desde 4.20 la siguiente serie lleva un ✓ en la pantalla de bloqueo (iOS 17+): iOS la marca allí y la apunta;
+  // al volver, pending() las devuelve y liveApply() las marca en la app antes de volver a mandar el estado.
   // Con una compilación sin el plugin (106 o anterior), Live es null o sus llamadas fallan: no pasa nada.
   const Live = plugin('HierroLive');
-  const vivo = {on: true, clave: '', descanso: ''}; // on: true para que, sin entreno, se cierre la que quedara de antes
+  const vivo = {on: true, clave: '', fin: 0, ocupado: false}; // on: true para que, sin entreno, se cierre la que quedara de antes
+  const vivoApp = (nombre) => { const h = window.HierroVivo; return h && typeof h[nombre] === 'function' ? h[nombre] : null; }; // index.html 4.20+
   const estadoVivo = () => {
-    let w = null, rest = null, nx = null;
+    let w = null, rest = null, nx = null, sig = [];
     try { w = typeof S !== 'undefined' && S ? S.active : null; } catch (e) { w = null; /* app sin cargar */ }
     if (!w || !Array.isArray(w.exercises)) return null;
     try { rest = typeof REST !== 'undefined' ? REST : null; } catch (e) { rest = null; /* app sin cargar */ }
     try { nx = typeof nextSetInfo === 'function' ? nextSetInfo() : null; } catch (e) { nx = null; /* sin ejercicios */ }
+    try { sig = vivoApp('next') ? vivoApp('next')(5) : []; } catch (e) { sig = []; /* sin ejercicios */ }
     let done = 0, total = 0;
     w.exercises.forEach((e) => (Array.isArray(e && e.sets) ? e.sets : []).forEach((s) => { total++; if (s && s.done) done++; }));
     const end = rest && !rest.fired ? Number(rest.end) : 0;
     const resting = end > Date.now() + 1000;
     const serie = nx ? (nx.w ? 'Calentamiento' : 'Serie ' + nx.n + ' de ' + nx.total) : '';
+    // Lo que se ve es la serie del ✓ (en superseries, la de la ronda), no la primera sin hacer del primer ejercicio
+    if (Array.isArray(sig) && sig[0]) nx = {name: sig[0].name, detail: sig[0].detail};
     return {
       title: String(w.title || 'Entreno').slice(0, 60),
       start: Number(w.start) || Date.now(),
       exercise: nx ? String(nx.name || '').slice(0, 60) : (total ? 'Todo hecho' : ''),
-      detail: nx ? [serie, nx.val].filter(Boolean).join(' · ').slice(0, 80) : (total ? 'Pulsa Terminar para guardarlo' : 'Añade un ejercicio'),
+      detail: nx ? (nx.detail || [serie, nx.val].filter(Boolean).join(' · ')).slice(0, 80) : (total ? 'Pulsa Terminar para guardarlo' : 'Añade un ejercicio'),
       done, total,
       restStart: resting ? Math.round(end - (Number(rest.total) || 0) * 1000) : 0,
-      restEnd: resting ? Math.round(end) : 0
+      restEnd: resting ? Math.round(end) : 0,
+      next: (Array.isArray(sig) ? sig : []).slice(0, 5).map((x) => ({k: String(x.k), name: String(x.name || '').slice(0, 60), detail: String(x.detail || '').slice(0, 80), rest: Number(x.rest) || 0, ok: !!x.ok}))
     };
   };
-  const pasoVivo = () => {
-    if (!Live) return;
-    const st = estadoVivo();
-    // Aviso de fin del descanso (sale aunque la app esté en segundo plano o el móvil bloqueado)
-    const d = st && st.restEnd ? String(st.restEnd) : '';
-    if (d !== vivo.descanso) {
-      vivo.descanso = d;
-      if (d) {
-        const sig = st.exercise && st.exercise !== 'Todo hecho' ? 'Ahora: ' + st.exercise + (st.detail ? ' · ' + st.detail : '') : 'A por la siguiente serie';
-        seguro(Live.restNotify({end: st.restEnd, title: '¡Descanso terminado!', body: sig}));
-      } else seguro(Live.restCancel());
+  // Solo con el entreno ya cargado (en frío S.active llega tras la sesión): si no, las series se quedan en la cola de iOS.
+  const pendientes = async () => {
+    let w = null;
+    try { w = typeof S !== 'undefined' && S ? S.active : null; } catch (e) { w = null; /* app sin cargar */ }
+    if (!w || !vivoApp('apply')) return;
+    let items = [];
+    try {
+      const r = await Live.pending();
+      items = r && Array.isArray(r.items) ? r.items : [];
+    } catch (e) { return; /* compilación sin pending() */ }
+    if (!items.length) return;
+    const hechas = vivoApp('apply')(items);
+    vivo.clave = '';
+    if (Array.isArray(hechas) && hechas.length) seguro(Live.ack({keys: hechas}));
+  };
+  const pasoVivo = async () => {
+    if (!Live || vivo.ocupado) return;
+    vivo.ocupado = true;
+    try {
+      await pendientes();
+      const st = estadoVivo();
+      // Aviso de fin del descanso (sale con el móvil bloqueado, con la app en segundo plano y, desde 4.20, también con la app delante).
+      // Solo se cancela si el descanso se corta antes de tiempo (saltar, descartar): al acabar solo, el aviso tiene que llegar.
+      const fin = st && st.restEnd ? st.restEnd : 0;
+      if (fin !== vivo.fin) {
+        if (fin) {
+          const sig = st.exercise && st.exercise !== 'Todo hecho' ? 'Ahora: ' + st.exercise + (st.detail ? ' · ' + st.detail : '') : 'A por la siguiente serie';
+          seguro(Live.restNotify({end: fin, title: '¡Descanso terminado!', body: sig}));
+        } else if (vivo.fin > Date.now() + 1500) seguro(Live.restCancel());
+        vivo.fin = fin;
+      }
+      // Live Activity
+      if (!st) {
+        if (vivo.on) { vivo.on = false; vivo.clave = ''; seguro(Live.end()); }
+        return;
+      }
+      const clave = JSON.stringify(st);
+      if (clave === vivo.clave) return;
+      vivo.clave = clave; vivo.on = true;
+      seguro(Live.sync(st));
+    } finally {
+      vivo.ocupado = false;
     }
-    // Live Activity
-    if (!st) {
-      if (vivo.on) { vivo.on = false; vivo.clave = ''; seguro(Live.end()); }
-      return;
-    }
-    const clave = JSON.stringify(st);
-    if (clave === vivo.clave) return;
-    vivo.clave = clave; vivo.on = true;
-    seguro(Live.sync(st));
   };
   if (Live) {
     setInterval(pasoVivo, 1000);
