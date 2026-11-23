@@ -3755,33 +3755,41 @@ function setInfoAt(e, si){
   // Como en la tabla: el calentamiento no cuenta (Serie 1 de 4 tras un calentamiento).
   return {name: x.name, w: s.t === 'w', n: e.sets.slice(0, si + 1).filter(isWork).length, total: e.sets.filter(isWork).length, val};
 }
+/* 4.22 · Orden de las series pendientes: primero los grupos (ejercicio o superserie) empezados que siguen a medias, del que
+   tocaste por última vez (e.at) al más antiguo; después el resto en el orden de la lista. Las superseries,
+   por rondas (A1, B1, A2, B2…). Devuelve [{ei, si}]. Así, si empiezas por el tercer ejercicio, lo siguiente es su serie 2. */
+function setOrder(W){
+  const X = W && Array.isArray(W.exercises) ? W.exercises : []; const G = [];
+  for (let a = 0; a < X.length;) { let b = a; while (X[a].ss && b + 1 < X.length && X[b + 1].ss === X[a].ss) b++; G.push([a, b]); a = b + 1; }
+  const sets = ([a, b]) => { const out = [], rounds = Math.max(0, ...X.slice(a, b + 1).map(e => e.sets.length));
+    for (let r = 0; r < rounds; r++) for (let ei = a; ei <= b; ei++) { const s = X[ei].sets[r]; if (s && !s.done) out.push({ei, si: r}); }
+    return out; };
+  // Solo cuenta si queda alguna serie hecha (desmarcar un toque erróneo no lo vuelve «en curso»); sin e.at (entreno de antes): 1.
+  const at = ([a, b]) => Math.max(0, ...X.slice(a, b + 1).map(e => e.sets.some(s => s.done) ? +e.at || 1 : 0));
+  const T = G.map((g, i) => ({g, i, t: sets(g).length ? at(g) : 0}));
+  // Empezados a medias, del más reciente al más antiguo (empate: el de más abajo); luego el resto en el orden de la lista.
+  return T.sort((x, y) => (y.t > 0) - (x.t > 0) || y.t - x.t || (x.t > 0 ? y.i - x.i : x.i - y.i)).flatMap(x => sets(x.g));
+}
 function nextSetInfo(){
   const W = ED && ED.mode === 'active' ? ED.data : S.active; if (!W || !W.exercises) return null;
-  for (const e of W.exercises) {
-    const si = e.sets.findIndex(s => !s.done); if (si < 0) continue;
-    return setInfoAt(e, si);
-  }
-  return null;
+  const o = setOrder(W)[0];
+  return o ? setInfoAt(W.exercises[o.ei], o.si) : null;
 }
-// 4.20 · Live Activity de iOS (native.js): las próximas series para completarlas desde la pantalla de bloqueo, en el orden en
-// que se hacen (las superseries por rondas: A1, B1, A2, B2…). rest = descanso que arranca al marcarla (como set-done: solo
+// 4.20 · Live Activity de iOS (native.js): las próximas series para completarlas desde la pantalla de bloqueo, en el orden de
+// setOrder (desde 4.22, primero los ejercicios a medias, del último tocado al más antiguo; superseries por rondas). rest = descanso que arranca al marcarla (como set-done: solo
 // en el último ejercicio del grupo). ok = con su sugerencia tiene datos (hasData) y se puede marcar sin abrir la app;
 // la lista para en la primera que no.
 function liveNext(max = 5){
   const W = S.active; if (!W || !Array.isArray(W.exercises)) return [];
   const out = [], X = W.exercises;
-  for (let a = 0; a < X.length && out.length < max;) {
-    let b = a; while (X[a].ss && b + 1 < X.length && X[b + 1].ss === X[a].ss) b++;
-    const rounds = Math.max(...X.slice(a, b + 1).map(e => e.sets.length));
-    for (let r = 0; r < rounds && out.length < max; r++) for (let ei = a; ei <= b && out.length < max; ei++) {
-      const e = X[ei], s = e.sets[r]; if (!s || s.done) continue;
-      const i = setInfoAt(e, r), x = exOf(e.exId), ph = phFor(e, r) || {}, c = {...s};
-      ['kg', 'reps', 'sec', 'km', 'min'].forEach(f => { if (c[f] == null && ph[f] != null) c[f] = ph[f]; });
-      const ok = hasData(c, x.type);
-      out.push({k: W.start + ':' + ei + ':' + r, name: i.name, detail: (i.w ? 'Calentamiento' : 'Serie ' + i.n + ' de ' + i.total) + (i.val ? ' · ' + i.val : ''), rest: ei === b ? Number(e.rest ?? S.settings.rest) || 0 : 0, ok});
-      if (!ok) return out;
-    }
-    a = b + 1;
+  for (const {ei, si: r} of setOrder(W)) {
+    if (out.length >= max) break;
+    const e = X[ei], s = e.sets[r], last = !(e.ss && X[ei + 1] && X[ei + 1].ss === e.ss);
+    const i = setInfoAt(e, r), x = exOf(e.exId), ph = phFor(e, r) || {}, c = {...s};
+    ['kg', 'reps', 'sec', 'km', 'min'].forEach(f => { if (c[f] == null && ph[f] != null) c[f] = ph[f]; });
+    const ok = hasData(c, x.type);
+    out.push({k: W.start + ':' + ei + ':' + r, name: i.name, detail: (i.w ? 'Calentamiento' : 'Serie ' + i.n + ' de ' + i.total) + (i.val ? ' · ' + i.val : ''), rest: last ? Number(e.rest ?? S.settings.rest) || 0 : 0, ok});
+    if (!ok) break;
   }
   return out;
 }
@@ -3796,7 +3804,7 @@ function liveApply(items){
     const m = /^(\d+):(\d+):(\d+)$/.exec(it.k); if (!m || +m[1] !== W.start) return;
     const e = W.exercises[+m[2]], si = +m[3], s = e && e.sets[si]; if (!s || s.done) return;
     fillFromPh(e, si); if (!hasData(s, exOf(e.exId).type)) return;
-    s.done = true; n++; last = {it, name: exOf(e.exId).name};
+    s.done = true; e.at = +it.t || Date.now(); n++; last = {it, name: exOf(e.exId).name};
     const pr = setPR(W, +m[2], si); if (pr) prs.push(pr);
   });
   if (!n) return hechas;
@@ -6131,7 +6139,7 @@ const A = {
     if (!s.done) {
       fillFromPh(e, si);
       if (!hasData(s, x.type)) { const row = $(`#r-${ei}-${si}`); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); toast(x.type === 'dur' ? 'Pon el tiempo de la serie' : x.type === 'cardio' ? 'Pon la distancia o los minutos' : 'Pon las repeticiones'); return; }
-      s.done = true; ED.just = ei + '-' + si; haptic(1);
+      s.done = true; e.at = Date.now(); ED.just = ei + '-' + si; haptic(1); // e.at: ejercicio en curso (setOrder)
       const next = e.ss ? ED.data.exercises[ei + 1] : null;
       const lastInSS = !(next && next.ss === e.ss);
       if (lastInSS) startRest(e.rest ?? S.settings.rest, x.name);
@@ -7930,7 +7938,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.21.0';
+const APP_VERSION = '4.22.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
