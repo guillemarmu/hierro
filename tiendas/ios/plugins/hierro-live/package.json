@@ -1,0 +1,11 @@
+{
+  "name": "hierro-live",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Entreno en curso en la pantalla de bloqueo (Live Activity) y aviso local de fin del descanso",
+  "files": ["ios/", "Package.swift"],
+  "capacitor": {
+    "ios": { "src": "ios" }
+  },
+  "peerDependencies": { "@capacitor/core": ">=8.0.0" }
+}
