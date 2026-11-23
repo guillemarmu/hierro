@@ -2773,7 +2773,7 @@ function navTo(mutate, o){
   const kind = t1 !== t0 ? (TAB_ORDER.indexOf(t1) > TAB_ORDER.indexOf(t0) ? 'tab-f' : 'tab-b') : d1 > d0 ? 'push' : d1 < d0 ? 'pop' : '';
   const view = $('#view'), top = $('#top'), root = document.documentElement, keep = o && o.keep;
   const fin = () => { render(); if (!keep) $('#view').scrollTop = 0; else if (kind === 'pop') $('#view').scrollTop = SCRMEM[t1 + ':' + d1] || 0; moIn(); };
-  if (!kind || moReduce() || document.hidden) return fin();
+  if (!kind || moReduce() || document.hidden || $('#modal.open')) return fin(); // con una ventana abierta, sin animar
   const id = ++MO.id;
   if ('startViewTransition' in document) { // camino principal: View Transitions
     root.setAttribute('data-mo', kind);
@@ -3797,6 +3797,7 @@ function restoreActiveBar(){
 let modalCb = null;
 function modal(title, body, foot = '', onOpen){
   const el = $('#modal');
+  if (document.documentElement.hasAttribute('data-mo')) moEnd(); // 4.16.2: una transición en curso pintaría la pantalla encima de la ventana
   el.innerHTML = `<div class="sheet"><div class="mh"><h2>${title}</h2><button class="iconbtn" data-act="m-close" aria-label="Cerrar">${ICON.x}</button></div><div class="mb">${body}</div>${foot ? `<div class="mf">${foot}</div>` : ''}</div>`;
   if (!el.classList.contains('open') && !moReduce()) { // entrada animada solo si estaba cerrada (no al redibujar)
     el.classList.add('pop'); clearTimeout(modal.t); modal.t = setTimeout(() => el.classList.remove('pop'), 520);
@@ -4117,6 +4118,7 @@ function summaryData(w){
   return {prev, ms, gs, totS, weekN, exs, num: workoutNumber(w), a: agg([w]), p: prev ? agg([prev]) : null};
 }
 function openSummary(w, fresh){
+  if (document.documentElement.hasAttribute('data-mo')) moEnd(); // 4.16.2: igual que en modal(), la pantalla no se pinta encima del Resumen
   const D = summaryData(w), maxVol = Math.max(1, ...D.exs.map(x => x.vol));
   const routine = fresh && w.routineId && S.routines.find(r => r.id === w.routineId);
   const prs = w.prs || [];
@@ -7703,7 +7705,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.16.1';
+const APP_VERSION = '4.16.2';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
