@@ -79,6 +79,59 @@
     } catch (e) { /* sin nativo */ }
   });
 
+  // Entreno en curso en la pantalla de bloqueo y la Dynamic Island (Live Activity) + aviso local de fin del descanso.
+  // Lee el estado de la app (S.active, REST, nextSetInfo de index.html) una vez por segundo y solo avisa a iOS si cambia.
+  // Con una compilación sin el plugin (106 o anterior), Live es null o sus llamadas fallan: no pasa nada.
+  const Live = plugin('HierroLive');
+  const vivo = {on: true, clave: '', descanso: ''}; // on: true para que, sin entreno, se cierre la que quedara de antes
+  const estadoVivo = () => {
+    let w = null, rest = null, nx = null;
+    try { w = typeof S !== 'undefined' && S ? S.active : null; } catch (e) { w = null; /* app sin cargar */ }
+    if (!w || !Array.isArray(w.exercises)) return null;
+    try { rest = typeof REST !== 'undefined' ? REST : null; } catch (e) { rest = null; /* app sin cargar */ }
+    try { nx = typeof nextSetInfo === 'function' ? nextSetInfo() : null; } catch (e) { nx = null; /* sin ejercicios */ }
+    let done = 0, total = 0;
+    w.exercises.forEach((e) => (Array.isArray(e && e.sets) ? e.sets : []).forEach((s) => { total++; if (s && s.done) done++; }));
+    const end = rest && !rest.fired ? Number(rest.end) : 0;
+    const resting = end > Date.now() + 1000;
+    const serie = nx ? (nx.w ? 'Calentamiento' : 'Serie ' + nx.n + ' de ' + nx.total) : '';
+    return {
+      title: String(w.title || 'Entreno').slice(0, 60),
+      start: Number(w.start) || Date.now(),
+      exercise: nx ? String(nx.name || '').slice(0, 60) : (total ? 'Todo hecho' : ''),
+      detail: nx ? [serie, nx.val].filter(Boolean).join(' · ').slice(0, 80) : (total ? 'Pulsa Terminar para guardarlo' : 'Añade un ejercicio'),
+      done, total,
+      restStart: resting ? Math.round(end - (Number(rest.total) || 0) * 1000) : 0,
+      restEnd: resting ? Math.round(end) : 0
+    };
+  };
+  const pasoVivo = () => {
+    if (!Live) return;
+    const st = estadoVivo();
+    // Aviso de fin del descanso (sale aunque la app esté en segundo plano o el móvil bloqueado)
+    const d = st && st.restEnd ? String(st.restEnd) : '';
+    if (d !== vivo.descanso) {
+      vivo.descanso = d;
+      if (d) {
+        const sig = st.exercise && st.exercise !== 'Todo hecho' ? 'Ahora: ' + st.exercise + (st.detail ? ' · ' + st.detail : '') : 'A por la siguiente serie';
+        seguro(Live.restNotify({end: st.restEnd, title: '¡Descanso terminado!', body: sig}));
+      } else seguro(Live.restCancel());
+    }
+    // Live Activity
+    if (!st) {
+      if (vivo.on) { vivo.on = false; vivo.clave = ''; seguro(Live.end()); }
+      return;
+    }
+    const clave = JSON.stringify(st);
+    if (clave === vivo.clave) return;
+    vivo.clave = clave; vivo.on = true;
+    seguro(Live.sync(st));
+  };
+  if (Live) {
+    setInterval(pasoVivo, 1000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { vivo.clave = ''; pasoVivo(); } });
+  }
+
   let plataforma = 'ios';
   try { if (typeof cap.getPlatform === 'function') plataforma = cap.getPlatform() || 'ios'; } catch (e) { /* se queda en ios */ }
   window.Native = {is: true, platform: plataforma, health: salud};
