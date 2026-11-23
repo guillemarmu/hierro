@@ -54,9 +54,11 @@ service cloud.firestore {
 
     function validProfile(d) {
       // 4.9.1: lista cerrada de campos (antes valían hasta 14 campos cualquiera, de cualquier tamaño)
-      return d.keys().hasOnly(['uid', 'username', 'name', 'nameLc', 'bio', 'private', 'stats', 'rank'])
+      // 4.17: photo = foto de perfil (JPEG en data URL, como mucho 40000 caracteres)
+      return d.keys().hasOnly(['uid', 'username', 'name', 'nameLc', 'bio', 'private', 'stats', 'rank', 'photo'])
         && d.username is string && d.username.matches('^[a-z0-9_.]{3,20}$')
         && optStr(d, 'name', 80) && optStr(d, 'nameLc', 80) && optStr(d, 'bio', 200) && optStr(d, 'stats', 6000)
+        && optStr(d, 'photo', 40000) && (!('photo' in d) || d.photo == null || d.photo.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$'))
         && optBool(d, 'private')
         && (!('rank' in d) || d.rank == null || (d.rank is int && d.rank >= 0 && d.rank <= 24));
     }
