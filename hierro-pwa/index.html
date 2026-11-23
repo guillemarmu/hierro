@@ -1193,6 +1193,21 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 /* 4.14 · Cuenta, social y moderación */
 .auth input[type=checkbox]{min-height:0;width:22px;height:22px;padding:0;margin-top:1px;flex:none;box-shadow:none}
 .au-age{padding:8px 0;cursor:pointer}
+/* 4.17 · Foto de perfil */
+.avatar.av-ph{background:var(--sup-3)}
+.avatar>img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.av-btn{position:relative;flex:none;padding:0;border:0;background:none;border-radius:50%;cursor:pointer;color:inherit}
+.av-btn .av-cam{position:absolute;right:2px;bottom:2px;width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--sup-solid)}
+.av-btn .av-cam svg{width:15px;height:15px}
+.av-row{display:flex;align-items:center;gap:12px}
+.av-row .av-b{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
+.av-pick input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.avc{width:240px;height:240px;max-width:100%;margin:4px auto 0;border-radius:50%;overflow:hidden;position:relative;touch-action:none;background:var(--sup-3);cursor:grab;box-shadow:0 0 0 3px var(--sup-solid),0 0 0 5px var(--acc)}
+.avc:active{cursor:grabbing}
+.avc img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none}
+.avatar.av-big{width:120px;height:120px;font-size:44px;margin:8px auto}
+.av-pick{position:relative;overflow:hidden}
+#modal input.av-zoom{width:100%;min-height:44px;padding:0;box-shadow:none;background:none;accent-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -2839,7 +2854,7 @@ function render(){
   else html = ({home: viewHome, train: viewTrain, social: viewSocial, clan: viewClan, me: viewMe})[tab]();
   if (Cloud.session && Mod.checked !== Cloud.session.uid && navigator.onLine !== false) setTimeout(() => Mod.check().catch(() => {}), 0);
   $('#top').classList.toggle('sub', !!v);
-  const acts = !v && tab === 'social' && Social.ready() ? `<div class="row acts"><button class="iconbtn" data-act="soc-search" aria-label="Buscar personas">${ICON.search}</button><button class="iconbtn bell" data-act="soc-notifs" aria-label="Notificaciones">${ICON.bell}${Social.unseen ? `<em class="badge">${Social.unseen > 9 ? '9+' : Social.unseen}</em>` : ''}</button><button class="iconbtn" data-act="soc-user" data-id="${Social.myUid()}" aria-label="Mi perfil público">${avatar(Social.myName(), 'xs')}</button></div>` : '';
+  const acts = !v && tab === 'social' && Social.ready() ? `<div class="row acts"><button class="iconbtn" data-act="soc-search" aria-label="Buscar personas">${ICON.search}</button><button class="iconbtn bell" data-act="soc-notifs" aria-label="Notificaciones">${ICON.bell}${Social.unseen ? `<em class="badge">${Social.unseen > 9 ? '9+' : Social.unseen}</em>` : ''}</button><button class="iconbtn" data-act="soc-user" data-id="${Social.myUid()}" aria-label="Mi perfil público">${avatar(Social.myName(), 'xs', 0, Social.myUid())}</button></div>` : '';
   $('#top').classList.toggle('compact', !!acts);
   $('#top').innerHTML = `<div class="t">${v ? `<button class="iconbtn" data-act="back" aria-label="Volver">${ICON.back}</button>` : ''}${!v && tab === 'home' ? `<div class="brand">${MARK}<h1>Hierro</h1></div>` : `<h1>${esc(title)}</h1>`}</div>${acts}${Sync.on() ? '<span id="syncState" class="sync"></span>' : ''}`;
   syncUI();
@@ -3280,7 +3295,7 @@ function viewMe(){
   const tot = S.workouts.length, vol = S.workouts.reduce((a, w) => a + wVolume(w), 0), ms = S.workouts.reduce((a, w) => a + (w.end - w.start), 0);
   const name = Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : 'Tú';
   const now = new Date(), pm = now.getFullYear() * 12 + now.getMonth() - 1;
-  let h = `<div class="card row me-head" style="gap:14px"><div class="avatar">${esc(name.slice(0, 1).toUpperCase())}</div><div style="flex:1;min-width:0"><h2 style="overflow:hidden;text-overflow:ellipsis">${esc(name)}</h2><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">${Cloud.session ? esc(Cloud.session.email) : 'Sin cuenta: tus datos están solo en este móvil'}</div>${Cloud.session ? '' : authBtn('Crear cuenta o entrar', 'primary sm')}</div></div>`;
+  let h = `<div class="card row me-head" style="gap:14px">${Social.ready() ? myAvatar(name) : `<div class="avatar">${esc(name.slice(0, 1).toUpperCase())}</div>`}<div style="flex:1;min-width:0"><h2 style="overflow:hidden;text-overflow:ellipsis">${esc(name)}</h2><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">${Cloud.session ? esc(Cloud.session.email) : 'Sin cuenta: tus datos están solo en este móvil'}</div>${Cloud.session ? '' : authBtn('Crear cuenta o entrar', 'primary sm')}</div></div>`;
   h += `<div class="card stats"><div class="stat"><b>${tot}</b><span>Entrenos</span></div><div class="stat"><b>${fmtKg(vol)}</b><span>Volumen</span></div><div class="stat"><b>${fmtN(ms / 36e5, 0)} h</b><span>Entrenando</span></div></div>`;
   h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>Tu semana tipo y análisis de tus rutinas</small></div><i>›</i></button><button data-act="go-stats"><span>${ICON.chart}</span><div><b>Estadísticas</b><small>Reparto muscular, evolución, ejercicios principales</small></div><i>›</i></button>
     <button data-act="go-ranks"><span>${rkIcon(rkAll().glob ? rkAll().glob.idx : -1, 26)}</span><div><b>Rangos</b><small>${rkAll().glob ? 'Global: ' + rkName(rkAll().glob.idx) : 'Tu nivel en cada ejercicio y músculo'}</small></div><i>›</i></button>
@@ -3808,6 +3823,7 @@ function modal(title, body, foot = '', onOpen){
 // Cierre: el estado se limpia al instante (contrato síncrono) y la salida la anima una copia inerte (.mghost)
 function closeModal(){
   const el = $('#modal'), sh = el.firstElementChild;
+  if (el.querySelector('#avCrop')) avFree(); // 4.17: soltar la foto grande decodificada si se cierra el encuadre sin guardar
   document.querySelectorAll('.mghost').forEach(g => g.remove());
   if (sh && el.classList.contains('open') && !moReduce() && !document.hidden) {
     const g = document.createElement('div'), c = sh.cloneNode(true);
@@ -4537,6 +4553,7 @@ const Social = {
     const b = {uid: this.myUid(), username: p.username, name: this.myName(), nameLc: nrm(this.myName()).slice(0, 40), bio: p.bio || '', private: !!p.private};
     if (!p.private) b.stats = JSON.stringify({n7: inRange(Date.now() - 7 * 864e5, Date.now() + 1).length, workouts: S.workouts.length, vol: Math.round(S.workouts.reduce((a, w) => a + wVolume(w), 0)), streak: weekStreak(), n30: a30.n, ms30: Math.round(a30.ms / 60000) * 60000, vol30: Math.round(a30.vol), sets30: a30.sets, mus30: m30, since: S.workouts.length ? S.workouts[S.workouts.length - 1].start : 0}); // perfil privado: no se suben estadísticas
     const rk = rkPublic(); if (rk != null) b.rank = rk; // rango global (0-24), solo si la persona lo comparte
+    if (avOk(p.photo)) b.photo = p.photo; // 4.17: foto de perfil (la ve cualquiera con cuenta, también con perfil privado)
     return b;
   },
   // Escrituras sociales que salen de la sincronización normal (perfil y entrenos publicados)
@@ -4586,6 +4603,12 @@ const Social = {
     const p = this.cleanPost({...b, id: d._id, uid: d.uid, start: d.start, hasPhoto: d.hasPhoto, likes: d.likes, commentCount: d.commentCount, lastC: d.lastC, aud: d.aud});
     return p ? this.putPost(p) : null;
   },
+  setPhoto(v){ // 4.17: data URL (avOk) o '' para quitarla; se sube con el perfil en la siguiente sincronización
+    const p = this.me(); if (!p) return false;
+    if (v && !avOk(v)) return false;
+    if (v) p.photo = v; else delete p.photo;
+    Store.synced.prof = null; Store.mark(); Sync.run(); return true;
+  },
   async claim(username, bio, priv){
     const uid = this.myUid(), old = this.me() && this.me().username, writes = [];
     // Se mira en la nube a quién pertenece cada @ (desde 4.5.12): si el nuevo ya es mío (p. ej. lo cambié en otro móvil) no se vuelve a crear,
@@ -4603,7 +4626,8 @@ const Social = {
         throw e;
       }
     }
-    S.settings.social = {username, bio, private: priv};
+    const photo = (this.me() || {}).photo; // 4.17: editar el perfil no borra la foto
+    S.settings.social = {username, bio, private: priv}; if (avOk(photo)) S.settings.social.photo = photo;
     Store.synced.prof = null; Store.mark(); await Sync.run();
   },
   /* ---- Feed 4.8: «Siguiendo» por persona seguida (ventana de tiempo sobre el id), «Descubrir» global, caché en el móvil ---- */
@@ -5077,7 +5101,24 @@ function renderTabs(){
 
 /* ---------- Vistas sociales ---------- */
 const n7Of = uid => uid === Social.myUid() ? inRange(Date.now() - 7 * 864e5, Date.now() + 1).length : (((Social.users.get(uid) || {}).profile || {}).stats || {}).n7;
-const avatar = (name, cls = '', n7) => `<span class="avatar ${cls}${n7 >= 3 ? ' hot' : ''}" aria-hidden="true"${n7 > 0 ? ` style="--aro:${heat(Math.min(1, .1 + n7 * .2))}"` : ''}>${esc((name || '?').slice(0, 1).toUpperCase())}</span>`;
+/* 4.17 · Foto de perfil: JPEG cuadrado de AV.px (data URL en profiles.photo y en S.settings.social.photo). Se pinta con una URL blob
+   por foto (AV.url) para no meter decenas de KB en cada render. Sin foto, o si la persona está bloqueada, la inicial de siempre. */
+const AV = {px: 160, max: 16000, box: 240, urls: new Map(), re: /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/};
+const avOk = v => typeof v === 'string' && v.length <= 40000 && AV.re.test(v);
+function avUrl(v){
+  let u = AV.urls.get(v); if (u) return u;
+  try { const b = atob(v.slice(v.indexOf(',') + 1)), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); u = URL.createObjectURL(new Blob([a], {type: 'image/jpeg'})); } catch (e) { return ''; }
+  if (AV.urls.size >= 300) { const [k, x] = AV.urls.entries().next().value; URL.revokeObjectURL(x); AV.urls.delete(k); }
+  AV.urls.set(v, u); return u;
+}
+function avPhoto(uid){
+  if (!uid || isBlocked(uid)) return '';
+  const v = uid === Social.myUid() ? (Social.me() || {}).photo : (Social.userOf(uid) || {}).photo;
+  return avOk(v) ? avUrl(v) : '';
+}
+const avatar = (name, cls = '', n7, uid) => { const ph = avPhoto(uid); return `<span class="avatar ${cls}${n7 >= 3 ? ' hot' : ''}${ph ? ' av-ph' : ''}" aria-hidden="true"${n7 > 0 ? ` style="--aro:${heat(Math.min(1, .1 + n7 * .2))}"` : ''}>${ph ? `<img src="${ph}" alt="" decoding="async">` : esc((name || '?').slice(0, 1).toUpperCase())}</span>`; };
+// Mi avatar tocable para cambiar la foto (solo con perfil social; sin perfil, la inicial sin más)
+const myAvatar = (name, cls = '', n7) => Social.ready() ? `<button class="av-btn" data-act="av-edit" aria-label="${(Social.me() || {}).photo ? 'Cambiar foto de perfil' : 'Poner foto de perfil'}">${avatar(name, cls, n7, Social.myUid())}<span class="av-cam" aria-hidden="true">${ICON.camera}</span></button>` : avatar(name, cls, n7);
 /* 4.10.3 · Foto doble (trasera + frontal), obligatoria para publicar. Siempre en el momento: sin galería.
    En iPhone el navegador no deja abrir las dos cámaras a la vez: la trasera al pulsar y, al momento, la frontal con cuenta atrás.
    Resultado: un solo JPEG 3:4 (≤260 KB, cabe en posts.photo sin tocar las reglas) con la frontal en miniatura arriba a la izquierda.
@@ -5239,7 +5280,7 @@ function postCardH(p, opt){
   const menu = `<button class="iconbtn post-more" data-act="soc-menu" data-id="${id}" aria-label="Más opciones">${ICON.dots}</button>`;
   const head = opt.noHead
     ? `<div class="post-date"><span>${esc(fmtDate(p.start, false))} · ${esc(ago(p.start))}${p.aud === 'fol' ? ' · 🔒 Solo seguidores' : ''}</span>${menu}</div>`
-    : `<div class="post-head"><button class="who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(nameOfPost(p), 'sm', n7Of(p.uid))}<span><b>${esc(nameOfPost(p))}</b><small>@${esc(userNameOfPost(p))} · ${esc(ago(p.start))}${p.aud === 'fol' ? ' · <span role="img" aria-label="Solo sus seguidores" title="Solo sus seguidores">🔒</span>' : ''}</small></span></button>${menu}</div>`;
+    : `<div class="post-head"><button class="who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(nameOfPost(p), 'sm', n7Of(p.uid), p.uid)}<span><b>${esc(nameOfPost(p))}</b><small>@${esc(userNameOfPost(p))} · ${esc(ago(p.start))}${p.aud === 'fol' ? ' · <span role="img" aria-label="Solo sus seguidores" title="Solo sus seguidores">🔒</span>' : ''}</small></span></button>${menu}</div>`;
   const phKnown = Social.photos && Social.photos.has(p.id), photoOk = p.hasPhoto && !(phKnown && !Social.photos.get(p.id)) && !Social.photoFail.has(p.id);
   const dur = Math.max(0, (+p.end || 0) - (+p.start || 0)), sets = Number.isFinite(+p.sets) && p.sets != null ? +p.sets : ex.reduce((a, e) => a + (Array.isArray(e.sets) ? e.sets.length : 0), 0);
   const rows = ex.slice(0, 2).map(e => { const ss = Array.isArray(e.sets) ? e.sets : [], b = ss.length ? exBestInSets(ss, e.type) : null; return `<span><b>${ss.length} ×</b><i class="nm">${esc(e.name)}</i>${b ? `<em>${esc(setText(b, e.type))}</em>` : '<em></em>'}</span>`; }).join('');
@@ -5445,6 +5486,7 @@ function viewBlocked(){
 function socialSetupHTML(edit){
   const p = Social.me() || {}, sug = norm(Cloud.session ? (Cloud.session.name || Cloud.session.email.split('@')[0]) : '').replace(/ /g, '').slice(0, 20);
   return `<div class="card stack">${edit ? '' : `<h2>Entrena con tus amigos</h2><div class="muted">Crea tu perfil para seguir a tus amigos, ver sus entrenos, darles me gusta y comentar. Tus medidas y datos privados no se comparten nunca.</div>`}
+    ${edit ? avRowHTML() : ''}
     ${edit && Cloud.session ? `<label class="f">Nombre (el que se ve en el clan y el feed)<input id="soName" value="${esc(Cloud.session.name || '')}" maxlength="40" autocomplete="nickname"></label>` : ''}
     <label class="f">Nombre de usuario<div class="at"><span>@</span><input id="soUser" value="${esc(p.username || sug)}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20"></div></label>
     <div id="soMsg" class="small err"></div>
@@ -5472,7 +5514,7 @@ function viewSocial(){
   if (Social.me().private) h += `<div class="card row between small"><span>🔒 Tu perfil es privado: solo tus seguidores ven tus entrenos.</span><button class="linkbtn" data-act="soc-edit">Cambiar</button></div>`;
   if (mode === 'discover') {
     let sg = []; try { sg = (Social.suggestions() || []).filter(x => !isBlocked(x.uid || x.id)).slice(0, 8); } catch (e) {}
-    if (sg.length) h += `<div class="soc-sug"><b>Gente que entrena</b><div class="sug">${sg.map(s => { const uid = s.uid || s.id, u = Social.userOf(uid) || s; return `<div><button class="who" data-act="soc-user" data-id="${esc(uid)}">${avatar(u.name || u.username || '?', 'sm', n7Of(uid))}<b>${esc(shortName(u.name || u.username))}</b></button><button class="btn sm" data-act="soc-follow" data-id="${esc(uid)}">Seguir</button></div>`; }).join('')}</div></div>`;
+    if (sg.length) h += `<div class="soc-sug"><b>Gente que entrena</b><div class="sug">${sg.map(s => { const uid = s.uid || s.id, u = Social.userOf(uid) || s; return `<div><button class="who" data-act="soc-user" data-id="${esc(uid)}">${avatar(u.name || u.username || '?', 'sm', n7Of(uid), uid)}<b>${esc(shortName(u.name || u.username))}</b></button><button class="btn sm" data-act="soc-follow" data-id="${esc(uid)}">Seguir</button></div>`; }).join('')}</div></div>`;
   }
   if (!list.length) {
     if (st.err) h += st.err === 'offline' ? socEmpty('📡', 'Sin conexión', 'Conéctate para ver qué han entrenado tus amigos.', [['soc-refresh', 'Reintentar', 'primary']]) : socEmpty('⚠️', 'No se ha podido cargar', 'Inténtalo de nuevo en un momento.', [['soc-refresh', 'Reintentar', 'primary']]);
@@ -5516,7 +5558,7 @@ function detLikeLine(likes, me){
 function cmtHTML(m, p, me, mine){
   const uid = String(m.uid || ''), nm = detName(uid), id = String(m._id || ''), can = uid === me || mine || Mod.admin, open = CMX.has(id);
   if (isBlocked(uid)) return '';
-  return `<div class="comment" data-cid="${esc(id)}">${avatar(nm, 'sm')}<div class="cm-b"><div class="cm-h"><b>${esc(nm)}</b><span class="muted">· ${esc(ago(+m.ts || 0))}</span>${uid !== me ? `<button class="cm-del${can ? ' cm-rep' : ''}" data-act="soc-report-c" data-id="${esc(p.id)}" data-c="${esc(id)}">Denunciar</button>` : ''}${can ? `<button class="cm-del" data-act="soc-del-comment" data-id="${esc(p.id)}" data-c="${esc(id)}">Borrar</button>` : ''}</div><div class="cm-t${open ? ' open' : ''}">${esc(m.text)}</div><button class="cm-more" data-act="soc-cmt-more" data-c="${esc(id)}" hidden>${open ? 'ver menos' : 'ver más'}</button></div></div>`;
+  return `<div class="comment" data-cid="${esc(id)}">${avatar(nm, 'sm', 0, uid)}<div class="cm-b"><div class="cm-h"><b>${esc(nm)}</b><span class="muted">· ${esc(ago(+m.ts || 0))}</span>${uid !== me ? `<button class="cm-del${can ? ' cm-rep' : ''}" data-act="soc-report-c" data-id="${esc(p.id)}" data-c="${esc(id)}">Denunciar</button>` : ''}${can ? `<button class="cm-del" data-act="soc-del-comment" data-id="${esc(p.id)}" data-c="${esc(id)}">Borrar</button>` : ''}</div><div class="cm-t${open ? ' open' : ''}">${esc(m.text)}</div><button class="cm-more" data-act="soc-cmt-more" data-c="${esc(id)}" hidden>${open ? 'ver menos' : 'ver más'}</button></div></div>`;
 }
 function cmtFit(){ document.querySelectorAll('#comments .cm-t').forEach(t => { const b = t.nextElementSibling; if (b) b.hidden = !(t.classList.contains('open') || t.scrollHeight > t.clientHeight + 1); }); }
 function cmtSync(){ const f = $('#cmtForm'), i = $('#cmtText'); if (f && i) f.querySelector('button').disabled = CMT_BUSY || !i.value.trim(); }
@@ -5563,7 +5605,7 @@ function viewPost(pid){
   const pr = Social.userOf(p.uid), dt = new Date(num(p.start)), when = fmtDate(num(p.start), false) + ', ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
   const mus = Object.entries(isO(p.muscles) ? p.muscles : {}).filter(([k, n]) => Object.prototype.hasOwnProperty.call(MUSCLES, k) && num(n) > 0).map(([k, n]) => [k, num(n)]), mc = Object.fromEntries(mus), m7 = mus.sort((a, b) => b[1] - a[1]);
   let h = `<div class="card stack det-top">
-    <div class="row"><button class="row who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(detName(p.uid), 'sm', n7Of(p.uid))}<span><b>${esc(detName(p.uid))}</b><small>${pr && pr.username ? '@' + esc(pr.username) + ' · ' : ''}${esc(when)}</small></span></button></div>
+    <div class="row"><button class="row who" data-act="soc-user" data-id="${esc(p.uid)}">${avatar(detName(p.uid), 'sm', n7Of(p.uid), p.uid)}<span><b>${esc(detName(p.uid))}</b><small>${pr && pr.username ? '@' + esc(pr.username) + ' · ' : ''}${esc(when)}</small></span></button></div>
     <h2 class="det-title">${esc(p.title)}</h2>${p.notes ? `<p class="det-notes">${esc(p.notes)}</p>` : ''}`;
   if (p.hasPhoto) { h += `<div class="det-photo" data-dp="${esc(p.id)}"></div>`; setTimeout(() => detPhotoLoad(p), 0); }
   if (mine && S.workouts.some(w => w.id === p.wid)) h += `<div class="stack"><button class="btn sm" data-act="soc-photo" data-id="${esc(p.id)}">${ICON.camera.replace('<svg', '<svg width="18" height="18"')} ${p.hasPhoto ? 'Cambiar foto' : 'Añadir foto'}</button></div>`;
@@ -5598,7 +5640,8 @@ function viewUser(uid){
   if (!isMe && isBlocked(uid)) return `<div class="card empty">${EI('🚫')}<h3>Has bloqueado a ${esc(nm)}</h3><div class="small muted">No ves nada suyo y no puede comentarte, seguirte ni mandarte avisos.</div><button class="btn" data-act="soc-unblock" data-id="${esc(uid)}">Desbloquear</button></div>`;
   const n7 = isMe ? n7Of(uid) : st.n7, sid = esc(uid);
   const rk = isMe ? rkPublic() : Number.isInteger(p.rank) && p.rank >= 0 && p.rank <= 24 ? p.rank : null;
-  let h = `<div class="uhead">${avatar(p.name, '', n7)}<div class="ub"><h2>${esc(p.name)}</h2>${rk != null ? rkTag(rk, 18, 'sm') : ''}<div class="small muted ur">@${esc(p.username)}${!isMe && Social.followers.includes(uid) ? ' <span class="pill accent">Te sigue</span>' : ''}${priv ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="ubio">${esc(p.bio)}</div>` : ''}</div></div>
+  const av = isMe ? myAvatar(p.name, '', n7) : avatar(p.name, '', n7, uid);
+  let h = `<div class="uhead">${av}<div class="ub"><h2>${esc(p.name)}</h2>${rk != null ? rkTag(rk, 18, 'sm') : ''}<div class="small muted ur">@${esc(p.username)}${!isMe && Social.followers.includes(uid) ? ' <span class="pill accent">Te sigue</span>' : ''}${priv ? ' · perfil privado' : ''}</div>${p.bio ? `<div class="ubio">${esc(p.bio)}</div>` : ''}</div></div>
     <div class="stats" style="padding:0 4px${priv ? ';grid-template-columns:repeat(2,1fr)' : ''}"><button class="stat" data-act="soc-people" data-id="${sid}" data-k="followers"><b>${u.followers.length}</b><span>Seguidores</span></button><button class="stat" data-act="soc-people" data-id="${sid}" data-k="following"><b>${u.following.length}</b><span>Siguiendo</span></button>${priv ? '' : `<div class="stat"><b>${isMe ? S.workouts.length : clamp(st.workouts, 0, 1e6)}</b><span>Entrenos</span></div>`}</div>`;
   const req = Social.reqOut.has(uid), canSee = isMe || !priv || fol, asks = !isMe && Social.reqIn.includes(uid);
   if (asks) h += `<div class="card row between"><span class="small"><b>${esc(nm)}</b> quiere seguirte</span><span class="row" style="gap:6px"><button class="btn sm" data-act="soc-rej" data-id="${sid}">Rechazar</button><button class="btn sm primary" data-act="soc-acc" data-id="${sid}">Aceptar</button></span></div>`;
@@ -5636,7 +5679,7 @@ function personRow(p, uid, opt = {}){
   const me = Social.myUid(); if (isBlocked(uid || (p && p.uid))) return ''; // 4.14: sin personas bloqueadas en buscador ni listas
   if (!p) return `<div class="person muted small">Cargando…</div>`;
   const fol = Social.following.has(p.uid), req = !fol && Social.reqOut.has(p.uid), id = esc(p.uid);
-  return `<div class="person"><button class="row who" data-act="soc-user" data-id="${id}">${avatar(p.name, 'sm', n7Of(p.uid))}<span><b>${esc(p.name)}</b><small>@${esc(p.username)}${p.uid !== me && Social.followers.includes(p.uid) ? ' <span class="pill accent">Te sigue</span>' : ''}</small></span></button>${p.uid !== me ? `<button class="btn sm pbtn ${fol ? '' : 'primary'}${opt.wide ? ' wide' : ''}" data-act="${fol ? 'soc-unfollow' : req ? 'soc-unreq' : 'soc-follow'}" data-id="${id}">${fol ? 'Siguiendo' : req ? 'Solicitado' : opt.label || 'Seguir'}</button>` : ''}</div>`;
+  return `<div class="person"><button class="row who" data-act="soc-user" data-id="${id}">${avatar(p.name, 'sm', n7Of(p.uid), p.uid)}<span><b>${esc(p.name)}</b><small>@${esc(p.username)}${p.uid !== me && Social.followers.includes(p.uid) ? ' <span class="pill accent">Te sigue</span>' : ''}</small></span></button>${p.uid !== me ? `<button class="btn sm pbtn ${fol ? '' : 'primary'}${opt.wide ? ' wide' : ''}" data-act="${fol ? 'soc-unfollow' : req ? 'soc-unreq' : 'soc-follow'}" data-id="${id}">${fol ? 'Siguiendo' : req ? 'Solicitado' : opt.label || 'Seguir'}</button>` : ''}</div>`;
 }
 function searchResHTML(){
   const s = Social.search, q = nrm(s.q), inv = `<div class="card stack"><h3>Invita a tus amigos</h3><div class="small muted">Mándales el enlace de la app; cuando creen su cuenta y su perfil podrás buscarlos aquí.</div><button class="btn" data-act="soc-invite">Copiar enlace de invitación</button></div>`;
@@ -5688,11 +5731,11 @@ function viewNotifs(){
     const x = g.items[0], dot = isNew ? '<i class="ndot" role="img" aria-label="Nuevo"></i>' : '', tail = `<span class="nt-time">${ago(g.ts)}</span>`;
     const chev = `<span class="nchev" aria-hidden="true">${ICON.chev}</span>`;
     if (x.rel) return `<div class="nrow"><button class="notif" data-act="cl-goto" data-id="${esc(x.rel)}"><span class="cl-emo sm" aria-hidden="true">${esc(x.cemoji || '🛡️')}</span><span class="nb"><span class="nt"><b>${esc(cut(x.cname || 'Un clan', 30))}</b> ${T[x.type] || ''}${x.text ? `: <span class="muted">«${esc(cut(x.text, 80))}»</span>` : ''}</span>${tail}</span>${dot}${chev}</button></div>`;
-    if (g.type === 'creq' || g.type === 'cok') return `<div class="nrow"><button class="notif" data-act="cl-home" data-k="${g.type === 'creq' ? 'req' : ''}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${nameB(x)} ${g.type === 'creq' ? 'quiere unirse a' : 'te ha aceptado en'} <b>${esc(cut(`${x.cemoji || '🛡️'} ${x.cname || 'tu clan'}`, 34))}</b></span>${tail}</span>${dot}${chev}</button></div>`;
-    if (g.type === 'freq' || g.type === 'fok') return `<div class="nrow"><button class="notif" data-act="soc-user" data-id="${esc(x.from)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${nameB(x)} ${g.type === 'fok' ? 'ha aceptado tu solicitud: ya ves sus entrenos' : 'te ha pedido seguirte'}</span>${tail}</span>${dot}${chev}</button></div>`;
+    if (g.type === 'creq' || g.type === 'cok') return `<div class="nrow"><button class="notif" data-act="cl-home" data-k="${g.type === 'creq' ? 'req' : ''}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from), x.from)}<span class="nb"><span class="nt">${nameB(x)} ${g.type === 'creq' ? 'quiere unirse a' : 'te ha aceptado en'} <b>${esc(cut(`${x.cemoji || '🛡️'} ${x.cname || 'tu clan'}`, 34))}</b></span>${tail}</span>${dot}${chev}</button></div>`;
+    if (g.type === 'freq' || g.type === 'fok') return `<div class="nrow"><button class="notif" data-act="soc-user" data-id="${esc(x.from)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from), x.from)}<span class="nb"><span class="nt">${nameB(x)} ${g.type === 'fok' ? 'ha aceptado tu solicitud: ya ves sus entrenos' : 'te ha pedido seguirte'}</span>${tail}</span>${dot}${chev}</button></div>`;
     if (g.type === 'follow') {
       const fol = Social.following.has(x.from);
-      return `<div class="nrow${fol ? '' : ' nr-fol'}"><button class="notif" data-act="soc-user" data-id="${esc(x.from)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${nameB(x)} ha empezado a seguirte</span>${tail}</span>${dot}${chev}</button>
+      return `<div class="nrow${fol ? '' : ' nr-fol'}"><button class="notif" data-act="soc-user" data-id="${esc(x.from)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from), x.from)}<span class="nb"><span class="nt">${nameB(x)} ha empezado a seguirte</span>${tail}</span>${dot}${chev}</button>
         ${fol ? '' : `<button class="btn sm nfol" data-act="soc-follow" data-id="${esc(x.from)}">Seguir</button>`}</div>`;
     }
     const who = []; g.items.forEach(i => { if (!who.some(w => w.from === i.from)) who.push(i); });
@@ -5701,12 +5744,12 @@ function viewNotifs(){
     const title = `«${esc(cut(x.title || 'Entreno', 40))}»`;
     const txt = g.type === 'like' ? `${names} ${who.length === 1 ? 'le ha dado' : 'le han dado'} me gusta a ${title}`
       : `${names} ${who.length === 1 ? 'ha comentado' : 'han comentado'} en ${title}${x.text ? `: <span class="muted">“${esc(cut(x.text, 80))}”</span>` : ''}`;
-    return `<div class="nrow"><button class="notif" data-act="soc-notif" data-k="${g.type}" data-id="${esc(g.pid)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from))}<span class="nb"><span class="nt">${txt}</span>${tail}</span>${dot}${chev}</button></div>`;
+    return `<div class="nrow"><button class="notif" data-act="soc-notif" data-k="${g.type}" data-id="${esc(g.pid)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from), x.from)}<span class="nb"><span class="nt">${txt}</span>${tail}</span>${dot}${chev}</button></div>`;
   };
   const nw = Social.notifs.filter(x => x.ts > since), old = Social.notifs.filter(x => x.ts <= since);
   let h = '';
   const rq = Social.reqIn.filter(id => !isBlocked(id));
-  if (rq.length) h += `<div class="sect-t">Solicitudes para seguirte</div>` + rq.map(id => { const p = Social.userOf(id), nm = p ? p.name || p.username : 'Alguien'; return `<div class="nrow nreq"><button class="notif" data-act="soc-user" data-id="${esc(id)}">${avatar(nm, 'sm', n7Of(id))}<span class="nb"><span class="nt"><b>${esc(shortName(nm) || 'Alguien')}</b>${p && p.username ? ` <span class="muted">@${esc(p.username)}</span>` : ''}</span></span></button><button class="btn sm" data-act="soc-rej" data-id="${esc(id)}">Rechazar</button><button class="btn sm primary" data-act="soc-acc" data-id="${esc(id)}">Aceptar</button></div>`; }).join('');
+  if (rq.length) h += `<div class="sect-t">Solicitudes para seguirte</div>` + rq.map(id => { const p = Social.userOf(id), nm = p ? p.name || p.username : 'Alguien'; return `<div class="nrow nreq"><button class="notif" data-act="soc-user" data-id="${esc(id)}">${avatar(nm, 'sm', n7Of(id), id)}<span class="nb"><span class="nt"><b>${esc(shortName(nm) || 'Alguien')}</b>${p && p.username ? ` <span class="muted">@${esc(p.username)}</span>` : ''}</span></span></button><button class="btn sm" data-act="soc-rej" data-id="${esc(id)}">Rechazar</button><button class="btn sm primary" data-act="soc-acc" data-id="${esc(id)}">Aceptar</button></div>`; }).join('');
   if (n.err) h += `<div class="card row between"><span class="small">No se han podido actualizar los avisos.</span><button class="btn sm" data-act="soc-notifs-retry">Reintentar</button></div>`;
   if (!Social.notifs.length && !rq.length) return h + `<div class="card empty">${EI('🔔')}<h3>Sin avisos todavía</h3><div>Aquí verás los me gusta, los comentarios y quién empieza a seguirte.</div></div>`;
   if (nw.length) h += `<div class="sect-t">Nuevos</div>` + group(nw).map(g => row(g, true)).join('') + (old.length ? `<div class="sect-t">Anteriores</div>` : '');
@@ -5728,7 +5771,7 @@ function viewCompare(uid){
   const bestMine = {}; S.workouts.forEach(w => w.exercises.forEach(e => { const t = exOf(e.exId).type; const sc = exScore(e.sets, t); if (sc > (bestMine[e.exId] || 0)) bestMine[e.exId] = sc; }));
   const bestThem = {}; u.posts.forEach(x => x.ex.forEach(e => { const sc = exScore(e.sets, e.type); if (sc > ((bestThem[e.id] || {}).v || 0)) bestThem[e.id] = {v: sc, name: e.name, type: e.type}; }));
   const common = Object.keys(bestThem).filter(id => bestMine[id]);
-  return `<div class="row between"><div class="row">${avatar(Social.myName(), 'sm')}<b>Tú</b></div><span class="muted">vs</span><div class="row"><b>${esc(p.name)}</b>${avatar(p.name, 'sm')}</div></div>
+  return `<div class="row between"><div class="row">${avatar(Social.myName(), 'sm', 0, Social.myUid())}<b>Tú</b></div><span class="muted">vs</span><div class="row"><b>${esc(p.name)}</b>${avatar(p.name, 'sm', 0, p.uid)}</div></div>
     <div class="card"><h3>Últimos 30 días</h3><table class="sets"><tr><th></th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(String(p.name || '').split(' ')[0])}</th></tr>${row('Entrenos', a.n, b.n, v => v)}${row('Tiempo', a.ms, b.ms, v => fmtDur(v))}${row('Volumen', a.vol, b.vol, v => fmtKg(v))}${row('Series', a.sets, b.sets, v => v)}</table>${partial ? `<div class="small muted">Tiene ${plural(b.n, 'entreno', 'entrenos')} en estos 30 días, pero su app aún no comparte el resumen: tiempo, volumen y series solo cuentan ${theirs.length ? 'lo que ha publicado' : 'lo publicado (nada)'}. Se completará cuando actualice Hierro.</div>` : ''}</div>
     <div class="card stack"><h3>Reparto muscular</h3><div class="small muted">Relleno: tú · discontinuo: ${esc(String(p.name || '').split(' ')[0])}</div>${radar(gm, gt)}</div>
     <div class="card stack"><h3>Ejercicios en común</h3>${common.length ? `<table class="sets"><tr><th>Ejercicio</th><th style="text-align:right">Tú</th><th style="text-align:right">${esc(String(p.name || '').split(' ')[0])}</th></tr>${common.map(id => { const t = bestThem[id].type; const f = v => fmtN(v) + scoreUnit(t); return `<tr><td>${esc(bestThem[id].name)}</td><td class="num" style="text-align:right"><b${bestMine[id] >= bestThem[id].v ? ' class="pr"' : ''}>${f(bestMine[id])}</b></td><td class="num" style="text-align:right"><b${bestThem[id].v > bestMine[id] ? ' class="pr"' : ''}>${f(bestThem[id].v)}</b></td></tr>`; }).join('')}</table><div class="small muted">Para peso y repeticiones se compara el 1RM estimado de la mejor serie.</div>` : '<div class="small muted">Todavía no tenéis ejercicios en común en sus entrenos publicados.</div>'}</div>`;
@@ -6176,7 +6219,7 @@ const A = {
   'soc-user'(el){ go({type: 'user', id: el.dataset.id}); },
   'soc-report'(el){ const p = Social.posts.get(el.dataset.id); if (p) Mod.report('post', 'posts/' + p.id, p.uid, [p.title, p.notes].filter(Boolean).join(' · ') + (p.hasPhoto ? ' [con foto]' : '')); },
   'soc-report-c'(el){ const pid = el.dataset.id, cid = el.dataset.c, c = Social.comments.get(pid), m = c && c.list.find(x => x._id === cid); if (m) Mod.report('comment', `posts/${pid}/comments/${cid}`, m.uid, m.text); },
-  'soc-report-u'(el){ const uid = el.dataset.id, u = Social.users.get(uid), pr = u && u.profile; Mod.report('user', 'profiles/' + uid, uid, pr ? `${pr.name || ''} @${pr.username || ''}${pr.bio ? ' · ' + pr.bio : ''}` : ''); },
+  'soc-report-u'(el){ const uid = el.dataset.id, u = Social.users.get(uid), pr = u && u.profile; Mod.report('user', 'profiles/' + uid, uid, pr ? `${pr.name || ''} @${pr.username || ''}${pr.bio ? ' · ' + pr.bio : ''}${pr.photo ? ' · con foto de perfil' : ''}` : ''); },
   'soc-block'(el){ Mod.block(el.dataset.id); },
   'soc-unblock'(el){ Mod.unblock(el.dataset.id); },
   'mod-unblock'(el){ Mod.unblock(el.dataset.id); },
@@ -7114,7 +7157,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
     const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : fmtN(r.v, 0);
     const medal = has && r.v > 0 ? ['🥇', '🥈', '🥉'][pos - 1] : null;
     const tag = opts.badge && r.c ? ` <span class="rl-tag" aria-label="${esc(r.c.name)}">${esc(r.c.emoji)}</span>` : '';
-    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(r.uid)}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7))}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${esc(sub)}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has && unit ? `<small>${unit}</small>` : ''}</span></button>`;
+    return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(r.uid)}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7), r.uid)}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${esc(sub)}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has && unit ? `<small>${unit}</small>` : ''}</span></button>`;
   }).join('');
 }
 function clanAwardsHTML(c){
@@ -7413,7 +7456,7 @@ function viewPique(id){
   const cats = [['🔥 Días', A.days, B.days, v => fmtN(v)], ['✨ Chiquipuntos', A.prs, B.prs, v => fmtN(v)], ['📈 Mejora', A.impr, B.impr, v => '+' + fmtN(v) + ' %'], ['Puntos', A.avg, B.avg, v => fmtN(v)]];
   h += `<div class="card stack"><div class="row between"><h3>Por categorías</h3><span class="small muted">media por activo</span></div><div class="cmp pq-cmp"><div class="a hd">${esc(mine.emoji)} ${esc(mine.name)}</div><span></span><div class="b hd">${esc(o.name)} ${esc(o.emoji)}</div>${cats.map(([l, x, y, f]) => { const mx = Math.max(x, y, 1e-9); return `<div class="a${x > y ? ' w' : ''}">${f(x)}<i style="width:${Math.round(56 * x / mx)}px"></i></div><span>${l}</span><div class="b${y > x ? ' w' : ''}"><i style="width:${Math.round(56 * y / mx)}px"></i>${f(y)}</div>`; }).join('')}</div></div>`;
   // cara a cara: 1.º contra 1.º…
-  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}"${m.blocked ? '' : ` data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(m.uid)}"`}>${avatar(m.name, 'xs')}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
+  const n = Math.min(A.rows.length, B.rows.length), side = (m, cls, win) => `<button class="pq-p ${cls}${win ? ' win' : ''}${m.me ? ' me' : ''}"${m.blocked ? '' : ` data-act="${m.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(m.uid)}"`}>${avatar(m.name, 'xs', 0, m.uid)}<span class="pq-nm"><b>${m.me ? 'Tú' : esc(m.name)}</b><em class="num">${fmtN(m.v.pts, 0)} pts</em></span></button>`;
   const pairs = [...Array(n)].map((_, i) => { const x = A.rows[i], y = B.rows[i], t = x.v.pts + y.v.pts, p = t ? Math.round(x.v.pts / t * 100) : 50;
     return `<div class="pq-pair">${side(x, 'l', x.v.pts > y.v.pts)}<span class="pq-pos num">${i + 1}.º</span>${side(y, 'r', y.v.pts > x.v.pts)}<i class="pq-mini${t ? '' : ' none'}"><span style="width:${p}%"></span></i></div>`; }).join('');
   const rest = [...A.rows.slice(n), ...B.rows.slice(n)];
@@ -7435,7 +7478,7 @@ function viewPique(id){
       <div class="chips pq-taunts" aria-label="Piques rápidos">${TAUNTS.map((t, i) => `<button class="chip" data-act="cl-taunt" data-id="${r._id}" data-i="${i}">${esc(t)}</button>`).join('')}</div>` : ''}
     ${w.err ? `<div class="small muted">${esc(w.err)}</div>` : !w.loaded ? '<div class="small muted">Cargando…</div>' : w.list.filter(m => !isBlocked(m.uid)).length ? `<div class="pq-msgs">${w.list.filter(m => !isBlocked(m.uid)).map(m => { const c = m.clan === o._id ? o : mine, del = m.uid === me || own || Mod.admin;
       const nm = wallName(m.uid);
-      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(nm, 'xs')}<div class="pq-mb"><div class="pq-mh"><b>${esc(nm)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${m.uid !== me ? `<button class="iconbtn" data-act="cl-wall-report" data-id="${r._id}" data-m="${m._id}" aria-label="Denunciar mensaje" title="Denunciar">⚑</button>` : ''}${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
+      return `<div class="pq-msg${m.clan === mine._id ? ' us' : ''}">${avatar(nm, 'xs', 0, m.uid)}<div class="pq-mb"><div class="pq-mh"><b>${esc(nm)}</b><span aria-hidden="true">${esc(c.emoji)}</span><small>${ago(m.ts)}</small></div><div class="pq-mt">${esc(m.text)}</div></div>${m.uid !== me ? `<button class="iconbtn" data-act="cl-wall-report" data-id="${r._id}" data-m="${m._id}" aria-label="Denunciar mensaje" title="Denunciar">⚑</button>` : ''}${del ? `<button class="iconbtn" data-act="cl-wall-del" data-id="${r._id}" data-m="${m._id}" aria-label="Borrar mensaje">${ICON.x}</button>` : ''}</div>`; }).join('')}</div>` : '<div class="rl-empty sm"><span aria-hidden="true">💬</span><div><b>Nadie ha picado todavía</b><small>Rompe el hielo con un pique rápido.</small></div></div>'}</div>`;
   if (own) h += `<button class="btn ghost danger block" data-act="cl-rel-end" data-id="${r._id}">${r.status === 'activa' ? 'Terminar el pique' : 'Cancelar el pique'}</button>`;
   return h;
 }
@@ -7472,7 +7515,7 @@ function clanCmpHTML(uid){
   const d = x.pts - y.pts;
   const verdict = !b ? `${first} todavía no compite en la liga.` : d > 0 ? `💪 Le sacas <b>${plural(d, 'punto', 'puntos')}</b> ${perThis(per)}` : d < 0 ? `😤 Te saca <b>${plural(-d, 'punto', 'puntos')}</b> ${perThis(per)}. ¡A por ${first}!` : `🤝 Empate ${perThis(per)}: el próximo entreno decide`;
   return `<div id="clCmp" class="stack" data-id="${esc(uid)}">
-    <div class="rl-cmph"><div class="row">${avatar(Social.myName(), 'sm')}<b>Tú</b></div><span class="pq-vs sm">VS</span><div class="row" style="justify-content:flex-end"><b>${first}</b>${avatar(name, 'sm')}</div></div>
+    <div class="rl-cmph"><div class="row">${avatar(Social.myName(), 'sm', 0, Social.myUid())}<b>Tú</b></div><span class="pq-vs sm">VS</span><div class="row" style="justify-content:flex-end"><b>${first}</b>${avatar(name, 'sm', 0, uid)}</div></div>
     ${perSeg(per)}
     <div class="cmp pq-cmp">${rows.map(([l, p, q, f]) => { const mx = Math.max(p, q, 1e-9); return `<div class="a${p > q ? ' w' : ''}">${f(p)}<i style="width:${Math.round(56 * p / mx)}px"></i></div><span>${l}</span><div class="b${q > p ? ' w' : ''}"><i style="width:${Math.round(56 * q / mx)}px"></i>${f(q)}</div>`; }).join('')}</div>
     ${y.partial ? '<div class="small muted">Su app no está actualizada: del año solo cuentan sus 8 últimas semanas.</div>' : ''}
@@ -7573,7 +7616,7 @@ Object.assign(A, {
     if (!again) closeModal();
     const c = Clan.mine(); if (!c || c.owner !== Social.myUid()) return;
     const ms = Clan.members(c).filter(m => !m.me), rq = Clan.people(c.requests || []);
-    const who = m => `<button class="row who" data-act="cl-prof" data-id="${esc(m.uid)}">${avatar(m.name, 'sm')}<span><b>${esc(m.name)}</b><small>${m.s && m.s.username ? '@' + esc(m.s.username) : ''}</small></span></button>`;
+    const who = m => `<button class="row who" data-act="cl-prof" data-id="${esc(m.uid)}">${avatar(m.name, 'sm', 0, m.uid)}<span><b>${esc(m.name)}</b><small>${m.s && m.s.username ? '@' + esc(m.s.username) : ''}</small></span></button>`;
     const reqH = rq.length ? `<h3>Quieren unirse</h3><div class="cl-people">${rq.map(m => `<div class="person">${who(m)}<div class="row cl-rq-b"><button class="btn sm" data-act="cl-rej" data-id="${esc(m.uid)}">Rechazar</button><button class="btn sm primary" data-act="cl-acc" data-id="${esc(m.uid)}">Aceptar</button></div></div>`).join('')}</div>` : '';
     const memH = ms.length ? `${rq.length ? '<h3>Miembros</h3>' : ''}<div class="cl-people">${ms.map(m => `<div class="person">${who(m)}<button class="btn sm danger" data-act="cl-kick" data-id="${esc(m.uid)}">Expulsar</button></div>`).join('')}</div><div class="small muted">Quien expulses no podrá volver a unirse.</div>` : '<div class="small muted">Todavía estás tú solo. Invita a tus amigos.</div>';
     modal('Solicitudes y miembros', `<div class="stack" id="clPeople">${reqH}${memH}</div>`);
@@ -7705,7 +7748,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.16.2';
+const APP_VERSION = '4.17.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -7951,6 +7994,79 @@ rebuildEx();
   document.addEventListener('scroll', sch, true); addEventListener('resize', sch);
   new MutationObserver(sch).observe(document.body, {childList: true, subtree: true}); sch();
 })();
+/* 4.17 · Foto de perfil: elegir (el sistema ofrece galería o cámara), encuadrar en un círculo (arrastrar, pellizcar o zoom) y guardar
+   un JPEG de AV.px × AV.px de como mucho AV.max caracteres. Se guarda con Social.setPhoto y sube con el perfil. */
+const AVC = {img: null, url: '', w: 0, h: 0, z: 1, x: 0, y: 0, b: AV.box, ptrs: new Map(), d0: 0, z0: 1};
+function avPickBtn(label, cls = ''){ return `<label class="btn ${cls} av-pick" tabindex="0">${label}<input type="file" accept="image/*" class="av-file" tabindex="-1"></label>`; }
+function avRowHTML(){ const ph = !!(Social.me() || {}).photo; return `<div class="av-row">${avatar(Social.myName(), '', 0, Social.myUid())}<div class="av-b">${avPickBtn(ph ? 'Cambiar foto' : 'Poner foto', 'sm')}${ph ? '<button class="btn sm ghost danger" data-act="av-del">Quitar</button>' : ''}</div></div>`; }
+function avRefresh(){ const r = $('.av-row'); if (r && !$('#modal.open')) r.outerHTML = avRowHTML(); else render(); }
+function avFree(){ if (AVC.url) URL.revokeObjectURL(AVC.url); AVC.img = null; AVC.url = ''; AVC.ptrs.clear(); }
+function avLoad(f){
+  if (f.type && !/^image\//.test(f.type)) { toast('Elige una imagen'); return; }
+  if (f.size > 40e6) { toast('Esa imagen es demasiado grande'); return; }
+  avFree(); const url = URL.createObjectURL(f), img = new Image();
+  img.onload = () => { if (!img.naturalWidth) { img.onerror(); return; } Object.assign(AVC, {img, url, w: img.naturalWidth, h: img.naturalHeight, z: 1}); avCrop(); };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('No se ha podido abrir esa imagen'); };
+  img.src = url;
+}
+const avScale = () => Math.max(AVC.b / AVC.w, AVC.b / AVC.h) * AVC.z;
+function avClamp(){ const k = avScale(); AVC.x = clamp(AVC.x, AVC.b - AVC.w * k, 0); AVC.y = clamp(AVC.y, AVC.b - AVC.h * k, 0); }
+function avZoom(z, cx = AVC.b / 2, cy = AVC.b / 2){ const z1 = AVC.z, z2 = clamp(z, 1, 4); AVC.x = cx - (cx - AVC.x) * z2 / z1; AVC.y = cy - (cy - AVC.y) * z2 / z1; AVC.z = z2; avClamp(); avDraw(); }
+function avDraw(){
+  const im = $('#avImg'), zi = $('#avZoom'); if (!im) return;
+  im.style.width = AVC.w + 'px'; im.style.height = AVC.h + 'px';
+  im.style.transform = `translate(${AVC.x}px,${AVC.y}px) scale(${avScale()})`;
+  if (zi && +zi.value !== AVC.z) zi.value = AVC.z;
+}
+function avCrop(){
+  modal('Encuadra tu foto', `<div class="avc" id="avCrop" role="img" tabindex="0" aria-label="Vista previa de tu foto de perfil. Muévela con las flechas"><img id="avImg" src="${AVC.url}" alt=""></div>
+    <label class="f">Zoom<input type="range" class="av-zoom" id="avZoom" min="1" max="4" step="0.01" value="1"></label>
+    <div class="small muted">Arrastra la foto para colocarla. La verán todas las personas con cuenta en Hierro, también si tu perfil es privado.</div>`,
+    `${avPickBtn('Otra foto')}<button class="btn primary" data-act="av-save">Guardar</button>`, el => {
+      const box = el.querySelector('#avCrop'); AVC.b = box.clientWidth || AV.box;
+      const k = avScale(); AVC.x = (AVC.b - AVC.w * k) / 2; AVC.y = (AVC.b - AVC.h * k) / 2; avDraw();
+      const pt = e => { const r = box.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; };
+      box.addEventListener('pointerdown', e => { box.setPointerCapture(e.pointerId); AVC.ptrs.set(e.pointerId, pt(e)); if (AVC.ptrs.size === 2) { const [a, b] = [...AVC.ptrs.values()]; AVC.d0 = Math.hypot(a.x - b.x, a.y - b.y) || 1; AVC.z0 = AVC.z; } });
+      box.addEventListener('pointermove', e => {
+        const o = AVC.ptrs.get(e.pointerId); if (!o) return; const p = pt(e); AVC.ptrs.set(e.pointerId, p);
+        if (AVC.ptrs.size === 1) { AVC.x += p.x - o.x; AVC.y += p.y - o.y; avClamp(); avDraw(); }
+        else if (AVC.ptrs.size === 2) { const [a, b] = [...AVC.ptrs.values()]; avZoom(AVC.z0 * Math.hypot(a.x - b.x, a.y - b.y) / AVC.d0, (a.x + b.x) / 2, (a.y + b.y) / 2); }
+      });
+      const up = e => { AVC.ptrs.delete(e.pointerId); if (AVC.ptrs.size === 1) AVC.z0 = AVC.z; };
+      box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+      box.addEventListener('wheel', e => { e.preventDefault(); const p = pt(e); avZoom(AVC.z * (e.deltaY < 0 ? 1.1 : 1 / 1.1), p.x, p.y); }, {passive: false});
+      el.querySelector('#avZoom').addEventListener('input', e => avZoom(+e.target.value));
+      box.addEventListener('keydown', e => { const d = {ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10]}[e.key]; if (!d) return; e.preventDefault(); AVC.x += d[0]; AVC.y += d[1]; avClamp(); avDraw(); });
+    });
+}
+function avExport(){
+  if (!AVC.img) return '';
+  const k = avScale(), sw = AVC.b / k, sx = -AVC.x / k, sy = -AVC.y / k;
+  const m = Math.max(AV.px, Math.min(800, Math.round(sw))), c1 = document.createElement('canvas'); c1.width = c1.height = m; // en dos pasos: menos dientes de sierra al reducir una foto de 12 Mpx
+  const g1 = c1.getContext('2d'); g1.fillStyle = '#fff'; g1.fillRect(0, 0, m, m); g1.imageSmoothingQuality = 'high'; g1.drawImage(AVC.img, sx, sy, sw, sw, 0, 0, m, m);
+  const c = document.createElement('canvas'); c.width = c.height = AV.px; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(c1, 0, 0, AV.px, AV.px);
+  for (let q = .86; q >= .4; q -= .08) { const v = c.toDataURL('image/jpeg', q); if (v.length <= AV.max && avOk(v)) return v; }
+  return '';
+}
+document.addEventListener('change', ev => { const i = ev.target; if (!i.classList || !i.classList.contains('av-file')) return; const f = i.files && i.files[0]; i.value = ''; if (f) avLoad(f); });
+document.addEventListener('keydown', ev => { const l = ev.target; if ((ev.key === 'Enter' || ev.key === ' ') && l.classList && l.classList.contains('av-pick')) { ev.preventDefault(); l.querySelector('input').click(); } });
+Object.assign(A, {
+  'av-edit'(){
+    const has = !!(Social.me() || {}).photo;
+    modal('Foto de perfil', `<div class="stack">${avatar(Social.myName(), 'av-big', 0, Social.myUid())}<div class="small muted">${has ? 'Es la que ven tus amigos en el feed y los comentarios.' : 'Ponte una foto para que tus amigos te reconozcan en el feed y los comentarios.'}</div></div>`,
+      `${has ? '<button class="btn ghost danger" data-act="av-del">Quitar</button>' : ''}${avPickBtn(has ? 'Cambiar foto' : 'Elegir foto', 'primary')}`);
+  },
+  'av-save'(){
+    const v = avExport();
+    if (!v || !Social.setPhoto(v)) { toast('No se ha podido preparar la foto. Prueba con otra.'); return; }
+    closeModal(); avRefresh(); toast('Foto de perfil guardada');
+  },
+  async 'av-del'(){
+    const ok = await ask('Quitar la foto', 'Volverá a salir la inicial de tu nombre.', [['0', 'Cancelar'], ['1', 'Quitar', 'danger']]);
+    closeModal(); if (ok !== '1') return;
+    Social.setPhoto(''); avRefresh(); toast('Foto quitada');
+  }
+});
 /* 4.14 · Botón/gesto Atrás (Android): una sola entrada de historial «centinela» mientras haya algo que cerrar
    (ventana, resumen, editor, subvista o pestaña distinta de Inicio). Atrás cierra lo de encima y, en Inicio sin nada abierto,
    no hay centinela y la app se cierra. Si se cierra por la UI, el centinela se retira con history.back() (sin duplicar entradas). */
