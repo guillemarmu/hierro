@@ -75,19 +75,31 @@ struct HierroLiveWidget: Widget {
     }
 }
 
+/// Separa el detalle que manda la web («Serie 2 de 3 · 35 kg × 10 reps») en la serie y el peso/repes.
+/// En cardio el valor también lleva « · » («2 km · 10 min»): se corta solo por el primero.
+private func partes(_ d: String) -> (serie: String, valor: String) {
+    guard let r = d.range(of: " · ") else { return (d, "") }
+    return (String(d[..<r.lowerBound]), String(d[r.upperBound...]))
+}
+
+/// Pantalla de bloqueo (23 nov, como la de la foto de Guillermo): arriba Hierro y el tiempo del entreno;
+/// en medio el ejercicio y «Serie 2 de 3»; abajo, grande, el peso × repes con el ✓ a la derecha.
 struct PantallaBloqueo: View {
     let st: HierroWorkoutAttributes.ContentState
     let stale: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "dumbbell.fill").foregroundColor(lila)
-                Text(st.title).font(.headline).lineLimit(1)
+            HStack(spacing: 6) {
+                Image(systemName: "dumbbell.fill").font(.caption).foregroundColor(lila)
+                Text(st.title.isEmpty ? "Hierro" : "Hierro · \(st.title)")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(tenue)
+                    .lineLimit(1)
                 Spacer(minLength: 8)
                 Text(st.start, style: .timer)
                     .monospacedDigit()
-                    .font(.subheadline)
+                    .font(.footnote.weight(.semibold))
                     .foregroundColor(tenue)
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: 80, alignment: .trailing)
@@ -105,53 +117,50 @@ struct Detalle: View {
     let grande: Bool
 
     var body: some View {
-        if let r = descanso(st, stale) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .bottom, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Descanso").font(.caption).foregroundColor(tenue)
+        let rango = descanso(st, stale)
+        let p = partes(st.detail)
+        VStack(alignment: .leading, spacing: grande ? 10 : 6) {
+            if let r = rango {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Descanso").font(.caption.weight(.semibold)).foregroundColor(tenue)
+                        Spacer(minLength: 4)
                         Text(timerInterval: r, countsDown: true)
                             .monospacedDigit()
-                            .font(.system(size: grande ? 34 : 28, weight: .bold, design: .rounded))
-                            .frame(maxWidth: 110, alignment: .leading)
+                            .font(.system(size: grande ? 22 : 18, weight: .bold, design: .rounded))
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 90, alignment: .trailing)
                     }
-                    Spacer(minLength: 4)
-                    if !st.exercise.isEmpty {
-                        VStack(alignment: .trailing, spacing: 1) {
-                            Text("Siguiente").font(.caption).foregroundColor(tenue)
-                            Text(st.exercise).font(.subheadline.weight(.semibold)).lineLimit(1)
-                            if !st.detail.isEmpty {
-                                Text(st.detail).font(.caption).foregroundColor(tenue).lineLimit(1)
-                            }
-                        }
-                    }
-                    BotonSerie(st: st)
+                    ProgressView(timerInterval: r, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
+                        .tint(azul)
                 }
-                ProgressView(timerInterval: r, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
-                    .tint(azul)
+            } else if stale && st.restEnd != nil {
+                Text("¡A por la siguiente!").font(.caption.weight(.semibold)).foregroundColor(lila)
             }
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        if stale && st.restEnd != nil {
-                            Text("¡A por la siguiente!").font(.caption.weight(.semibold)).foregroundColor(lila)
-                        }
-                        Text(st.exercise.isEmpty ? "Entreno en curso" : st.exercise)
-                            .font(grande ? .title3.weight(.bold) : .headline)
-                            .lineLimit(1)
-                        if !st.detail.isEmpty {
-                            Text(st.detail).font(.subheadline).foregroundColor(tenue).lineLimit(1)
-                        }
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if rango != nil && !st.exercise.isEmpty {
+                        Text("Siguiente").font(.caption).foregroundColor(tenue)
                     }
+                    Text(st.exercise.isEmpty ? "Entreno en curso" : st.exercise)
+                        .font(grande ? .headline : .subheadline.weight(.semibold))
+                        .lineLimit(2)
+                    if !p.serie.isEmpty {
+                        Text(p.serie).font(.subheadline).foregroundColor(tenue).lineLimit(1)
+                    } else if st.total > 0 {
+                        Text("\(st.done) de \(st.total) series").font(.subheadline).monospacedDigit().foregroundColor(tenue)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            if !p.valor.isEmpty || st.next?.first?.ok == true {
+                HStack(alignment: .center, spacing: 10) {
+                    Text(p.valor)
+                        .font(.system(size: grande ? 26 : 20, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer(minLength: 4)
                     BotonSerie(st: st)
-                }
-                if st.total > 0 {
-                    HStack(spacing: 10) {
-                        ProgressView(value: Double(min(st.done, st.total)), total: Double(st.total)).tint(azul)
-                        Text("\(st.done) de \(st.total)").font(.caption).monospacedDigit().foregroundColor(tenue)
-                    }
                 }
             }
         }
