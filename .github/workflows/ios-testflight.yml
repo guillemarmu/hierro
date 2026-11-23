@@ -67,6 +67,15 @@ jobs:
             echo "::error::ASC_KEY_P8 no es una clave .p8 válida (${#P} caracteres; líneas con guiones: $(printf '%s' "$P" | grep -c -- '-----')). Pega el contenido entero del archivo AuthKey_U85TUDM496.p8."
             exit 1
           fi
+      # La extensión de la Live Activity necesita su propio App ID para que la firma automática cree su perfil
+      - name: App ID de la extensión
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/py"
+          "$RUNNER_TEMP/py/bin/pip" install -q 'pyjwt[crypto]==2.10.1'
+          ASC_KEY_FILE="$RUNNER_TEMP/asc.p8" "$RUNNER_TEMP/py/bin/python" tiendas/ios/asc.py bundle-id
       # Se archiva con firma local (ad hoc, conserva los entitlements de Salud) porque la firma automática de desarrollo
       # necesita un dispositivo registrado; al exportar, Xcode vuelve a firmar con el certificado de distribución de Apple.
       - name: Archivar (firma local)
