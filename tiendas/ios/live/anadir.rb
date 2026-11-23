@@ -1,5 +1,6 @@
 # Añade al proyecto de Xcode que genera Capacitor la extensión «HierroLive» (Live Activity del entreno en curso)
-# y la incrusta en la app. Se puede repetir: si ya está, no hace nada. Lo llama preparar.sh (gema xcodeproj).
+# y la incrusta en la app. Además mete en la app el botón ✓ (HierroSerieHecha, que iOS ejecuta en la app) y su copia de
+# HierroWorkoutAttributes. Se puede repetir: lo que ya está no se duplica. Lo llama preparar.sh (gema xcodeproj).
 # Uso: ruby live/anadir.rb ios/App/App.xcodeproj
 require 'xcodeproj'
 require 'fileutils'
@@ -15,9 +16,20 @@ proj = Xcodeproj::Project.open(proj_path)
 app = proj.targets.find { |t| t.name == 'App' } or abort('No encuentro el target App')
 # Los archivos se copian siempre (así un cambio en live/ llega aunque el target ya exista)
 FileUtils.mkdir_p(dst)
-files = %w[HierroWorkoutAttributes.swift HierroLiveWidget.swift Info.plist]
+files = %w[HierroWorkoutAttributes.swift HierroSerieHecha.swift HierroLiveWidget.swift Info.plist]
 files.each { |f| FileUtils.cp(File.join(src, f), File.join(dst, f)) }
+
+# App: el botón ✓ y los atributos (en ios/App/App, junto a AppDelegate.swift)
+app_dir = File.join(File.dirname(proj_path), 'App')
+app_group = proj.main_group.children.find { |g| g.respond_to?(:path) && g.path == 'App' } or abort('No encuentro el grupo App')
+%w[HierroWorkoutAttributes.swift HierroSerieHecha.swift].each do |f|
+  FileUtils.cp(File.join(src, f), File.join(app_dir, f))
+  next if app.source_build_phase.files_references.any? { |r| r && r.path == f }
+  app.add_file_references([app_group.new_reference(f)])
+end
+
 if proj.targets.any? { |t| t.name == NAME }
+  proj.save
   puts "#{NAME} ya estaba en el proyecto (archivos actualizados)"
   exit 0
 end

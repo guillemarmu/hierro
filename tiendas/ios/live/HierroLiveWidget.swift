@@ -125,22 +125,27 @@ struct Detalle: View {
                             }
                         }
                     }
+                    BotonSerie(st: st)
                 }
                 ProgressView(timerInterval: r, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
                     .tint(azul)
             }
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                VStack(alignment: .leading, spacing: 1) {
-                    if stale && st.restEnd != nil {
-                        Text("¡A por la siguiente!").font(.caption.weight(.semibold)).foregroundColor(lila)
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if stale && st.restEnd != nil {
+                            Text("¡A por la siguiente!").font(.caption.weight(.semibold)).foregroundColor(lila)
+                        }
+                        Text(st.exercise.isEmpty ? "Entreno en curso" : st.exercise)
+                            .font(grande ? .title3.weight(.bold) : .headline)
+                            .lineLimit(1)
+                        if !st.detail.isEmpty {
+                            Text(st.detail).font(.subheadline).foregroundColor(tenue).lineLimit(1)
+                        }
                     }
-                    Text(st.exercise.isEmpty ? "Entreno en curso" : st.exercise)
-                        .font(grande ? .title3.weight(.bold) : .headline)
-                        .lineLimit(1)
-                    if !st.detail.isEmpty {
-                        Text(st.detail).font(.subheadline).foregroundColor(tenue).lineLimit(1)
-                    }
+                    Spacer(minLength: 4)
+                    BotonSerie(st: st)
                 }
                 if st.total > 0 {
                     HStack(spacing: 10) {
@@ -148,6 +153,27 @@ struct Detalle: View {
                         Text("\(st.done) de \(st.total)").font(.caption).monospacedDigit().foregroundColor(tenue)
                     }
                 }
+            }
+        }
+    }
+}
+
+/// ✓ para marcar la siguiente serie sin abrir la app (iOS 17+; en 16 no sale).
+struct BotonSerie: View {
+    let st: HierroWorkoutAttributes.ContentState
+
+    var body: some View {
+        if #available(iOS 17.0, *) {
+            if let s = st.next.first, s.ok {
+                Button(intent: HierroSerieHecha(clave: s.k)) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(azul))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Marcar como hecha: \(s.name), \(s.detail)")
             }
         }
     }
