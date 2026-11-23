@@ -164,7 +164,7 @@ struct BotonSerie: View {
 
     var body: some View {
         if #available(iOS 17.0, *) {
-            if let s = st.next.first, s.ok {
+            if let s = st.next?.first, s.ok {
                 Button(intent: HierroSerieHecha(clave: s.k)) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 18, weight: .bold))

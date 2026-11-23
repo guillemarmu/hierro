@@ -6,7 +6,7 @@ import UserNotifications
 /// Botón ✓ de la Live Activity (iOS 17+): marca la siguiente serie sin abrir Hierro.
 /// iOS lo ejecuta en el proceso de la app (también en segundo plano), así que este archivo va en la app y en la extensión.
 /// Actualiza la actividad al momento (serie hecha, descanso y aviso) y apunta la serie en UserDefaults
-/// («hierro.live.hechas»); la web la marca de verdad al volver (HierroLive.pending() → liveApply).
+/// («hierro.live.hechas»); la web la marca de verdad al volver (HierroLive.pending() → liveApply → ack()).
 @available(iOS 17.0, *)
 struct HierroSerieHecha: LiveActivityIntent {
     static var title: LocalizedStringResource = "Serie hecha"
@@ -26,14 +26,19 @@ struct HierroSerieHecha: LiveActivityIntent {
         guard let act = Activity<HierroWorkoutAttributes>.activities.first else { return .result() }
         var st = act.content.state
         // Solo la primera pendiente y solo si coincide (dos toques seguidos no marcan otra serie por error)
-        guard let serie = st.next.first, serie.k == clave, serie.ok else { return .result() }
+        var lista = st.next ?? []
+        guard let serie = lista.first, serie.k == clave, serie.ok else { return .result() }
         let ahora = Date()
-        st.next.removeFirst()
+        lista.removeFirst()
+        st.next = lista
         st.done = min(st.total, st.done + 1)
         HierroColaLive.apuntar(clave: serie.k, hora: ahora, descanso: serie.rest)
-        if let s = st.next.first {
+        if let s = lista.first {
             st.exercise = s.name
             st.detail = s.detail
+        } else if st.done < st.total {
+            st.exercise = "Sigue en Hierro"
+            st.detail = "Abre la app para las siguientes series"
         } else {
             st.exercise = "Todo hecho"
             st.detail = "Abre Hierro para terminar"
@@ -42,7 +47,7 @@ struct HierroSerieHecha: LiveActivityIntent {
             let fin = ahora.addingTimeInterval(serie.rest)
             st.restStart = ahora
             st.restEnd = fin
-            let cuerpo = st.next.first.map { "Ahora: \($0.name) · \($0.detail)" } ?? "A por la siguiente serie"
+            let cuerpo = lista.first.map { "Ahora: \($0.name) · \($0.detail)" } ?? "A por la siguiente serie"
             await HierroColaLive.avisar(fin: fin, cuerpo: cuerpo)
         } else {
             st.restStart = nil
