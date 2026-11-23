@@ -6,8 +6,10 @@ import ActivityKit
 /// Entreno en curso en la pantalla de bloqueo y en la Dynamic Island (Live Activity, iOS 16.2+),
 /// y aviso local cuando acaba el descanso (funciona con el móvil bloqueado y la app en segundo plano).
 /// La web (native.js) llama a sync() cada vez que cambia algo y a end() al terminar o descartar.
+/// Desde 4.20: pending() devuelve las series marcadas con el ✓ de la pantalla de bloqueo (HierroSerieHecha, en la app)
+/// y el aviso del descanso también sale con la app delante (manejador de avisos locales de Capacitor).
 @objc(HierroLivePlugin)
-public class HierroLivePlugin: CAPPlugin, CAPBridgedPlugin {
+public class HierroLivePlugin: CAPPlugin, CAPBridgedPlugin, NotificationHandlerProtocol {
     public let identifier = "HierroLivePlugin"
     public let jsName = "HierroLive"
     public let pluginMethods: [CAPPluginMethod] = [
@@ -15,10 +17,32 @@ public class HierroLivePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restNotify", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "restCancel", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "restCancel", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pending", returnType: CAPPluginReturnPromise)
     ]
 
     private static let restId = "hierro-rest"
+    /// Misma clave que HierroColaLive.clave (HierroSerieHecha.swift, en la app)
+    private static let colaKey = "hierro.live.hechas"
+
+    override public func load() {
+        bridge?.notificationRouter.localNotificationHandler = self
+    }
+
+    // Con la app delante iOS no enseña los avisos salvo que se le diga: el del descanso sí (la web además pita).
+    public func willPresent(notification: UNNotification) -> UNNotificationPresentationOptions {
+        guard notification.request.identifier == Self.restId else { return [] }
+        return [.banner, .list, .sound]
+    }
+
+    public func didReceive(response: UNNotificationResponse) {}
+
+    @objc func pending(_ call: CAPPluginCall) {
+        let d = UserDefaults.standard
+        let cola = d.array(forKey: Self.colaKey) as? [[String: Any]] ?? []
+        d.removeObject(forKey: Self.colaKey)
+        call.resolve(["items": cola])
+    }
 
     @objc func isAvailable(_ call: CAPPluginCall) {
         if #available(iOS 16.2, *) {
@@ -50,10 +74,25 @@ public class HierroLivePlugin: CAPPlugin, CAPBridgedPlugin {
             done: max(0, call.getInt("done") ?? 0),
             total: max(0, call.getInt("total") ?? 0),
             restStart: restEnd == nil ? nil : (restStart ?? Date()),
-            restEnd: restEnd)
+            restEnd: restEnd,
+            next: Self.series(call.getArray("next") ?? []))
         Task {
             let ok = await LiveWorkout.sync(st)
             call.resolve(["ok": ok])
+        }
+    }
+
+    @available(iOS 16.1, *)
+    private static func series(_ arr: JSArray) -> [HierroWorkoutAttributes.Serie] {
+        arr.prefix(5).compactMap { v in
+            guard let o = v as? JSObject, let k = o["k"] as? String, !k.isEmpty else { return nil }
+            let rest = (o["rest"] as? NSNumber)?.doubleValue ?? 0
+            return HierroWorkoutAttributes.Serie(
+                k: String(k.prefix(40)),
+                name: String(((o["name"] as? String) ?? "").prefix(60)),
+                detail: String(((o["detail"] as? String) ?? "").prefix(80)),
+                rest: max(0, min(rest, 3600)),
+                ok: (o["ok"] as? NSNumber)?.boolValue ?? false)
         }
     }
 
