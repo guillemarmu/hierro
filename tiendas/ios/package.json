@@ -8,6 +8,7 @@
     "@capacitor/core": "8.6.2",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/ios": "8.6.2",
-    "hierro-health": "file:plugins/hierro-health"
+    "hierro-health": "file:plugins/hierro-health",
+    "hierro-live": "file:plugins/hierro-live"
   }
 }

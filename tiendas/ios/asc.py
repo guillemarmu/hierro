@@ -5,6 +5,8 @@ Uso: python3 asc.py <accion>
   testflight-publico  Crea (o reutiliza) el grupo externo «Público» con enlace público, rellena la
                       información de prueba, añade la última compilación válida y la envía a la
                       revisión beta de Apple. Escribe el enlace público en el resumen.
+  bundle-id           Registra el App ID de la extensión de la Live Activity si no existe (lo usa
+                      «iOS TestFlight» antes de compilar, para que la firma automática encuentre su perfil).
   revision            Prepara la versión APP_VERSION en el App Store (la crea si no existe),
                       le pone la última compilación válida de esa versión y la envía a revisión.
                       La publicación sigue siendo manual (Guillermo decide cuándo sale).
@@ -161,6 +163,19 @@ def revision():
     summary(f'### App Store\nVersión {ver} con la compilación {b["attributes"]["version"]} enviada a revisión. Publicación manual: sale cuando la publiques en App Store Connect.')
 
 
+LIVE_BUNDLE = 'io.github.guillemarmu.hierro.HierroLive'
+
+
+def bundle_id():
+    r = call('GET', f'/v1/bundleIds?filter[identifier]={LIVE_BUNDLE}&filter[platform]=IOS&limit=20')
+    if any(b['attributes']['identifier'] == LIVE_BUNDLE for b in r['data']):
+        print(f'{LIVE_BUNDLE} ya estaba registrado')
+        return
+    call('POST', '/v1/bundleIds', {'data': {'type': 'bundleIds', 'attributes': {
+        'identifier': LIVE_BUNDLE, 'name': 'Hierro Live Activity', 'platform': 'IOS'}}})
+    summary(f'App ID `{LIVE_BUNDLE}` registrado (extensión de la Live Activity).')
+
+
 if __name__ == '__main__':
     acc = sys.argv[1] if len(sys.argv) > 1 else ''
-    {'testflight-publico': testflight_publico, 'revision': revision}.get(acc, lambda: sys.exit('Acción desconocida: ' + acc))()
+    {'testflight-publico': testflight_publico, 'revision': revision, 'bundle-id': bundle_id}.get(acc, lambda: sys.exit('Acción desconocida: ' + acc))()

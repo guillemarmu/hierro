@@ -50,6 +50,12 @@ if [ "${SIN_ENTITLEMENTS:-0}" != 1 ]; then
   grep -q 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements' "$PBX" || { echo "No se pudo enlazar App.entitlements." >&2; exit 1; }
 fi
 
+# Live Activity: entreno en curso en la pantalla de bloqueo y la Dynamic Island.
+# La app declara que usa Live Activities y se le añade la extensión de widget de live/ (gema xcodeproj de CocoaPods).
+poner NSSupportsLiveActivities bool true
+ruby -rxcodeproj -e1 2>/dev/null || gem install xcodeproj --no-document
+ruby live/anadir.rb "$APP/App.xcodeproj"
+
 # Icono: assets/icon-1024.png (1024 px, sin canal alfa y con el fondo de la marca, como exige la tienda)
 ICONO="$APP/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
 if [ -f assets/icon-1024.png ] && [ -d "$(dirname "$ICONO")" ]; then
