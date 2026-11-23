@@ -18,7 +18,8 @@ public class HierroLivePlugin: CAPPlugin, CAPBridgedPlugin, NotificationHandlerP
         CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restNotify", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restCancel", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "pending", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "pending", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "ack", returnType: CAPPluginReturnPromise)
     ]
 
     private static let restId = "hierro-rest"
@@ -37,11 +38,20 @@ public class HierroLivePlugin: CAPPlugin, CAPBridgedPlugin, NotificationHandlerP
 
     public func didReceive(response: UNNotificationResponse) {}
 
+    /// Series marcadas en la pantalla de bloqueo. No las borra: la web confirma con ack() las que ya ha marcado o descartado,
+    /// así no se pierden si la web aún no está lista (arranque en frío, recarga).
     @objc func pending(_ call: CAPPluginCall) {
+        let cola = UserDefaults.standard.array(forKey: Self.colaKey) as? [[String: Any]] ?? []
+        call.resolve(["items": cola])
+    }
+
+    @objc func ack(_ call: CAPPluginCall) {
+        let claves = Set((call.getArray("keys") ?? []).compactMap { $0 as? String })
         let d = UserDefaults.standard
         let cola = d.array(forKey: Self.colaKey) as? [[String: Any]] ?? []
-        d.removeObject(forKey: Self.colaKey)
-        call.resolve(["items": cola])
+        let quedan = cola.filter { !claves.contains(($0["k"] as? String) ?? "") }
+        if quedan.isEmpty { d.removeObject(forKey: Self.colaKey) } else { d.set(quedan, forKey: Self.colaKey) }
+        call.resolve()
     }
 
     @objc func isAvailable(_ call: CAPPluginCall) {

@@ -25,6 +25,7 @@ struct HierroWorkoutAttributes: ActivityAttributes {
         var total: Int
         var restStart: Date?
         var restEnd: Date?
-        var next: [Serie]
+        /// Opcional: los estados de la 4.19 no lo traen
+        var next: [Serie]?
     }
 }
