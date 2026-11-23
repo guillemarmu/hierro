@@ -3232,6 +3232,9 @@ function viewRanks(){
   }
   if (Social.ready() && G) h += `<label class="card row" data-act="rk-share" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" ${(S.settings.rkShare ?? RK.shareDef) ? 'checked' : ''}><span>Enseñar mi rango global a mis amigos<br><span class="small muted" style="font-weight:500">Solo se ve la insignia en tu perfil. Tu peso y tus marcas no salen del móvil.</span></span></label>`;
   if (R.bw) h += hTxt;
+  if (R.bw || n) { const ag = rkAge(), ap = Math.round((1 - 1 / R.af) * 100);
+    h += !ag ? '<div class="card row between small"><span>¿En qué año naciste? Con tu edad, los rangos se ajustan si tienes menos de 23 o más de 39 años.</span><button class="linkbtn" data-act="go-age">Añadir</button></div>'
+      : `<div class="card small muted">Cumples ${ag} años este año: ${ap ? `tu listón va un ${ap}\u00a0% más bajo por tu edad` : 'de 23 a 39 años no hay ajuste'}. <button class="linkbtn" data-act="go-age">Cambiar</button></div>`; }
   h += `<button class="btn block" data-act="go-rankhow">Cómo funcionan los rangos</button>`;
   return h;
 }
@@ -3243,11 +3246,13 @@ function viewRankHow(){
   return C('Qué es un rango', 'Cada ejercicio de fuerza tiene su rango, de Hierro a Simétrico. Hay 9 rangos y, salvo el último, cada uno tiene tres divisiones: empiezas en la I y subes hasta la III antes de pasar al siguiente.')
     + C('Cómo se calcula', 'Estimamos tu repetición máxima con tus series normales (no hace falta hacer un máximo) y la comparamos con lo que levanta una persona de nivel intermedio de tu mismo peso. Eso da tus puntos de rango: 100 puntos es nivel intermedio. Pesar más o menos no da ventaja: el listón sube y baja con tu peso.', 'En dominadas y fondos cuenta tu peso más el lastre. En flexiones, abdominales y planchas cuentan las repeticiones o el tiempo.')
     + C('Tu altura', 'Si apuntas cuánto mides (Perfil › Tu cuerpo), los ejercicios de pecho, hombros, tríceps y cuádriceps se ajustan a tu complexión: a igual peso, una persona alta y delgada tiene brazos de palanca más largos y menos músculo por centímetro, así que su listón baja un poco; una baja y ancha lo tiene algo más alto. El ajuste es pequeño (como mucho un 7 %) y no se aplica a tirones ni al peso muerto, donde los estudios no dan una ventaja clara. Sin altura, no hay ajuste.')
+    + C('Tu edad', 'Si apuntas tu año de nacimiento (Perfil › Tu cuerpo), el listón se ajusta a tu edad en todos los ejercicios. La fuerza llega a su máximo entre los 23 y los 39 años: con 18 años el listón baja un 6\u00a0%, con 45 un 5\u00a0%, con 50 un 12\u00a0% y con 60 un 25\u00a0%.',
+      'Los factores son los que usa el powerlifting para comparar a jóvenes y veteranos (Foster y McCulloch). Como solo se guarda el año, se cuenta la edad que cumples ese año, la que tenías en cada entreno. Sin año de nacimiento, no hay ajuste.')
     + C('Constancia, no un día suelto', 'Tu rango sale de tus mejores sesiones recientes de cada ejercicio, no de un pico aislado. Un día flojo no te baja. Descansar unas semanas tampoco. Y aunque pierdas forma, nunca caes por debajo del 85 % de tu mejor momento.')
     + C('Músculos, grupos y global', 'El rango de un músculo es la media de sus ejercicios; los que más series haces pesan más. Con los músculos se forman los seis grupos (espalda, pecho, hombros, brazos, piernas y core). El rango global se desbloquea con 8 ejercicios con rango y al menos uno de pecho, uno de espalda y uno de pierna. Piernas, espalda y pecho son los que más cuentan.')
     + `<div class="card stack"><h3>La escalera</h3><div class="rk-ladder">${ladder}</div></div>`
     + C('De dónde salen los números', 'No usamos datos de otros usuarios. Los listones vienen de tablas públicas de estándares de fuerza por peso corporal, y son orientativos: una máquina de tu gimnasio puede ser más dura o más blanda que otra. Los ejercicios asistidos, el cardio y los que no tienen un estándar fiable no llevan rango.')
-    + C('Privacidad', 'Tu peso, tu altura y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
+    + C('Privacidad', 'Tu peso, tu altura, tu edad y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
 }
 
 /* 4.12.4 · Perfil: «Tu cuerpo» (peso, altura y sexo, lo que necesitan los rangos) y «Otras medidas» (opcionales), en tarjetas separadas. */
@@ -3264,6 +3269,7 @@ function bodyCardHTML(){
     <div class="f"><span>Peso${req(lw)}</span><div class="row between bd-w"><div><b class="num">${lw ? fmtN(lw.weight) + ' kg' : '—'}</b><small class="muted">${lw ? fmtDate(lw.date, false) : 'Sin apuntar'}</small></div><button class="btn ${lw ? 'ghost' : 'primary'} sm" data-act="add-weight">${lw ? 'Actualizar' : 'Añadir'}</button></div></div>
     ${ws.length > 1 ? lineChart(ws.map(x => ({x: x.date, y: x.weight})), ' kg', undefined, {h: 140}) : ''}
     <label class="f" id="heightF"><span>Altura (cm)${req(rkHeight())}</span><input id="setHeight" type="number" inputmode="numeric" min="120" max="230" step="1" placeholder="Ej.: 178" value="${rkHeight() || ''}"></label>
+    <label class="f" id="birthF"><span>Año de nacimiento <span class="pill">Opcional</span></span><input id="setBirth" type="number" inputmode="numeric" min="1920" max="${rkBirthMax()}" step="1" placeholder="Ej.: 1998" value="${rkBirth() || ''}"><span class="small muted" style="font-weight:500">Ajusta los rangos a tu edad. Solo se guarda el año.</span></label>
     <div class="f" role="group" aria-labelledby="sexLbl"><span id="sexLbl">Sexo</span><div class="seg">${[['', 'Sin indicar'], ['m', 'Hombre'], ['f', 'Mujer']].map(([k, l]) => `<button data-act="set-sex" data-v="${k}" aria-pressed="${sex === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">Ajusta los estándares de fuerza. Sin indicar se usa el masculino.</div></div>
     ${all.length ? `<details><summary class="small muted">Historial de peso (${all.length})</summary><table class="sets small">${all.slice().reverse().map(x => `<tr><td>${fmtDate(x.date, false)}</td><td>${fmtN(x.weight)} kg</td><td><button class="btn ghost sm danger" data-act="del-measure" data-id="${x.id}" data-k="weight">Borrar</button></td></tr>`).join('')}</table></details>` : ''}
     ${S.settings.healthOk ? `<div class="row between small hl-row"><span class="muted">Datos corporales: consentimiento dado el ${fmtDate(S.settings.healthOk, false)}.</span><button class="linkbtn danger" data-act="health-off">Retirar</button></div>` : hasHealth() ? `<div class="row between small hl-row"><span class="muted">Datos corporales sin consentimiento.</span><button class="linkbtn" data-act="health-on">Revisar</button></div>` : ''}</div>`;
@@ -6131,6 +6137,7 @@ const A = {
   },
   'health-on'(){ healthCheck.open = false; healthCheck().then(render); },
   'go-height'(){ goBody('#setHeight'); },
+  'go-age'(){ goBody('#setBirth'); },
   'go-body'(){ goBody(lastWeight() ? '#setHeight' : '#bodyCard [data-act="add-weight"]'); },
   'body-later'(){ S.settings.bodyLater = Date.now(); Store.mark('meta'); render(); toast('Te lo recordamos más adelante'); },
   async 'set-sex'(el){ const v = el.dataset.v; if ((v === 'm' || v === 'f') && !(await healthOk())) return render(); if (v === 'm' || v === 'f') S.settings.sex = v; else delete S.settings.sex; Store.mark('meta'); render(); },
@@ -6500,6 +6507,10 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const el = ev.target;
   if (el.id === 'setHeight') { const v = Math.round(+el.value); if (el.value !== '' && !S.settings.healthOk) { const val = el.value; healthOk().then(ok => { const i = $('#setHeight') || el; if (ok) { if (S.settings.height === Math.round(+val)) return; i.value = val; i.dispatchEvent(new Event('change', {bubbles: true})); } else i.value = rkHeight() || ''; }); return; } if (el.value === '') { delete S.settings.height; Store.mark('meta'); toast('Altura borrada'); } else if (v >= 120 && v <= 230) { S.settings.height = v; Store.mark('meta'); toast('Altura: ' + v + ' cm'); } else { el.value = rkHeight() || ''; toast('Pon tu altura en centímetros (120-230)'); } }
+  if (el.id === 'setBirth') { const v = Math.round(+el.value);
+    if (el.value === '') { delete S.settings.birthYear; Store.mark('meta'); toast('Año de nacimiento borrado'); }
+    else if (v >= 1920 && v <= rkBirthMax()) { S.settings.birthYear = v; Store.mark('meta'); toast('Año de nacimiento: ' + v); }
+    else { el.value = rkBirth() || ''; toast('Pon un año entre 1920 y ' + rkBirthMax()); } }
   if (el.id === 'setRest') { S.settings.rest = +el.value; Store.mark('meta'); toast('Descanso por defecto: ' + (S.settings.rest ? fmtClock(S.settings.rest) : 'sin temporizador')); }
   if (el.id === 'setNotif') { if (el.checked) askNotif().then(ok => { el.checked = ok; }); else { S.settings.notif = false; Store.mark('meta'); } }
   if (el.id === 'setEffort') { S.settings.effort = el.checked; Store.mark('meta'); render(); }
@@ -6652,14 +6663,26 @@ function rkInfo(id){
    no en tirones ni en peso muerto (ahí los estudios van en los dos sentidos). Sin altura: 1. */
 const rkHeight = () => { const h = +S.settings.height; return h >= 120 && h <= 230 ? h : 0; };
 function rkHf(bw, sex){ const h = rkHeight(); if (!h || !(bw > 0)) return 1; const bmi = bw / (h / 100) ** 2, k = Math.pow(RK.hRef[sex === 'f' ? 'f' : 'm'] / bmi, RK.hExp); return clamp(k, 1 - RK.hCap, 1 + RK.hCap); }
-// 1RM (kg) que se espera de un intermedio con ese peso corporal (y, en los ejercicios que toca, con tu altura)
-function rkExpected(f, bw, sex){ const ref = RK.ref[sex === 'f' ? 'f' : 'm']; return f.k * (sex === 'f' ? f.sf : 1) * ref * Math.pow(bw / ref, RK.exp) / (f.hAdj ? rkHf(bw, sex) : 1); }
+/* 4.18 · Corrección por edad (opcional, S.settings.birthYear). La fuerza llega a su máximo entre los 23 y los 39 años: antes y después
+   se espera algo menos. Factores de powerlifting: Foster para jóvenes (14-22) y McCulloch para veteranos (40-80). El listón se divide
+   por el factor en todos los ejercicios (también en repeticiones y tiempo). Se usa la edad que tenías el día del entreno. Sin año: 1. */
+const RK_AGE_JR = [1.23, 1.18, 1.13, 1.08, 1.06, 1.04, 1.03, 1.02, 1.01];   // 14 … 22 años
+const RK_AGE_MS = [1, 1.01, 1.02, 1.031, 1.043, 1.055, 1.068, 1.082, 1.097, 1.113, 1.13, 1.147, 1.165, 1.184, 1.204, 1.225, 1.246, 1.268, 1.291, 1.315,
+  1.34, 1.366, 1.393, 1.421, 1.45, 1.48, 1.511, 1.543, 1.576, 1.61, 1.645, 1.681, 1.718, 1.756, 1.795, 1.835, 1.876, 1.918, 1.961, 2.005, 2.05]; // 40 … 80
+const rkBirthMax = () => new Date().getFullYear() - 14;
+const rkBirth = () => { const y = +S.settings.birthYear; return Number.isInteger(y) && y >= 1920 && y <= rkBirthMax() ? y : 0; };
+const rkAge = (t = Date.now()) => { const y = rkBirth(); return y ? new Date(t).getFullYear() - y : 0; };
+function rkAf(t){ const a = rkAge(t); if (!(a > 0)) return 1; return a < 23 ? RK_AGE_JR[clamp(a, 14, 22) - 14] : a < 40 ? 1 : RK_AGE_MS[Math.min(a, 80) - 40]; }
+// 1RM (kg) que se espera de un intermedio con ese peso corporal (y, en los ejercicios que toca, con tu altura), dividido por el factor de edad
+function rkExpected(f, bw, sex, af = 1){ const ref = RK.ref[sex === 'f' ? 'f' : 'm']; return f.k * (sex === 'f' ? f.sf : 1) * ref * Math.pow(bw / ref, RK.exp) / (f.hAdj ? rkHf(bw, sex) : 1) / af; }
+// repeticiones o segundos de cada nivel, con tu sexo y tu edad
+const rkRepsA = (f, sex, af = 1) => f.a.map(q => q * (sex === 'f' ? f.f : 1) / af);
 // Puntos de una serie (0 = no puntúa). bw puede ser null: entonces solo puntúan reps/tiempo.
-function rkSetScore(f, s, bw, sex){
+function rkSetScore(f, s, bw, sex, af = 1){
   if (!isWork(s)) return 0;
   if (f.mode !== 'load') {
     const v = f.mode === 'sec' ? (+s.sec || 0) : (+s.reps || 0); if (!(v > 0)) return 0;
-    const a = sex === 'f' ? f.a.map(q => q * f.f) : f.a;
+    const a = rkRepsA(f, sex, af);
     if (v <= a[0]) return v / a[0] * RK_ANCH[0];
     for (let i = 1; i < 5; i++) if (v <= a[i]) return RK_ANCH[i - 1] + (v - a[i - 1]) / (a[i] - a[i - 1]) * (RK_ANCH[i] - RK_ANCH[i - 1]);
     return Math.min(RK.max, RK_ANCH[4] + (v - a[4]) / (a[4] - a[3]) * (RK_ANCH[4] - RK_ANCH[3]));
@@ -6667,7 +6690,7 @@ function rkSetScore(f, s, bw, sex){
   if (!(bw > 0) || !(s.reps > 0)) return 0;
   const load = f.bw ? bw + (+s.kg || 0) : (+s.kg || 0); if (!(load > 0)) return 0;
   const rm = s.reps === 1 ? load : load * (1 + Math.min(s.reps, f.bw ? RK.capBw : RK.capWr) / 30);
-  return Math.min(RK.max, rm / rkExpected(f, bw, sex) * 100);
+  return Math.min(RK.max, rm / rkExpected(f, bw, sex, af) * 100);
 }
 function rkSust(win){ // win: puntos de las últimas ≤6 sesiones, de la más reciente a la más antigua
   const m = Math.min(3, Math.ceil(win.length / 2));
@@ -6687,13 +6710,13 @@ function rkAll(){
   const bwAt = bwPicker(S.measures);
   const info = new Map(), ex = new Map(), none = new Map(); // none: exId → 'std' | 'bw'
   for (let i = S.workouts.length - 1; i >= 0; i--) {          // S.workouts va de más nuevo a más viejo: se recorre al revés
-    const w = S.workouts[i], bw = bwAt(w.start), per = new Map();
+    const w = S.workouts[i], bw = bwAt(w.start), af = rkAf(w.start), per = new Map();
     for (const e of w.exercises) {
       let f = info.get(e.exId); if (f === undefined) info.set(e.exId, f = rkInfo(e.exId));
       if (!f) { if (exMap.has(e.exId) && exOf(e.exId).type !== 'cardio') none.set(e.exId, 'std'); continue; }
       if (f.mode === 'load' && !bw) { none.set(e.exId, 'bw'); continue; }
       let o = per.get(e.exId); if (!o) per.set(e.exId, o = {n: 0, k: 0, top: null});
-      for (const s of e.sets) { const v = rkSetScore(f, s, bw, sex); if (v > 0) { o.k++; if (v > o.n) { o.n = v; o.top = s; } } }
+      for (const s of e.sets) { const v = rkSetScore(f, s, bw, sex, af); if (v > 0) { o.k++; if (v > o.n) { o.n = v; o.top = s; } } }
     }
     per.forEach((o, id) => { if (!(o.n > 0)) return; let E = ex.get(id); if (!E) ex.set(id, E = {exId: id, info: info.get(id), win: [], ks: [], ses: 0, peak: 0});
       E.win.unshift(o.n); E.ks.unshift(o.k); if (E.win.length > RK.win) { E.win.pop(); E.ks.pop(); }
@@ -6715,18 +6738,18 @@ function rkAll(){
   const n = all.length, miss = RK.need.filter(g => !grp[g]); let glob = null;
   if (n >= RK.minEx && !miss.length) { let s = 0, k = 0; for (const [g] of GROUPS) if (grp[g]) { s += grp[g].pos * RK.gw[g]; k += RK.gw[g]; }
     const p = s / k; glob = {pos: p, idx: Math.floor(p), prog: p >= 24 ? 1 : p - Math.floor(p)}; }
-  return rkAll.c = {sex, sexSet: !!S.settings.sex, bw: bwAt(Infinity), ex, none, mus, grp, glob, n, miss};
+  return rkAll.c = {sex, sexSet: !!S.settings.sex, bw: bwAt(Infinity), af: rkAf(Date.now()), ex, none, mus, grp, glob, n, miss};
 }
 const rkEx = id => rkAll().ex.get(id) || null;
 const rkWhy = id => { const R = rkAll(); return R.ex.has(id) ? null : R.none.get(id) || (rkInfo(id) ? 'data' : 'std'); };
 function rkTarget(id){
   const E = rkEx(id), R = rkAll(); if (!E || E.idx >= 24) return null;
   const T = RK_LO[E.idx + 1], f = E.info, top = E.top || {};
-  if (f.mode !== 'load') { const a = R.sex === 'f' ? f.a.map(q => q * f.f) : f.a; let v = a[4] + (T - 168) / 36 * (a[4] - a[3]);
+  if (f.mode !== 'load') { const a = rkRepsA(f, R.sex, R.af); let v = a[4] + (T - 168) / 36 * (a[4] - a[3]);
       for (let i = 4; i >= 1; i--) if (T <= RK_ANCH[i]) v = a[i - 1] + (T - RK_ANCH[i - 1]) / (RK_ANCH[i] - RK_ANCH[i - 1]) * (a[i] - a[i - 1]);
       if (T <= RK_ANCH[0]) v = T / RK_ANCH[0] * a[0]; v = Math.ceil(v - 1e-9);
       return {idx: E.idx + 1, reps: v, txt: f.mode === 'sec' ? fmtClock(v) : v + ' reps'}; }
-  const rm = T / 100 * rkExpected(f, R.bw, R.sex), r = clamp(top.reps || 5, 1, f.bw ? RK.capBw : RK.capWr), need = r === 1 ? rm : rm / (1 + r / 30);
+  const rm = T / 100 * rkExpected(f, R.bw, R.sex, R.af), r = clamp(top.reps || 5, 1, f.bw ? RK.capBw : RK.capWr), need = r === 1 ? rm : rm / (1 + r / 30);
   if (f.bw) { const extra = need - R.bw;
     if (extra <= 0 || !(top.kg > 0)) { const r2 = Math.max(1, Math.ceil(30 * (rm / R.bw - 1) - 1e-9)); if (r2 <= RK.capBw) return {idx: E.idx + 1, kg: 0, reps: r2, txt: r2 + ' reps'}; if (extra <= 0) return null; }
     const kg = Math.ceil(extra - 1e-9); return {idx: E.idx + 1, kg, reps: r, txt: `+${fmtN(kg)} kg × ${r}`}; }
@@ -6735,7 +6758,7 @@ function rkTarget(id){
 }
 function rkLive(id, sets){
   const R = rkAll(), E = R.ex.get(id), f = E ? E.info : rkInfo(id); if (!f) return null;
-  let n = 0; for (const s of sets) if (s.done) n = Math.max(n, rkSetScore(f, s, R.bw, R.sex)); if (!(n > 0)) return E ? {idx: E.idx, score: E.score} : null;
+  let n = 0; for (const s of sets) if (s.done) n = Math.max(n, rkSetScore(f, s, R.bw, R.sex, R.af)); if (!(n > 0)) return E ? {idx: E.idx, score: E.score} : null;
   const sust = rkSust([n, ...(E ? E.win : [])].slice(0, RK.win)), score = Math.max(sust, RK.floor * Math.max(sust, E ? E.peak : 0));
   return {idx: rkStep(score), score};
 }
@@ -7748,7 +7771,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.17.0';
+const APP_VERSION = '4.18.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
