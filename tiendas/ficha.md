@@ -50,20 +50,24 @@ Textos y respuestas listos para copiar en Google Play Console y App Store Connec
   - Salud y forma física: salud (peso y medidas, solo con consentimiento) y forma física (entrenos).
   - Contenido del usuario: fotos, otro contenido (publicaciones, comentarios, mensajes de clan).
   - Identificadores: ID de usuario.
-  - Diagnóstico: otros datos de diagnóstico (estado de la sincronización y navegador del móvil, que la app guarda en tu cuenta).
+  - Diagnóstico: datos de fallos (los últimos errores técnicos de la app) y otros datos de diagnóstico (estado de la sincronización y navegador del móvil), que la app guarda en tu cuenta.
+  - Otros tipos de datos: año de nacimiento (opcional, para ajustar los rangos a la edad).
+  - Contenido del usuario › Otro contenido: también los nombres de las rutinas y los días del plan que usa el Coach de avisos (si activas los mensajes de motivación).
   - Identificadores: la suscripción de avisos push del navegador (solo si activas los avisos).
 - Datos para **prevenir el fraude** (reCAPTCHA de Google en App Check, solo con cuenta): identificadores del dispositivo y datos de uso técnicos. No vinculados a la identidad para publicidad.
 
 ## Seguridad de los datos de Google (Data safety)
 - ¿Recoge o comparte datos? Recoge: **sí**. Comparte con terceros: **no** (Google Firebase y Cloudflare son encargados del tratamiento, no cuenta como compartir).
 - Cifrado en tránsito: **sí** (todo por HTTPS).
-- Se puede pedir el borrado: **sí**, desde la app y en la URL de soporte. **Ojo**: hoy el botón de la app no borra los comentarios en publicaciones ajenas, los mensajes de los muros, los «me gusta» ni los datos de diagnóstico (lo explica `soporte.html`); antes de enviar a las tiendas conviene que la app los borre también (ver `LEEME.md`).
+- Se puede pedir el borrado: **sí**, desde la app (borra también comentarios, me gusta y mensajes en lo de otros) y en la URL de soporte.
 - Tipos de datos (todos para «Funciones de la app» y «Gestión de la cuenta»; los de reCAPTCHA también para «Prevención de fraudes, seguridad y cumplimiento»):
   - Información personal: nombre, correo electrónico, ID de usuario.
   - Salud y actividad física: información de salud (peso y medidas, opcional), información de actividad física (entrenos).
   - Fotos y vídeos: fotos (opcional, solo si publicas).
   - Mensajes: otros mensajes en la app (comentarios y muros de clan, opcional).
-  - Información y rendimiento de la app: diagnósticos (estado de la sincronización y navegador del móvil).
+  - Información personal: otra información (año de nacimiento, opcional).
+  - Información y rendimiento de la app: registros de fallos (los últimos errores de la app) y diagnósticos (estado de la sincronización y navegador del móvil).
+  - Actividad en la app: otro contenido generado por el usuario (nombres de rutinas y días del plan para los mensajes de motivación, opcional).
   - ID de dispositivo u otros ID: la suscripción de avisos push (opcional) y los que use reCAPTCHA (prevención de fraudes).
 - Nada es obligatorio para usar la app sin cuenta salvo el almacenamiento local.
 
