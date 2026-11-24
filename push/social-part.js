@@ -97,13 +97,15 @@ async function apnsToken(env){
   apnsJwt = data + '.' + b64u(sig); apnsJwtAt = Date.now(); return apnsJwt;
 }
 const APNS_HEX = /^[0-9a-f]{64,200}$/;
+// apns-collapse-id admite 64 bytes y los ids de los me gusta pasan de eso: se usa un hash FNV-1a de 64 bits (16 caracteres)
+const idHash = s => { let h = 0xcbf29ce484222325n; for (const c of te.encode(s)) h = BigInt.asUintN(64, (h ^ BigInt(c)) * 0x100000001b3n); return h.toString(16).padStart(16, '0'); };
 // Devuelve {status, gone}: gone = el token ya no vale (hay que borrarlo)
 async function sendApns(token, msg, env, opt = {}){
   if (!env.APNS_P8) return {status: 0, gone: false};
   const body = JSON.stringify({aps: {alert: {title: msg.title, body: msg.body}, sound: 'default', 'thread-id': opt.thread || 'social'}, hierro: {t: opt.t || '', ...(msg.pid ? {pid: msg.pid} : {})}});
   const go = host => fetch(`https://${host}/3/device/${token}`, {method: 'POST', body, headers: {
     authorization: 'bearer ' + apnsJwt, 'apns-topic': APNS_TOPIC, 'apns-push-type': 'alert', 'apns-priority': opt.urgency === 'normal' ? '5' : '10',
-    'apns-expiration': String(Math.floor(Date.now() / 1000) + (opt.ttl || 24 * 3600)), ...(opt.collapse ? {'apns-collapse-id': opt.collapse.slice(0, 64)} : {})}});
+    'apns-expiration': String(Math.floor(Date.now() / 1000) + (opt.ttl || 24 * 3600)), ...(opt.collapse ? {'apns-collapse-id': idHash(opt.collapse)} : {})}});
   await apnsToken(env);
   let r = await go('api.push.apple.com'), why = r.ok ? '' : await r.text();
   if (r.status === 400 && /BadDeviceToken/.test(why)) { r = await go('api.sandbox.push.apple.com'); why = r.ok ? '' : await r.text(); } // compilaciones de desarrollo
