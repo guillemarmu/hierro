@@ -1380,12 +1380,14 @@ function platesFor(kg){
 
 /* =========================================================
    Biblioteca de ejercicios  (nombre | músculo | material | tipo | otros nombres)
-   tipo: wr = peso×reps · bw = peso corporal (+kg opcional) · dur = tiempo · cardio = km + min
+   tipo: wr = peso×reps · bw = peso corporal (+kg opcional) · dur = tiempo · cardio = km + min · kgm = peso + distancia (4.25; la distancia se guarda en s.km y se apunta en metros)
    ========================================================= */
-const MUSCLES = {pecho:'Pecho',espalda:'Espalda',hombros:'Hombros',biceps:'Bíceps',triceps:'Tríceps',antebrazo:'Antebrazo',cuadriceps:'Cuádriceps',isquios:'Isquios',gluteos:'Glúteos',gemelos:'Gemelos',abdominales:'Abdominales',lumbares:'Lumbares',trapecio:'Trapecio',aductores:'Aductores',abductores:'Abductores',cardio:'Cardio',completo:'Cuerpo completo'};
+const MUSCLES = {pecho:'Pecho',espalda:'Espalda',hombros:'Hombros',biceps:'Bíceps',triceps:'Tríceps',antebrazo:'Antebrazo',cuadriceps:'Cuádriceps',isquios:'Isquios',gluteos:'Glúteos',gemelos:'Gemelos',abdominales:'Abdominales',lumbares:'Lumbares',trapecio:'Trapecio',aductores:'Aductores',abductores:'Abductores',cardio:'Cardio',hyrox:'Hyrox',natacion:'Natación',completo:'Cuerpo completo'};
 const LEGS = ['cuadriceps', 'isquios', 'gluteos', 'gemelos', 'aductores', 'abductores']; // el filtro «Pierna» del selector los junta
+const HYROX_X = ['x-remo-ergometro', 'x-correr']; // 4.25: el filtro «Hyrox» enseña también el remo y la carrera (son de Cardio)
+const NO_RANK = ['cardio', 'completo', 'hyrox', 'natacion']; // grupos sin rango de fuerza
 const EQUIP = {barra:'Barra',mancuernas:'Mancuernas',maquina:'Máquina',polea:'Polea',corporal:'Peso corporal',smith:'Smith',kettlebell:'Kettlebell',banda:'Banda',otro:'Otro'};
-const TYPES = {wr:'Peso y repeticiones',bw:'Peso corporal (+ lastre)',dur:'Tiempo',cardio:'Distancia y tiempo'};
+const TYPES = {wr:'Peso y repeticiones',bw:'Peso corporal (+ lastre)',dur:'Tiempo',cardio:'Distancia y tiempo',kgm:'Peso y distancia'};
 const LIB_SRC = `
 Press banca (barra)|pecho|barra|wr|Bench Press (Barbell)
 Press banca (mancuernas)|pecho|mancuernas|wr|Bench Press (Dumbbell)
@@ -1497,6 +1499,19 @@ Remo ergómetro|cardio|maquina|cardio|Rowing Machine
 Escaladora|cardio|maquina|cardio|Stair Machine;Stair Climber
 Caminar|cardio|corporal|cardio|Walking
 Comba|cardio|otro|dur|Jump Rope
+Correr|cardio|corporal|cardio|Outdoor Running;Outdoor Run
+SkiErg|hyrox|maquina|cardio|Ski Erg;SkiErg;Ski Machine
+Empuje de trineo (sled push)|hyrox|otro|kgm|Sled Push
+Arrastre de trineo (sled pull)|hyrox|otro|kgm|Sled Pull
+Burpees con salto horizontal|hyrox|corporal|bw|Burpee Broad Jump;Burpee Broad Jumps
+Farmer carry (Hyrox)|hyrox|kettlebell|kgm|Farmers Carry;Farmer Carry
+Zancadas con saco (Hyrox)|hyrox|otro|kgm|Sandbag Lunge;Sandbag Lunges
+Wall balls|hyrox|otro|wr|Wall Ball;Wall Balls
+Natación crol|natacion|corporal|cardio|Freestyle Swimming;Swimming (Freestyle)
+Natación braza|natacion|corporal|cardio|Breaststroke;Swimming (Breaststroke)
+Natación espalda|natacion|corporal|cardio|Backstroke;Swimming (Backstroke)
+Natación mariposa|natacion|corporal|cardio|Swimming (Butterfly)
+Natación (varios estilos)|natacion|corporal|cardio|Swimming;Pool Swimming
 `;
 const LIB = LIB_SRC.trim().split('\n').map(l => {
   const [name, muscle, equip, type, en] = l.split('|').map(x => x.trim());
@@ -1551,7 +1566,7 @@ function guessEquip(name){
 let exMap = new Map();
 function rebuildEx(){ exMap = new Map(); [...LIB, ...S.customEx].forEach(e => exMap.set(e.id, e)); rkReset(); }
 const exOf = id => exMap.get(id) || {id, name: 'Ejercicio borrado', muscle: 'completo', equip: 'otro', type: 'wr', aliases: []};
-const MTINT = {pecho: 'var(--acc-t)', espalda: 'var(--frio)', lumbares: 'var(--frio)', trapecio: 'var(--frio)', hombros: 'var(--violeta-t)', biceps: 'var(--pr)', triceps: 'var(--pr)', antebrazo: 'var(--pr)', cuadriceps: 'var(--ok-t)', isquios: 'var(--ok-t)', gluteos: 'var(--ok-t)', gemelos: 'var(--ok-t)', aductores: 'var(--ok-t)', abductores: 'var(--ok-t)', abdominales: 'var(--texto)', cardio: 'var(--peligro)'};
+const MTINT = {pecho: 'var(--acc-t)', espalda: 'var(--frio)', lumbares: 'var(--frio)', trapecio: 'var(--frio)', hombros: 'var(--violeta-t)', biceps: 'var(--pr)', triceps: 'var(--pr)', antebrazo: 'var(--pr)', cuadriceps: 'var(--ok-t)', isquios: 'var(--ok-t)', gluteos: 'var(--ok-t)', gemelos: 'var(--ok-t)', aductores: 'var(--ok-t)', abductores: 'var(--ok-t)', abdominales: 'var(--texto)', cardio: 'var(--peligro)', hyrox: 'var(--peligro)', natacion: 'var(--frio)'};
 /* Fotos de ejercicios: base de datos libre free-exercise-db (dominio público, github.com/yuhonas/free-exercise-db).
    Cada ejercicio trae dos fotos: posición inicial (0) y final (1). */
 const PHOTO_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
@@ -1666,6 +1681,9 @@ Remo ergómetro=Rowing_Stationary
 Escaladora=Stairmaster
 Caminar=Walking_Treadmill
 Comba=Rope_Jumping
+Empuje de trineo (sled push)=Sled_Push
+Farmer carry (Hyrox)=Farmers_Walk
+Zancadas con saco (Hyrox)=Barbell_Walking_Lunge
 `;
 const PHOTO = new Map(PHOTO_SRC.trim().split('\n').map(l => { const [n, id] = l.split('='); return [norm(n), id]; }));
 const PHOTO_STOP = new Set(['de', 'del', 'con', 'en', 'la', 'el', 'al', 'a', 'por', 'sobre', 'encima', 'y', 'los', 'las', 'para', 'banca']);
@@ -2262,10 +2280,12 @@ function wSets(w){ let n = 0; w.exercises.forEach(e => n += e.sets.length); retu
 function hasData(s, type){
   if (type === 'dur') return s.sec > 0;
   if (type === 'cardio') return s.km > 0 || s.min > 0;
+  if (type === 'kgm') return s.km > 0;
   return s.reps > 0;
 }
 /* 4.14: límites razonables al apuntar (no se guardan disparates) */
-const SET_MAX = {kg: 1000, reps: 1000, sec: 86400, km: 1000, min: 1440};
+const SET_MAX = {kg: 1000, reps: 1000, sec: 86400, km: 1000, min: 1440, m: 100000};
+const fmtM = km => fmtN(km * 1000, 1) + '\u00a0m'; // 4.25: distancia de kgm (guardada en km) en metros
 function setValOk(f, v, type){ return v == null || (isFinite(v) && v <= SET_MAX[f] && v >= (f === 'kg' && type === 'bw' ? -SET_MAX.kg : 0)); }
 function durOk(v){ return v != null && v >= 1 && v <= 1440; }
 function exHistory(exId, beforeTs = Infinity, excludeId = null){
@@ -2298,7 +2318,7 @@ function computePRs(w){
     const cur = {kg: 0, e1rm: 0, vol: 0, reps: 0, sec: 0, km: 0};
     work.forEach(s => { cur.kg = Math.max(cur.kg, s.kg || 0); cur.e1rm = Math.max(cur.e1rm, e1rm(s)); cur.vol = Math.max(cur.vol, setVol(s)); cur.reps = Math.max(cur.reps, s.reps || 0); cur.sec = Math.max(cur.sec, s.sec || 0); cur.km = Math.max(cur.km, s.km || 0); });
     const add = (kind, label, val, txt, prev) => prs.push({exId: e.exId, kind, label, val, txt, prev});
-    if (type === 'wr' || (type === 'bw' && cur.kg > 0)) {
+    if (type === 'wr' || ((type === 'bw' || type === 'kgm') && cur.kg > 0)) {
       if (cur.kg > old.kg) add('kg', 'Peso más alto', cur.kg, fmtN(cur.kg) + ' kg', old.kg ? fmtN(old.kg) + ' kg' : '');
       if (cur.e1rm > old.e1rm + 0.01) add('e1rm', '1RM estimado', cur.e1rm, fmtN(cur.e1rm) + ' kg', old.e1rm ? fmtN(old.e1rm) + ' kg' : '');
       if (cur.vol > old.vol) add('vol', 'Mejor serie (volumen)', cur.vol, fmtN(cur.vol, 0) + ' kg', old.vol ? fmtN(old.vol, 0) + ' kg' : '');
@@ -2306,6 +2326,7 @@ function computePRs(w){
     if (type === 'bw' && cur.reps > old.reps) add('reps', 'Más repeticiones', cur.reps, cur.reps + ' reps', old.reps ? old.reps + ' reps' : '');
     if (type === 'dur' && cur.sec > old.sec) add('sec', 'Más tiempo', cur.sec, fmtClock(cur.sec), old.sec ? fmtClock(old.sec) : '');
     if (type === 'cardio' && cur.km > old.km) add('km', 'Más distancia', cur.km, fmtN(cur.km, 2) + ' km', old.km ? fmtN(old.km, 2) + ' km' : '');
+    if (type === 'kgm' && cur.km > old.km) add('km', 'Más distancia', cur.km, fmtM(cur.km), old.km ? fmtM(old.km) : '');
   }
   return prs;
 }
@@ -2318,7 +2339,7 @@ function setPR(d, ei, si, cache){
   if (!base) return null; // primera vez: no cuenta
   const b = Object.assign({}, base);
   d.exercises.forEach((x, i) => { if (x.exId !== e.exId) return; x.sets.forEach((q, j) => { if (!(i < ei || (i === ei && j < si)) || !q.done || !isWork(q)) return; b.kg = Math.max(b.kg, q.kg || 0); b.e1rm = Math.max(b.e1rm, e1rm(q)); b.vol = Math.max(b.vol, setVol(q)); b.reps = Math.max(b.reps, q.reps || 0); b.sec = Math.max(b.sec, q.sec || 0); b.km = Math.max(b.km, q.km || 0); }); });
-  if (type === 'wr' || (type === 'bw' && s.kg > 0)) {
+  if (type === 'wr' || ((type === 'bw' || type === 'kgm') && s.kg > 0)) {
     if ((s.kg || 0) > b.kg) return {label: 'Peso más alto', txt: fmtN(s.kg) + ' kg'};
     if (e1rm(s) > b.e1rm + 0.01) return {label: '1RM estimado', txt: fmtN(e1rm(s)) + ' kg'};
     if (setVol(s) > b.vol) return {label: 'Mejor serie', txt: fmtN(setVol(s), 0) + ' kg'};
@@ -2326,6 +2347,7 @@ function setPR(d, ei, si, cache){
   if (type === 'bw' && (s.reps || 0) > b.reps) return {label: 'Más repeticiones', txt: s.reps + ' reps'};
   if (type === 'dur' && (s.sec || 0) > b.sec) return {label: 'Más tiempo', txt: fmtClock(s.sec)};
   if (type === 'cardio' && (s.km || 0) > b.km) return {label: 'Más distancia', txt: fmtN(s.km, 2) + ' km'};
+  if (type === 'kgm' && (s.km || 0) > b.km) return {label: 'Más distancia', txt: fmtM(s.km)};
   return null;
 }
 /* RIR/RPE (4.15, opcional): S.settings.effort = true lo enseña; S.settings.effUnit = 'rir' (por defecto) o 'rpe'.
@@ -2338,10 +2360,12 @@ const effVal = (rpe, mode) => { const v = rpeOk(rpe); return v == null || !mode 
 const effFmt = (rpe, mode) => { const v = effVal(rpe, mode); return v == null ? null : mode === 'rir' && v >= 5 ? '5+' : mode === 'rpe' && v < 6 ? '<6' : fmtN(v); };
 function effText(rpe, mode = effMode()){ const t = effFmt(rpe, mode); return t == null ? '' : (mode === 'rpe' ? 'RPE ' : 'RIR ') + t; }
 const effSfx = s => { const t = s ? effText(s.rpe) : ''; return t ? ' · ' + t : ''; };
+const setHead = type => type === 'dur' ? 'Tiempo' : type === 'cardio' ? 'Distancia y tiempo' : type === 'kgm' ? 'Peso y distancia' : 'Peso × reps';
 function setText(s, type){
   if (!s) return '';
   if (type === 'dur') return s.sec ? fmtClock(s.sec) : '';
   if (type === 'cardio') return [s.km ? fmtN(s.km, 2) + ' km' : '', s.min ? fmtN(s.min) + ' min' : ''].filter(Boolean).join(' · ');
+  if (type === 'kgm') return [s.kg ? fmtN(s.kg) + ' kg' : '', s.km ? fmtM(s.km) : ''].filter(Boolean).join(' · ');
   if (type === 'bw') return (s.kg ? '+' + fmtN(s.kg) + ' kg × ' : '× ') + (s.reps ?? '');
   if (s.kg == null && s.reps == null) return '';
   return `${fmtN(s.kg || 0)} kg × ${s.reps ?? ''}`;
@@ -2352,6 +2376,7 @@ function setLine(s, type){
   if (!s) return '';
   if (type === 'dur') return s.sec ? fmtClock(s.sec) : '';
   if (type === 'cardio') return [s.km ? fmtN(s.km, 2) + ' km' : '', s.min ? fmtClock(s.min * 60) : ''].filter(Boolean).join(' - ');
+  if (type === 'kgm') return [s.kg ? fmtN(s.kg, 2) + ' kg' : '', s.km ? fmtN(s.km * 1000, 1) + ' m' : ''].filter(Boolean).join(' x ');
   if (type === 'bw') return s.reps ? (s.kg ? `+${fmtN(s.kg, 2)} kg x ${s.reps}` : `${s.reps} reps`) : (s.kg ? `+${fmtN(s.kg, 2)} kg` : '');
   if (s.kg == null && s.reps == null) return '';
   return `${fmtN(s.kg || 0, 2)} kg x ${s.reps ?? 0}`;
@@ -2901,10 +2926,11 @@ function exBestInSets(sets, type){
   if (type === 'wr') return ws.reduce((a, b) => e1rm(b) > e1rm(a) ? b : a);
   if (type === 'bw') return ws.reduce((a, b) => ((b.reps || 0) + (b.kg || 0) / 10) > ((a.reps || 0) + (a.kg || 0) / 10) ? b : a);
   if (type === 'dur') return ws.reduce((a, b) => (b.sec || 0) > (a.sec || 0) ? b : a);
+  if (type === 'kgm') return ws.reduce((a, b) => (b.kg || 0) > (a.kg || 0) || ((b.kg || 0) === (a.kg || 0) && (b.km || 0) > (a.km || 0)) ? b : a);
   return ws.reduce((a, b) => (b.km || 0) > (a.km || 0) ? b : a);
 }
-function exScore(sets, type){ const b = exBestInSets(sets, type); if (!b) return 0; return type === 'wr' ? e1rm(b) : type === 'bw' ? (b.reps || 0) : type === 'dur' ? (b.sec || 0) : (b.km || 0); }
-const scoreUnit = type => type === 'wr' ? ' kg' : type === 'bw' ? ' reps' : type === 'dur' ? ' s' : ' km';
+function exScore(sets, type){ const b = exBestInSets(sets, type); if (!b) return 0; return type === 'wr' ? e1rm(b) : type === 'bw' ? (b.reps || 0) : type === 'dur' ? (b.sec || 0) : type === 'kgm' ? (b.kg || 0) : (b.km || 0); }
+const scoreUnit = type => type === 'wr' || type === 'kgm' ? ' kg' : type === 'bw' ? ' reps' : type === 'dur' ? ' s' : ' km';
 function prevComparable(w){
   return S.workouts.find(x => x.start < w.start && x.id !== w.id && ((w.routineId && x.routineId === w.routineId) || norm(x.title) === norm(w.title))) || null;
 }
@@ -3032,7 +3058,7 @@ function viewWorkout(w){
     const x = exOf(e.exId), sn = {n: 0};
     h += `<div class="card stack"><button class="row between" data-act="open-ex" data-id="${x.id}" style="text-align:left"><h3>${esc(x.name)}</h3>${e.ss ? '<span class="pill accent">Superserie</span>' : ''}</button>
       ${e.notes ? `<div class="small muted">${esc(e.notes)}</div>` : ''}
-      <table class="sets"><tr><th>Serie</th><th>${x.type === 'dur' ? 'Tiempo' : x.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th><th>${x.type === 'wr' ? '1RM est.' : ''}</th></tr>
+      <table class="sets"><tr><th>Serie</th><th>${setHead(x.type)}</th><th>${x.type === 'wr' ? '1RM est.' : ''}</th></tr>
       ${e.sets.map(s => { const lab = setLab(s.t, sn); return `<tr><td><b class="st-${s.t}">${lab}</b></td><td>${setText(s, x.type)}${effSfx(s)}</td><td class="muted">${x.type === 'wr' && s.kg && s.reps ? fmtN(e1rm(s)) : ''}</td></tr>`; }).join('')}</table>
       ${(prBy[e.exId] || []).map(p => `<div class="pr small">${ICON.trophy.replace('<svg', '<svg width="14" height="14" style="vertical-align:-2px"')} ${p.label}: ${p.txt}</div>`).join('')}</div>`;
   }
@@ -3064,7 +3090,7 @@ function exUseCount(){ const c = {}; S.workouts.forEach(w => w.exercises.forEach
 const EX_STOP = new Set(['de', 'del', 'con', 'en', 'la', 'el', 'a', 'y']);
 function exFilter(q, m){
   const nq = norm(q), tk = nq.split(' ').filter(t => t && !EX_STOP.has(t));
-  return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle))) && (!nq || (() => { const hay = norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')); return hay.includes(nq) || (tk.length > 0 && tk.every(t => hay.includes(t))); })()));
+  return allEx().filter(e => (!m || e.muscle === m || (m === 'pierna' && LEGS.includes(e.muscle)) || (m === 'hyrox' && HYROX_X.includes(e.id))) && (!nq || (() => { const hay = norm(e.name + ' ' + e.aliases.join(' ') + ' ' + (MUSCLES[e.muscle] || '')); return hay.includes(nq) || (tk.length > 0 && tk.every(t => hay.includes(t))); })()));
 }
 function exItem(e, count, sel){
   return `<button class="exitem ${sel ? 'sel' : ''}" data-act="${sel === undefined ? 'open-ex' : 'pick-ex'}" data-id="${e.id}"><span class="mono" style="--mt:${MTINT[e.muscle] || 'var(--apagado)'}">${sel ? ICON.check.replace('<svg', '<svg width="20" height="20"') : esc(e.name.slice(0, 2).toUpperCase()) + photoImg(e)}</span><span class="nm"><div>${esc(e.name)}</div><div class="small muted">${esc(MUSCLES[e.muscle] || e.muscle)}, ${esc(EQUIP[e.equip] || e.equip)}${e.custom ? (e.src === 'hevy' ? ', importado' : ', propio') : ''}</div></span>${count ? `<span class="pill num">${count}</span>` : ''}</button>`;
@@ -3103,13 +3129,13 @@ function viewExercise(id){
     h += rkExCardHTML(id);
     const metrics = x.type === 'wr' ? [['kg', 'Peso máx.'], ['e1rm', '1RM est.'], ['vol', 'Mejor serie'], ['sess', 'Volumen sesión'], ['reps', 'Reps máx.']]
       : x.type === 'bw' ? [['reps', 'Reps máx.'], ['tot', 'Reps totales'], ['kg', 'Lastre máx.']]
-      : x.type === 'dur' ? [['sec', 'Mejor tiempo'], ['tsec', 'Tiempo total']] : [['km', 'Distancia'], ['min', 'Minutos']];
+      : x.type === 'dur' ? [['sec', 'Mejor tiempo'], ['tsec', 'Tiempo total']] : x.type === 'kgm' ? [['kg', 'Peso máx.'], ['m', 'Distancia máx.'], ['tm', 'Distancia total']] : [['km', 'Distancia'], ['min', 'Minutos']];
     if (!metrics.some(m => m[0] === UI.exMetric)) UI.exMetric = metrics[0][0];
     const val = sets => {
       const ws = sets.filter(isWork), mx = f => Math.max(0, ...ws.map(f)), sm = f => ws.reduce((a, s) => a + f(s), 0);
-      return {kg: mx(s => s.kg || 0), e1rm: mx(e1rm), vol: mx(setVol), sess: sm(setVol), reps: mx(s => s.reps || 0), tot: sm(s => s.reps || 0), sec: mx(s => s.sec || 0), tsec: sm(s => s.sec || 0), km: sm(s => s.km || 0), min: sm(s => s.min || 0)}[UI.exMetric];
+      return {kg: mx(s => s.kg || 0), e1rm: mx(e1rm), vol: mx(setVol), sess: sm(setVol), reps: mx(s => s.reps || 0), tot: sm(s => s.reps || 0), sec: mx(s => s.sec || 0), tsec: sm(s => s.sec || 0), km: sm(s => s.km || 0), min: sm(s => s.min || 0), m: mx(s => (s.km || 0) * 1000), tm: sm(s => (s.km || 0) * 1000)}[UI.exMetric];
     };
-    const unit = {kg: ' kg', e1rm: ' kg', vol: ' kg', sess: ' kg', reps: ' reps', tot: ' reps', sec: ' s', tsec: ' s', km: ' km', min: ' min'}[UI.exMetric];
+    const unit = {kg: ' kg', e1rm: ' kg', vol: ' kg', sess: ' kg', reps: ' reps', tot: ' reps', sec: ' s', tsec: ' s', km: ' km', min: ' min', m: ' m', tm: ' m'}[UI.exMetric];
     const pts = hist.map(({w, sets}) => ({x: w.start, y: val(sets)})).filter(p => p.y > 0);
     const first = pts[0], last = pts[pts.length - 1];
     h += `<div class="chips wrap">${metrics.map(([k, l]) => `<button class="chip" data-act="ex-metric" data-k="${k}" aria-pressed="${UI.exMetric === k}">${l}</button>`).join('')}</div>
@@ -3124,7 +3150,7 @@ function viewExercise(id){
     const row = (label, r, txt) => r ? `<button class="recrow" data-act="open-workout" data-id="${r.w.id}"><span>${label}<small>${fmtDate(r.w.start, false)}${r.s ? ' · ' + setText(r.s, x.type) : ''}</small></span><b class="pr num">${txt(r.v)}</b></button>` : '';
     const rows = x.type === 'wr' ? [row('Peso más alto', R.kg, v => fmtN(v) + ' kg'), row('1RM estimado', R.e1rm, v => fmtN(v) + ' kg'), row('Mejor serie (peso × reps)', R.vol, v => fmtN(v, 0) + ' kg'), row('Mejor sesión (volumen)', R.sess, v => fmtKg(v)), row('Más repeticiones', R.reps, v => v + ' reps')]
       : x.type === 'bw' ? [row('Más repeticiones', R.reps, v => v + ' reps'), row('Lastre más alto', R.kg, v => fmtN(v) + ' kg')]
-      : x.type === 'dur' ? [row('Mejor tiempo', R.sec, v => fmtClock(v))] : [row('Mayor distancia', R.km, v => fmtN(v, 2) + ' km')];
+      : x.type === 'dur' ? [row('Mejor tiempo', R.sec, v => fmtClock(v))] : x.type === 'kgm' ? [row('Peso más alto', R.kg, v => fmtN(v) + ' kg'), row('Mayor distancia', R.km, fmtM)] : [row('Mayor distancia', R.km, v => fmtN(v, 2) + ' km')];
     const body = rows.join('');
     h += body ? `<div class="card stack"><h3>Chiquipuntos personales</h3><div class="small muted">Toca uno para abrir el entreno donde lo hiciste.</div>${body}</div>` : `<div class="empty">${EI('✨')}<div>Aún no hay chiquipuntos para este ejercicio.</div></div>`;
     const rk = Object.keys(reps).map(Number).sort((a, b) => a - b);
@@ -3691,11 +3717,20 @@ function effBtnHTML(s, ei, si, ef){
   const t = effFmt(s.rpe, ef);
   return `<button class="seff${t == null ? ' nov' : ''}" data-act="set-eff" data-ei="${ei}" data-si="${si}" aria-label="${ef === 'rpe' ? 'RPE' : 'RIR'} serie ${si + 1}: ${t ?? 'sin poner'}">${t ?? '–'}</button>`;
 }
+// 4.25: el campo «m» (metros) de kgm es la distancia guardada en s.km
+const setFv = (s, f) => f === 'm' ? (s.km != null ? Math.round(s.km * 1e5) / 100 : null) : s[f];
+// Columnas y campos de las series según el tipo de ejercicio
+function setCols(x){
+  const t = x.type;
+  if (t === 'dur') return {cols: ['Seg'], fields: ['sec']};
+  if (t === 'cardio') return {cols: ['km', 'min'], fields: ['km', 'min']};
+  if (t === 'kgm') return {cols: [x.equip === 'corporal' ? '+kg' : 'kg', 'm'], fields: ['kg', 'm']};
+  return {cols: t === 'bw' ? ['+kg', 'Reps'] : ['kg', 'Reps'], fields: ['kg', 'reps']};
+}
 function exCardHTML(e, ei){
   const x = exOf(e.exId), m = ED.mode, chk = m === 'active';
   const prev = prevSets(e.exId, m === 'past' ? ED.data.id : null);
-  const cols = x.type === 'dur' ? ['Seg'] : x.type === 'cardio' ? ['km', 'min'] : x.type === 'bw' ? ['+kg', 'Reps'] : ['kg', 'Reps'];
-  const fields = x.type === 'dur' ? ['sec'] : x.type === 'cardio' ? ['km', 'min'] : ['kg', 'reps'];
+  const {cols, fields} = setCols(x);
   const rest = e.rest ?? S.settings.rest;
   const ef = m !== 'routine' && (x.type === 'wr' || x.type === 'bw') ? effMode() : null, efc = ef ? 'eff' : '';
   const sn = {n: 0};
@@ -3705,7 +3740,7 @@ function exCardHTML(e, ei){
     const lab = setLab(s.t, sn);
     const ph = phFor(e, si) || {};
     const pv = prev[si], key = ei + '-' + si;
-    const inputs = fields.map(f => `<input class="sin" inputmode="${f === 'reps' || f === 'sec' ? 'numeric' : 'decimal'}" data-act="set-in" data-f="${f}" data-ei="${ei}" data-si="${si}" value="${s[f] != null ? String(s[f]).replace('.', ',') : ''}" placeholder="${ph[f] != null ? fmtN(ph[f], 2) : '–'}" aria-label="${f} serie ${si + 1}">`).join('') + (fields.length === 1 ? '<div></div>' : '');
+    const inputs = fields.map(f => { const cv = setFv(s, f), pv = setFv(ph, f); return `<input class="sin" inputmode="${f === 'reps' || f === 'sec' ? 'numeric' : 'decimal'}" data-act="set-in" data-f="${f}" data-ei="${ei}" data-si="${si}" value="${cv != null ? String(cv).replace('.', ',') : ''}" placeholder="${pv != null ? fmtN(pv, 2) : '–'}" aria-label="${f === 'm' ? 'metros' : f} serie ${si + 1}">`; }).join('') + (fields.length === 1 ? '<div></div>' : '');
     return `<div class="swrap"><div class="sgrid srow t-${s.t} ${chk && s.done ? 'done' : ''} ${pr ? 'prow' : ''} ${chk ? '' : 'nochk'} ${efc} ${chk && ED.cur === key ? 'cur' : ''} ${ED.just === key ? 'just' : ''}" id="r-${ei}-${si}" data-ei="${ei}" data-si="${si}">
       <button class="sbadge" data-act="set-menu" data-ei="${ei}" data-si="${si}" aria-label="Tipo de serie">${lab}${pr ? `<i class="medal" title="Chiquipunto: ${pr.label}">${ICON.trophy}</i>` : ''}</button>
       <button class="sprev" data-act="use-prev" data-ei="${ei}" data-si="${si}">${pv ? esc(setText(pv, x.type)) : '–'}</button>
@@ -3752,6 +3787,7 @@ function setInfoAt(e, si){
   const v = f => s[f] != null && s[f] !== '' ? s[f] : ph[f];
   const kg = v('kg'), reps = v('reps'), sec = v('sec'), km = v('km'), min = v('min');
   const val = x.type === 'dur' ? (sec ? fmtClock(sec) : '') : x.type === 'cardio' ? [km ? fmtN(km, 2) + ' km' : '', min ? fmtN(min) + ' min' : ''].filter(Boolean).join(' · ')
+    : x.type === 'kgm' ? [kg ? fmtN(kg, 2) + ' kg' : '', km ? fmtM(km) : ''].filter(Boolean).join(' × ')
     : [kg ? fmtN(kg, 2) + ' kg' : '', reps ? reps + ' reps' : ''].filter(Boolean).join(' × ');
   // Como en la tabla: el calentamiento no cuenta (Serie 1 de 4 tras un calentamiento).
   return {name: x.name, w: s.t === 'w', n: e.sets.slice(0, si + 1).filter(isWork).length, total: e.sets.filter(isWork).length, val};
@@ -4094,7 +4130,7 @@ function fixDurations(){ let n = 0; for (const w of S.workouts) if (fixDuration(
 function guessMuscle(name){
   const n = norm(name);
   // de lo más concreto a lo más general (p. ej. «Curl de piernas» antes que «curl», «Jalón al pecho» antes que «pecho»)
-  const R = [[/\b(run|correr|carrera|treadmill|cinta|bike|bici|cycl|elliptic|eliptica|escaladora|stair|andar|walk|camin|swim|nadar|cuerdas de batalla|battle rope|comba|jump rope|cardio|row machine|remoergometro)/, 'cardio'],
+  const R = [[/\b(swim|nadar|natacion)/, 'natacion'], [/\b(run|correr|carrera|treadmill|cinta|bike|bici|cycl|elliptic|eliptica|escaladora|stair|andar|walk|camin|cuerdas de batalla|battle rope|comba|jump rope|cardio|row machine|remoergometro)/, 'cardio'],
     [/shrug|encogim|trapec/, 'trapecio'],
     [/crunch|abdominal|plank|plancha|ab wheel|rueda|leg raise|elevacion de (piernas|rodillas)|rodillas al pecho|knee raise|twist|giro ruso|pallof|core|sit up|hollow|oblicu/, 'abdominales'],
     [/back extension|hiperext|hyperext|lumbar|extension de espalda/, 'lumbares'],
@@ -4147,6 +4183,8 @@ function exIndex(){
 /* 4.14: los valores absurdos de un CSV se descartan (la serie se queda sin ese dato) sin bloquear la importación */
 const withRpe = (s, v) => { v = rpeOk(num(v)); if (v != null) s.rpe = v; return s; }; // columna rpe de Hevy (4.15)
 const csvClamp = (v, max, signed) => v != null && (v > max || v < (signed ? -max : 0)) ? null : v;
+// Tipo de un ejercicio nuevo al importar, según lo que trae la fila (4.25: peso y distancia → kgm)
+const csvType = (km, kg, dur, reps) => km ? (kg ? 'kgm' : 'cardio') : (dur && !reps) ? 'dur' : (kg == null && reps) ? 'bw' : 'wr';
 function importWorkoutsCSV(text){
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('El archivo está vacío.');
@@ -4180,7 +4218,7 @@ function importWorkoutsCSV(text){
       let km = cKm >= 0 ? num(get(r, cKm)) : null; if (km == null && cMi >= 0) { const mi = num(get(r, cMi)); km = mi != null ? mi * 1.609344 : null; }
       km = csvClamp(km, SET_MAX.km);
       if (!exId) {
-        const type = km ? 'cardio' : (dur && !reps) ? 'dur' : (kgRaw == null && reps) ? 'bw' : 'wr';
+        const type = csvType(km, kgRaw, dur, reps);
         const x = {id: 'c-' + rid(), name: title, muscle: guessMuscle(title), equip: guessEquip(title), type, aliases: [], custom: true, src: 'hevy'};
         S.customEx.push(x); exMap.set(x.id, x); idx.set(norm(title), x.id); created.push(x.name); exId = x.id;
       }
@@ -4192,7 +4230,7 @@ function importWorkoutsCSV(text){
       const kg = kgRaw != null ? (lbs ? kgRaw * 0.45359237 : kgRaw) : null;
       const s = {t, kg: kg != null ? Math.round(kg * 100) / 100 : null, reps, sec: null, km: null, min: null};
       const type = exOf(exId).type;
-      if (type === 'dur') s.sec = dur; if (type === 'cardio') { s.km = km; s.min = dur ? Math.round(dur / 6) / 10 : null; }
+      if (type === 'dur') s.sec = dur; if (type === 'cardio' || type === 'kgm') s.km = km; if (type === 'cardio') s.min = dur ? Math.round(dur / 6) / 10 : null;
       block.sets.push(withRpe(s, get(r, 'rpe')));
     }
     if (!exercises.length) continue;
@@ -5807,7 +5845,7 @@ function viewPost(pid){
   const safeSet = (s, t) => { try { return setText(s, t); } catch (e) { return ''; } };
   for (const e of exs) {
     const sn = {n: 0};
-    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${e.type === 'dur' ? 'Tiempo' : e.type === 'cardio' ? 'Distancia y tiempo' : 'Peso × reps'}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${setLab(t, sn)}</b></td><td>${esc(safeSet(s, e.type) + effSfx(s))}</td></tr>`; }).join('')}</table></div>`;
+    h += `<div class="card stack"><h3>${esc(e.name)}</h3><table class="sets"><tr><th>Serie</th><th>${setHead(e.type)}</th></tr>${arr(e.sets).filter(isO).map(s => { const t = ['n', 'w', 'd', 'f'].includes(s.t) ? s.t : 'n'; return `<tr><td><b class="st-${t}">${setLab(t, sn)}</b></td><td>${esc(safeSet(s, e.type) + effSfx(s))}</td></tr>`; }).join('')}</table></div>`;
   }
   h += `<button class="btn primary block" data-act="soc-copy" data-id="${esc(p.id)}">Hacer este entreno</button>
     <div class="grid2 det-acts"><button class="btn" data-act="soc-copy-routine" data-id="${esc(p.id)}">Guardar como rutina</button><button class="btn" data-act="soc-copytext" data-id="${esc(p.id)}">Copiar texto</button></div>
@@ -6156,7 +6194,7 @@ const A = {
     const ei = +el.dataset.ei, si = +el.dataset.si, e = ED.data.exercises[ei], s = e.sets[si], x = exOf(e.exId);
     if (!s.done) {
       fillFromPh(e, si);
-      if (!hasData(s, x.type)) { const row = $(`#r-${ei}-${si}`); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); toast(x.type === 'dur' ? 'Pon el tiempo de la serie' : x.type === 'cardio' ? 'Pon la distancia o los minutos' : 'Pon las repeticiones'); return; }
+      if (!hasData(s, x.type)) { const row = $(`#r-${ei}-${si}`); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); toast(x.type === 'dur' ? 'Pon el tiempo de la serie' : x.type === 'cardio' ? 'Pon la distancia o los minutos' : x.type === 'kgm' ? 'Pon los metros' : 'Pon las repeticiones'); return; }
       s.done = true; e.at = Date.now(); ED.just = ei + '-' + si; haptic(1); // e.at: ejercicio en curso (setOrder)
       const next = e.ss ? ED.data.exercises[ei + 1] : null;
       const lastInSS = !(next && next.ss === e.ss);
@@ -6684,8 +6722,8 @@ document.addEventListener('input', ev => {
   if (el.id === 'edTitle') { syncTitle(); edTouch(); return; }
   if (el.dataset.act === 'set-in') {
     const ex = ED.data.exercises[+el.dataset.ei], s = ex.sets[+el.dataset.si], f = el.dataset.f; let v = num(el.value); if (v != null && (f === 'reps' || f === 'sec')) v = Math.round(v);
-    if (!setValOk(f, v, exOf(ex.exId).type)) { el.value = s[f] != null ? String(s[f]).replace('.', ',') : ''; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 400); toast('Ese valor no es razonable (' + ({kg: exOf(ex.exId).type === 'bw' ? 'kg: de -1000 a 1000' : 'kg: 0-1000', reps: 'reps: 0-1000', sec: 'segundos: 0-86400', km: 'km: 0-1000', min: 'minutos: 0-1440'}[f]) + ')'); return; }
-    s[f] = v; edTouch(); return;
+    if (!setValOk(f, v, exOf(ex.exId).type)) { const cv = setFv(s, f); el.value = cv != null ? String(cv).replace('.', ',') : ''; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 400); toast('Ese valor no es razonable (' + ({kg: exOf(ex.exId).type === 'bw' ? 'kg: de -1000 a 1000' : 'kg: 0-1000', reps: 'reps: 0-1000', sec: 'segundos: 0-86400', km: 'km: 0-1000', min: 'minutos: 0-1440', m: 'metros: 0-100000'}[f]) + ')'); return; }
+    if (f === 'm') s.km = v != null ? v / 1000 : null; else s[f] = v; edTouch(); return;
   }
   if (el.dataset.act === 'ex-note') { ED.data.exercises[+el.dataset.ei].notes = el.value; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; edTouch(); }
 });
@@ -6831,7 +6869,7 @@ const RK_SEXF = {pecho: .62, hombros: .64, triceps: .64, biceps: .66, antebrazo:
   cuadriceps: .76, isquios: .76, gluteos: .80, gemelos: .76, aductores: .80, abductores: .80, abdominales: .80};
 const RK_SEXF_EX = {'x-peso-muerto-barra': .76, 'x-peso-muerto-con-barra-hexagonal': .76}; // músculo «espalda», pero es un levantamiento de pierna
 function rkInfo(id){
-  const x = exMap.get(id); if (!x || x.muscle === 'cardio' || x.muscle === 'completo') return null;
+  const x = exMap.get(id); if (!x || NO_RANK.includes(x.muscle)) return null;
   const r = RK_REPS.get(id); if (r) return (r.mode === 'sec' ? x.type === 'dur' : x.type === 'bw') ? {mode: r.mode, a: r.a, f: r.f, x} : null;
   if (x.type !== 'wr' && x.type !== 'bw') return null;
   let k = FZ_STD.get(id); if (k == null) k = RK_STD.get(id);
@@ -6898,7 +6936,7 @@ function rkAll(){
     const w = S.workouts[i], bw = bwAt(w.start), af = rkAf(w.start), per = new Map();
     for (const e of w.exercises) {
       let f = info.get(e.exId); if (f === undefined) info.set(e.exId, f = rkInfo(e.exId));
-      if (!f) { if (exMap.has(e.exId) && exOf(e.exId).type !== 'cardio') none.set(e.exId, 'std'); continue; }
+      if (!f) { const xx = exMap.get(e.exId); if (xx && xx.type !== 'cardio' && xx.type !== 'kgm') none.set(e.exId, 'std'); continue; }
       if (f.mode === 'load' && !bw) { none.set(e.exId, 'bw'); continue; }
       let o = per.get(e.exId); if (!o) per.set(e.exId, o = {n: 0, k: 0, top: null});
       for (const s of e.sets) { const v = rkSetScore(f, s, bw, sex, af); if (v > 0) { o.k++; if (v > o.n) { o.n = v; o.top = s; } } }
@@ -7957,7 +7995,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.24.0';
+const APP_VERSION = '4.25.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
