@@ -161,7 +161,59 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { vivo.clave = ''; pasoVivo(); } });
   }
 
+  // 4.26: avisos push de iOS (APNs) con @capacitor/push-notifications. Las compilaciones antiguas de TestFlight no traen el plugin:
+  // available() da false y la web no enseña nada nativo. El token sale en hexadecimal (minúsculas) y se guarda mientras dure la app.
+  const Push = plugin('PushNotifications');
+  const hayPush = () => { try { return typeof cap.isPluginAvailable === 'function' ? !!cap.isPluginAvailable('PushNotifications') : true; } catch (e) { return false; /* sin nativo */ } }; // registerPlugin devuelve un proxy aunque el plugin no esté compilado
+  const pushOk = !!(Push && hayPush() && ['register', 'checkPermissions', 'requestPermissions', 'addListener'].every((m) => typeof Push[m] === 'function'));
+  const apns = {tok: null, espera: null};
+  const permisoPush = async (pedir) => {
+    let r = await seguro(Push.checkPermissions());
+    let p = r && r.receive;
+    if (p === 'prompt' && pedir) { r = await seguro(Push.requestPermissions()); p = r && r.receive; }
+    return p === 'granted';
+  };
+  const soltar = (hs) => hs.forEach((h) => { if (h && typeof h.remove === 'function') seguro(h.remove()); });
+  // Escucha «registration» antes de llamar a register() (iOS contesta con un evento) y se rinde a los 10 s
+  const registrarPush = async () => {
+    let fin = null;
+    const llega = new Promise((res) => { fin = res; });
+    const hs = await Promise.all([
+      seguro(Push.addListener('registration', (ev) => fin(ev && typeof ev.value === 'string' ? ev.value.toLowerCase() : null))),
+      seguro(Push.addListener('registrationError', () => fin(null)))
+    ]);
+    const tope = setTimeout(() => fin(null), 10000);
+    try {
+      await Push.register();
+      const t = await llega;
+      return typeof t === 'string' && /^[0-9a-f]{64,200}$/.test(t) ? t : null;
+    } catch (e) { return null; /* iOS rechazó el registro */ } finally { clearTimeout(tope); soltar(hs); }
+  };
+  // token(pedir): con pedir=false no sale ningún diálogo (solo registra si el permiso ya estaba dado)
+  const tokenPush = async (pedir = true) => {
+    if (!pushOk) return null;
+    try {
+      if (!(await permisoPush(pedir))) return null;
+      if (apns.tok) return apns.tok;
+      if (!apns.espera) apns.espera = registrarPush().then((t) => { apns.tok = t || apns.tok; apns.espera = null; return t; });
+      return await apns.espera;
+    } catch (e) { apns.espera = null; return null; /* sin nativo */ }
+  };
+  // Tocar un aviso social (lleva hierro.t) abre Social › Avisos. Si la web aún no escucha, queda marcado en Native.notifsPending.
+  let avisosPendiente = false; // por si el aviso llega antes de que exista window.Native o de que la web escuche
+  const abrirAvisos = () => {
+    avisosPendiente = true;
+    try { window.dispatchEvent(new CustomEvent('hierro:open-notifs')); } catch (e) { /* sin CustomEvent */ }
+  };
+  if (pushOk) {
+    seguro(Push.addListener('pushNotificationActionPerformed', (ev) => {
+      const d = ev && ev.notification && ev.notification.data;
+      if (d && d.hierro && d.hierro.t) abrirAvisos();
+    }));
+  }
+
   let plataforma = 'ios';
   try { if (typeof cap.getPlatform === 'function') plataforma = cap.getPlatform() || 'ios'; } catch (e) { /* se queda en ios */ }
-  window.Native = {is: true, platform: plataforma, health: salud};
+  window.Native = {is: true, platform: plataforma, health: salud, push: {available: () => pushOk, token: tokenPush, perm: async () => pushOk && !!(await seguro(permisoPush(false)))},
+    get notifsPending() { return avisosPendiente; }, set notifsPending(v) { avisosPendiente = !!v; }};
 })();

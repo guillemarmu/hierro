@@ -3456,7 +3456,7 @@ function viewMe(){
     <div class="f" role="group" aria-labelledby="themeLbl"><span id="themeLbl">Tema</span><div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => `<button data-act="set-theme" data-v="${k}" aria-pressed="${tp === k}">${l}</button>`).join('')}</div></div>
     <label class="f">Descanso por defecto<select id="setRest">${[0, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${S.settings.rest === s ? 'selected' : ''}>${s ? fmtClock(s) : 'Sin temporizador'}</option>`).join('')}</select></label>
     ${prefsHTML()}
-    ${window.Native ? '' : `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setNotif" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${!('Notification' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.') : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).'}</span></span></label>${coachHTML()}`}${healthHTML()}</div>`;
+${notifRowHTML()}${coachHTML()}${socPushHTML()}${healthHTML()}</div>`;
   h += `<div class="card stack"><h3>Tus datos</h3>
     <div class="small muted">${Cloud.session ? 'Se guardan en tu cuenta y en este móvil, así que funciona sin conexión y se sube solo cuando vuelve la cobertura. Solo tú puedes verlos.' : 'Se guardan solo en este móvil. Descarga una copia de vez en cuando y siempre antes de cambiar de móvil.'}</div>
     <button class="btn primary" data-act="import-csv">Importar entrenos (CSV)</button>
@@ -3872,6 +3872,13 @@ const Push = {
   at: null, okAt: null, sub: null,
   url(){ return ((window.HIERRO_CONFIG || {}).pushUrl || '').replace(/\/$/, ''); },
   ok(){ return !!this.url() && notifOK() && 'PushManager' in window; },
+  nat(){ return !!(window.Native && window.Native.push && window.Native.push.available()); }, // 4.26: app de iOS con el plugin de push (APNs)
+  // 4.26: por qué este móvil no puede recibir avisos ('' si puede)
+  why(){
+    if (this.nat()) return '';
+    if (!('Notification' in window) || !('PushManager' in window)) return IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.';
+    return Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).' : '';
+  },
   async getSub(){
     if (this.sub) return this.sub;
     const reg = await navigator.serviceWorker.ready;
@@ -3879,7 +3886,13 @@ const Push = {
     if (!s) { const k = atob(this.key.replace(/-/g, '+').replace(/_/g, '/')), u = new Uint8Array(k.length); for (let i = 0; i < k.length; i++) u[i] = k.charCodeAt(i); s = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: u}); }
     return this.sub = s;
   },
-  async call(path, body){ const s = await this.getSub(); const r = await fetch(this.url() + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({sub: s.toJSON(), ...body}), keepalive: true}); if (!r.ok) throw new Error('push ' + r.status); },
+  async post(path, body){ const r = await fetch(this.url() + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), keepalive: true}); if (!r.ok) throw new Error('push ' + r.status); },
+  // 4.26: el aparato de este móvil: token APNs en la app de iOS (ask: pedir el permiso si falta) o suscripción web. Falla si no hay
+  async dev(ask){
+    if (this.nat()) { const t = await window.Native.push.token(!!ask); if (!t) throw new Error('sin token'); return {key: t, coach: {apns: t}, reg: {kind: 'apns', token: t}}; }
+    const s = await this.getSub(), sub = s.toJSON(); return {key: s.endpoint, coach: {sub}, reg: {kind: 'web', sub}};
+  },
+  async call(path, body){ return this.post(path, {...(await this.dev()).coach, ...body}); },
   // Mantiene el servidor al día con el descanso actual: programa, reprograma o cancela
   sync(){
     if (!this.ok()) return;
@@ -3906,7 +3919,8 @@ const Coach = {
   LS: 'hierro.coach', seen: false, busy: false, again: false,
   cfg(){ const c = S.settings.coach || {}; return {on: typeof c.on === 'boolean' ? c.on : null, level: c.level === 'suave' ? 'suave' : 'picante'}; },
   perm(){ return 'Notification' in window && Notification.permission === 'granted'; },
-  on(){ const c = this.cfg(); return this.perm() && c.on !== false; },
+  on(){ const c = this.cfg(); return Push.nat() ? c.on === true : this.perm() && c.on !== false; }, // 4.26: en iOS nativo hace falta activarlo a mano (el permiso se pide al hacerlo)
+  hint(){ return Push.why() || (Push.nat() ? 'Te llegan como notificaciones del iPhone. ' : '') + 'De vez en cuando, un empujón según tu plan y los días que llevas sin entrenar. Nunca de noche.'; },
   name(){ const n = (Cloud.session && Cloud.session.name) || (S.settings.social && S.settings.social.username) || ''; return String(n).trim().split(/\s+/)[0].slice(0, 30); },
   body(){
     const p = plan(), idx = [0, 1, 2, 3, 4, 5, 6], rs = idx.map(i => planRoutines(p, i));
@@ -3914,32 +3928,113 @@ const Coach = {
       last: S.workouts.reduce((m, w) => Math.max(m, w.start || 0), 0), streak: weekStreak(), level: this.cfg().level, enabled: true};
   },
   async sync(){
-    if (!Push.url() || Store.key === 'nouser' || !('serviceWorker' in navigator)) return;
+    if (!Push.url() || Store.key === 'nouser' || !(Push.nat() || 'serviceWorker' in navigator)) return;
     if (this.busy) { this.again = true; return; }
     this.busy = true;
     try {
       const prev = localStorage.getItem(this.LS);
       if (!this.on()) { if (prev && prev !== 'off') { await Push.call('/coach/off', {}); localStorage.setItem(this.LS, 'off'); } return; }
-      if (!('PushManager' in window)) return;
-      const b = this.body(), h = hashOf({e: (await Push.getSub()).toJSON().endpoint, b});
+      if (!Push.nat() && !('PushManager' in window)) return;
+      const b = this.body(), h = hashOf({e: (await Push.dev()).key, b});
       if (h === prev && this.seen) return; // sin cambios: solo se vuelve a subir una vez por arranque
       await Push.call('/coach', b); localStorage.setItem(this.LS, h); this.seen = true;
     } catch (e) { console.warn('coach', e); }
     finally { this.busy = false; if (this.again) { this.again = false; this.sync(); } }
   },
+  async allow(){ // 4.26: pide el permiso de notificaciones (iOS nativo: el token APNs; web: askNotif)
+    if (Push.nat()) return SocPush.nativeToken();
+    return this.perm() || askNotif();
+  },
+  // 4.26: al cerrar sesión o borrar la cuenta, el servidor olvida el plan de este móvil (al volver a entrar se sube otra vez si está activo)
+  leave(){ const prev = localStorage.getItem(this.LS); if (!Push.url() || !prev || prev === 'off') return; this.seen = false; Push.call('/coach/off', {}).then(() => localStorage.removeItem(this.LS), e => console.warn('coach', e)); },
   async set(on){
-    if (on && !this.perm() && !(await askNotif())) return false;
+    if (on && !(await this.allow())) return false;
     S.settings.coach = {on, level: this.cfg().level}; Store.mark('meta'); render(); this.sync();
     toast(on ? 'Mensajes de motivación activados 💪' : 'Mensajes de motivación desactivados'); return on;
   },
-  level(v){ S.settings.coach = {on: this.on(), level: v === 'suave' ? 'suave' : 'picante'}; Store.mark('meta'); render(); this.sync(); }
+  level(v){ S.settings.coach = {on: Push.nat() ? this.cfg().on === true : this.on(), level: v === 'suave' ? 'suave' : 'picante'}; Store.mark('meta'); render(); this.sync(); }
 };
+/* ---------- Avisos de Social por notificación (4.26) ----------
+   Cuando alguien te pide seguirte, te acepta, te sigue, da like, comenta o pide entrar en tu clan, el servidor de avisos (Cloudflare)
+   manda una notificación a tus móviles. Ajuste S.settings.socPush (se sincroniza; activo si no se toca) que solo vale con sesión y con el permiso
+   del móvil. Este móvil se registra en /dev/reg (token APNs en la app de iOS, suscripción web en el resto) al abrir la app y al activarlo;
+   la huella uid+aparato y la hora van en localStorage y solo se repite si cambia o pasa un día. Se da de baja (/dev/off, sin idToken) al
+   cerrar sesión, al borrar la cuenta y al desactivarlo. Todo en una cola para que una baja no pise a un registro posterior. */
+const SocPush = {
+  LS: 'hierro.socpush', TYPES: ['freq', 'fok', 'follow', 'like', 'comment', 'creq', 'cok'], tok: null, probed: false, q: Promise.resolve(),
+  can(){ return !!(Cloud.session && Push.url()); },
+  want(){ return S.settings.socPush !== false; },
+  web(){ return !Push.nat() && 'Notification' in window && Notification.permission === 'granted' && 'serviceWorker' in navigator && 'PushManager' in window; },
+  on(){ return this.want() && (Push.nat() ? !!this.tok : this.web()); },
+  saved(){ try { return JSON.parse(localStorage.getItem(this.LS) || 'null'); } catch (e) { return null; /* almacenamiento bloqueado o dato roto */ } },
+  keep(v){ try { if (v) localStorage.setItem(this.LS, JSON.stringify(v)); else localStorage.removeItem(this.LS); } catch (e) { /* almacenamiento bloqueado */ } },
+  run(fn){ const p = this.q.then(fn); this.q = p.catch(() => { /* lo trata quien llama */ }); return p; },
+  setTok(k){ if (k === this.tok) return; this.tok = k; if ((tab === 'me' && !cur()) || tab === 'social') { if (!ED) render(); } },
+  // iOS nativo: pedir el permiso y sacar el token (con la respuesta del sistema, un aviso si no se concede)
+  async nativeToken(){
+    const P = window.Native.push, t = await P.token(true); if (t) this.setTok(t);
+    else toast(P.perm && await P.perm() ? 'No se han podido activar los avisos. Inténtalo más tarde.' : 'Sin permiso: actívalo en los ajustes del móvil (Notificaciones › Hierro)'); // con permiso y sin token: fallo de iOS, no de permiso
+    return !!t;
+  },
+  // El aparato sin pedir permisos; null si no se puede (sin permiso, sin soporte o sin token)
+  async device(){
+    if (!Push.nat() && !this.web()) return null;
+    try { const d = await Push.dev(false); if (Push.nat()) this.setTok(d.key); return d; } catch (e) { return null; /* sin permiso o sin token */ }
+  },
+  // 4.26: tarjeta en Social › Avisos para activarlos sin buscar en Ajustes (no sale si están activos, bloqueados o si se descartó)
+  offer(){
+    let no = false; try { no = !!localStorage.getItem('hierro.socpush.no'); } catch (e) { /* almacenamiento bloqueado */ }
+    if (!this.can() || this.on() || no || (window.Native && !Push.nat()) || (Push.nat() && !this.ready)) return ''; // iOS: hasta saber si ya hay permiso, no se ofrece
+    if (!Push.nat() && !('Notification' in window && 'PushManager' in window && Notification.permission !== 'denied')) return '';
+    return '<div class="card stack"><b>Entérate al momento</b><div class="small muted">Activa los avisos de Social y te llegará una notificación cuando alguien te pida seguirte, te comente o le guste tu entreno.</div>'
+      + '<div class="row"><button class="btn primary sm" data-act="socpush-on">Activar avisos</button><button class="btn ghost sm" data-act="socpush-no">Ahora no</button></div></div>';
+  },
+  probe(){ if (this.probed || !Push.nat()) return; this.probed = true; this.device().finally(() => { this.ready = true; if (tab === 'social' && !ED) render(); }); }, // en iOS el interruptor necesita saber si ya hay permiso
+  sync(){
+    return this.run(async () => {
+      if (!this.can()) return;
+      this.probe(); // iOS: el interruptor necesita saber si ya hay permiso
+      if (!this.want()) { await this.drop(); return; }
+      const d = await this.device(); if (!d) return;
+      const h = hashOf({u: Cloud.session.uid, k: d.key}), prev = this.saved();
+      if (prev && prev.h === h && Date.now() - (prev.t || 0) < 864e5) return;
+      await Push.post('/dev/reg', {idToken: await Cloud.token(), ...d.reg});
+      this.keep({h, t: Date.now()});
+    }).catch(e => console.warn('socpush', e));
+  },
+  async drop(){ // baja de este móvil (solo si estaba dado de alta)
+    if (!Push.url() || !this.saved()) return;
+    const d = await this.device(); if (d) await Push.post('/dev/off', d.reg);
+    this.keep(null);
+  },
+  leave(){ return this.run(() => this.drop()).catch(e => console.warn('socpush', e)); }, // al cerrar sesión o borrar la cuenta
+  async set(on){
+    if (on && !(Push.nat() ? await this.nativeToken() : (this.web() || await askNotif()))) return false;
+    S.settings.socPush = on; Store.mark('meta'); render();
+    if (on) this.sync(); else this.leave();
+    toast(on ? 'Avisos de Social activados ✓' : 'Avisos de Social desactivados'); return on;
+  },
+  // Tras guardarse el aviso en Firestore: el servidor lo comprueba (con tu idToken) y notifica a los móviles de quien lo recibe
+  notify(to, type, id, extra){
+    if (!Push.url() || !this.TYPES.includes(type)) return;
+    const cid = type === 'comment' && id.includes('_c_') ? id.slice(id.indexOf('_c_') + 3) : undefined;
+    const body = {to, type, id, pid: extra.pid, cid, clan: extra.clan};
+    Cloud.token().then(idToken => Push.post('/notify', {idToken, ...body})).catch(() => { /* el aviso ya está guardado: si no llega la notificación, no pasa nada */ });
+  }
+};
+function socPushHTML(){
+  if (!SocPush.can() || (window.Native && !Push.nat())) return '';
+  return `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setSocPush" ${SocPush.on() ? 'checked' : ''}><span>Avisos de Social<br><span class="small muted" style="font-weight:500">${Push.why() || 'Cuando alguien te pide seguirte, te acepta, te sigue, da me gusta a tu entreno, te comenta, pide entrar en tu clan o te acepta en el suyo.'}</span></span></label>`;
+}
+// Notificación al acabar el descanso (en la app de iOS la hace el sistema, no sale)
+function notifRowHTML(){
+  if (window.Native) return '';
+  const hint = Push.why() || 'Suena y vibra aunque el móvil esté en silencio (según tus ajustes de notificaciones).';
+  return `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setNotif" ${notifOK() ? 'checked' : ''}><span>Notificación al acabar el descanso<br><span class="small muted" style="font-weight:500">${hint}</span></span></label>`;
+}
 function coachHTML(){
-  if (!Push.url()) return '';
-  const on = Coach.on(), lv = Coach.cfg().level;
-  const hint = !('Notification' in window) || !('PushManager' in window) ? (IS_IOS ? 'En iPhone funciona abriendo Hierro desde el icono de la pantalla de inicio.' : 'Este navegador no permite notificaciones.')
-    : Notification.permission === 'denied' ? 'Bloqueadas: actívalas en los ajustes del móvil (Notificaciones › Hierro).'
-    : 'De vez en cuando, un empujón según tu plan y los días que llevas sin entrenar. Nunca de noche.';
+  if (!Push.url() || (window.Native && !Push.nat())) return ''; // en la app de iOS sin el plugin de push (compilaciones antiguas) no sale
+  const on = Coach.on() && (!Push.nat() || !!SocPush.tok), lv = Coach.cfg().level, hint = Coach.hint(); // en iOS sale marcado cuando hay token (el ajuste no se toca)
   return `<label class="row" style="font-weight:600;align-items:flex-start"><input type="checkbox" class="sw" id="setCoach" ${on ? 'checked' : ''}><span>Mensajes de motivación<br><span class="small muted" style="font-weight:500">${hint}</span></span></label>`
     + (on ? `<div class="f" role="group" aria-labelledby="coachLbl"><span id="coachLbl">Tono de los mensajes</span><div class="seg">${[['suave', 'Suave'], ['picante', 'Picante']].map(([k, l]) => `<button data-coach-level="${k}" aria-pressed="${lv === k}">${l}</button>`).join('')}</div><div class="small muted" style="font-weight:500">${lv === 'suave' ? 'Ánimo y buen rollo: «Hoy toca entrenar, vamos a por ello».' : 'Con un poco de guasa: «Vamos vago, te toca entrenar».'}</div></div>` : '');
 }
@@ -3962,8 +4057,11 @@ document.addEventListener('change', ev => {
   if (!el.checked) { H.disable(); return; }
   H.enable().then(on => { el.checked = on; if (!on) toast('Sin permiso de Salud: actívalo en Ajustes › Salud › Acceso a datos › Hierro'); }, () => { el.checked = false; });
 });
+document.addEventListener('change', ev => { if (ev.target.id !== 'setSocPush') return; const el = ev.target; SocPush.set(el.checked).then(ok => { el.checked = ok; }); });
 document.addEventListener('change', ev => { if (ev.target.id !== 'setCoach') return; const el = ev.target; Coach.set(el.checked).then(ok => { el.checked = ok; }); });
 document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-coach-level]'); if (b) Coach.level(b.dataset.coachLevel); });
+setTimeout(() => SocPush.sync(), 5000); // 4.26: registro de este móvil para los avisos de Social
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') SocPush.sync(); }); // barato: solo sube si cambió la huella o pasó un día
 setTimeout(() => Coach.sync(), 3500); // al abrir la app (una vez por arranque, y solo si cambió algo o hace falta refrescar el registro)
 
 function startRest(sec, name){
@@ -4548,6 +4646,7 @@ async function afterLogin(isNew){
   if (isNew) { S.settings.terms = TERMS_V; Store.mark('meta'); }
   if (S.active) restoreActiveBar();
   if (Social.ready()) Social.pollNotifs();
+  setTimeout(() => SocPush.sync(), 3000);
   if (!isNew) setTimeout(async () => { await termsCheck(); healthCheck(); }, 1500);
   toast(isNew ? `¡Bienvenido, ${Cloud.session.name || 'campeón'}!` : `Hola de nuevo${Cloud.session.name ? ', ' + Cloud.session.name.split(' ')[0] : ''}`);
   // datos guardados en este móvil antes de tener cuenta
@@ -5074,7 +5173,8 @@ const Social = {
   },
   notify(to, type, id, extra = {}){
     if (to === this.myUid()) return;
-    Cloud.commit([{update: {name: Cloud.name('notifs', to, 'items', id), fields: fsFields({from: this.myUid(), name: this.myName(), username: this.me().username, type, ts: Date.now(), ...extra})}}]).catch(() => {});
+    Cloud.commit([{update: {name: Cloud.name('notifs', to, 'items', id), fields: fsFields({from: this.myUid(), name: this.myName(), username: this.me().username, type, ts: Date.now(), ...extra})}}])
+      .then(() => SocPush.notify(to, type, id, extra)).catch(() => { /* aviso no guardado: no se manda notificación */ }); // 4.26: la notificación solo sale si el aviso se guardó
   },
   async follow(uid){ // → 'ok' (ya le sigues) o 'req' (perfil privado: solicitud enviada)
     const me = this.myUid();
@@ -5976,7 +6076,7 @@ function viewNotifs(){
     return `<div class="nrow"><button class="notif" data-act="soc-notif" data-k="${g.type}" data-id="${esc(g.pid)}">${avatar(Social.nameOf(x.from, x.name), 'sm', n7Of(x.from), x.from)}<span class="nb"><span class="nt">${txt}</span>${tail}</span>${dot}${chev}</button></div>`;
   };
   const nw = Social.notifs.filter(x => x.ts > since), old = Social.notifs.filter(x => x.ts <= since);
-  let h = '';
+  let h = SocPush.offer(); // 4.26: si no te llegan notificaciones, ofrece activarlas aquí
   const rq = Social.reqIn.filter(id => !isBlocked(id));
   if (rq.length) h += `<div class="sect-t">Solicitudes para seguirte</div>` + rq.map(id => { const p = Social.userOf(id), nm = p ? p.name || p.username : 'Alguien'; return `<div class="nrow nreq"><button class="notif" data-act="soc-user" data-id="${esc(id)}">${avatar(nm, 'sm', n7Of(id), id)}<span class="nb"><span class="nt"><b>${esc(shortName(nm) || 'Alguien')}</b>${p && p.username ? ` <span class="muted">@${esc(p.username)}</span>` : ''}</span></span></button><button class="btn sm" data-act="soc-rej" data-id="${esc(id)}">Rechazar</button><button class="btn sm primary" data-act="soc-acc" data-id="${esc(id)}">Aceptar</button></div>`; }).join('');
   if (n.err) h += `<div class="card row between"><span class="small">No se han podido actualizar los avisos.</span><button class="btn sm" data-act="soc-notifs-retry">Reintentar</button></div>`;
@@ -7995,7 +8095,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.25.0';
+const APP_VERSION = '4.26.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -8207,7 +8307,25 @@ async function ptrRun(){
 /* =========================================================
    Arranque
    ========================================================= */
+// 4.26: tocar un aviso social abre Social › Avisos. Llega por la web (?go=notifs o un mensaje del service worker) o por la app de iOS
+// (evento hierro:open-notifs; si la web aún no estaba lista, native.js lo deja marcado en Native.notifsPending). Se aplica cuando la app ya cargó.
+const DeepAv = {
+  pend: false, ready: false,
+  ask(){ this.pend = true; this.run(); },
+  run(){
+    const N = window.Native; if (N && N.notifsPending) { this.pend = true; N.notifsPending = false; }
+    if (!this.pend || !this.ready) return;
+    this.pend = false;
+    if (!Cloud.session || !Social.ready()) return;
+    if (ED) { toast('Tienes avisos nuevos en Social'); return; }
+    navTo(() => { tab = 'social'; navStack.social = [{type: 'notifs'}]; }); Social.openNotifs();
+  }
+};
+window.addEventListener('hierro:open-notifs', () => DeepAv.ask());
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.go === 'notifs') DeepAv.ask(); });
+try { if (/[?&]go=notifs\b/.test(location.search)) { DeepAv.pend = true; history.replaceState(null, '', location.pathname + location.hash); } } catch (e) { /* sin history */ }
 async function signOutLocal(){
+  SocPush.leave(); Coach.leave(); // 4.26: este móvil deja de recibir los avisos y los mensajes de motivación de esa cuenta
   clearTimeout(Store.timer); Store.timer = null; clearTimeout(Sync.timer);
   ActBak.clear(); await KV.del(Store.key); await KV.del('session');
   Cloud.session = null; Sync.state = 'idle';
@@ -8222,7 +8340,7 @@ rebuildEx();
   await KV.open();
   if (Cloud.enabled()) {
     Cloud.session = await KV.get('session');
-    if (!Cloud.session) { Store.key = 'nouser'; render(); showAuth(); return; }
+    if (!Cloud.session) { Store.key = 'nouser'; render(); showAuth(); DeepAv.ready = true; return; } // ready: sin sesión el toque se descarta, pero un inicio de sesión posterior ya puede recibirlos
     await Store.load(Cloud.session.uid);
   } else await Store.load(null);
   if (ActBak.restore()) toast('Entreno en curso recuperado');
@@ -8230,6 +8348,7 @@ rebuildEx();
   render();
   if (S.active) { restoreActiveBar(); wakeLock(true); }
   showWelcome();
+  DeepAv.ready = true; DeepAv.run();
   autoUpdate();
   // si se actualizó con el entreno abierto, se vuelve a abrir donde estaba
   try { if (sessionStorage.getItem('hierro.reopen') === '1') { sessionStorage.removeItem('hierro.reopen'); if (S.active && !ED) openEditor('active'); } } catch (e) {}
@@ -8300,6 +8419,8 @@ function avExport(){
 document.addEventListener('change', ev => { const i = ev.target; if (!i.classList || !i.classList.contains('av-file')) return; const f = i.files && i.files[0]; i.value = ''; if (f) avLoad(f); });
 document.addEventListener('keydown', ev => { const l = ev.target; if ((ev.key === 'Enter' || ev.key === ' ') && l.classList && l.classList.contains('av-pick')) { ev.preventDefault(); l.querySelector('input').click(); } });
 Object.assign(A, {
+  async 'socpush-on'(){ await SocPush.set(true); socRender(); }, // 4.26: desde la tarjeta de Avisos
+  'socpush-no'(){ try { localStorage.setItem('hierro.socpush.no', '1'); } catch (e) { /* almacenamiento bloqueado */ } socRender(); },
   'av-edit'(){
     const has = !!(Social.me() || {}).photo;
     modal('Foto de perfil', `<div class="stack">${avatar(Social.myName(), 'av-big', 0, Social.myUid())}<div class="small muted">${has ? 'Es la que ven tus amigos en el feed y los comentarios.' : 'Ponte una foto para que tus amigos te reconozcan en el feed y los comentarios.'}</div></div>`,

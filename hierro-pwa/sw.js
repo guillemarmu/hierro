@@ -1,6 +1,6 @@
 /* Hierro · service worker: guarda la app en el móvil para que abra sin conexión.
    Al publicar una versión nueva, cambia VERSION para que los móviles la descarguen. */
-const VERSION = 'hierro-4.25.0';
+const VERSION = 'hierro-4.26.0';
 const PHOTOS = 'hierro-fotos'; // fotos de ejercicios: se guardan al verlas y no se borran al actualizar
 const FONTS = 'hierro-fuentes'; // caché antigua de Google Fonts (hasta 4.9.0); desde 4.9.1 las fuentes van en ./fonts/ dentro de la app
 // 4.9.3: solo lo imprescindible tiene que bajar para instalar la versión nueva; iconos y fuentes se intentan
@@ -21,17 +21,22 @@ self.addEventListener('activate', e => {
 self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(); });
 // Aviso del servidor (descanso terminado con la pantalla bloqueada o la app cerrada)
 self.addEventListener('push', e => {
-  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { /* aviso sin datos: sale el del descanso */ }
   // quita el aviso fijo «Descanso · termina a las…» que se puso al bloquear el móvil
   if (!d.tag || d.tag === 'hierro-descanso') e.waitUntil(self.registration.getNotifications({tag: 'hierro-rest'}).then(ns => ns.forEach(n => n.close())).catch(() => {}));
-  e.waitUntil(self.registration.showNotification(d.title || '¡Descanso terminado!', {body: d.body || 'A por la siguiente serie', tag: d.tag || 'hierro-descanso', renotify: true, silent: false, vibrate: [300, 120, 300, 120, 400], icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: {url: self.registration.scope}}));
+  // 4.26: los avisos sociales traen tag «hierro-social» y url «./?go=notifs»; se guarda la url para abrir Social › Avisos al tocarlos
+  let url = self.registration.scope; try { if (d.url) url = new URL(d.url, self.registration.scope).href; } catch (x) { /* url mala: se abre la app sin más */ }
+  e.waitUntil(self.registration.showNotification(d.title || '¡Descanso terminado!', {body: d.body || 'A por la siguiente serie', tag: d.tag || 'hierro-descanso', renotify: true, silent: false, vibrate: [300, 120, 300, 120, 400], icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: {url}}));
 });
-// Al tocar el aviso del descanso, vuelve a la app (o la abre)
+// Al tocar un aviso vuelve a la app (o la abre); si pedía los avisos de Social, la app abierta recibe el mensaje {go: 'notifs'}
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './', go = /[?&]go=notifs\b/.test(url);
   e.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(cs => {
     const c = cs.find(x => x.url.startsWith(self.registration.scope));
-    return c ? c.focus() : self.clients.openWindow((e.notification.data && e.notification.data.url) || './');
+    if (!c) return self.clients.openWindow(url);
+    if (go) c.postMessage({go: 'notifs'});
+    return c.focus();
   }));
 });
 
