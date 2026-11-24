@@ -4827,7 +4827,8 @@ const Social = {
   },
   async loadFollows(){
     const uid = this.myUid(), sel = f => ({fields: [{fieldPath: f}]});
-    const [a, b] = await Promise.all([Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: sel('to')}), Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid), select: sel('from')})]);
+    const g = this.gen, [a, b] = await Promise.all([Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: sel('to')}), Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('to', 'EQUAL', uid), select: sel('from')})]);
+    if (g !== this.gen) return; // 4.24: se cambió de cuenta mientras tanto
     this.following = new Set(a.filter(r => r.document).map(r => docData(r.document).to).filter(x => typeof x === 'string'));
     this.followers = b.filter(r => r.document).map(r => docData(r.document).from).filter(x => typeof x === 'string'); this.followsAt = Date.now();
     this.loadReqs().catch(() => {});
@@ -4978,7 +4979,7 @@ const Social = {
   async loadUser(uid, force){
     let u = this.users.get(uid);
     if (u && (u.loading || (u.loaded && !force && Date.now() - (u.at || 0) < this.PROFILE_TTL))) return u;
-    u = u || {}; u.loading = true; this.users.set(uid, u); const g = this.gen;
+    u = u || {}; u.loading = true; this.users.set(uid, u); const g = this.gen, pub = uid !== this.myUid() && !this.following.has(uid); let late = false; // pub: la carga sale con el filtro de públicas
     try {
       const [pd, posts, fr, fg] = await Promise.all([
         Cloud.fs('GET', Cloud.name('profiles', encodeURIComponent(uid))),
@@ -4987,12 +4988,23 @@ const Social = {
         Cloud.queryRoot({from: [{collectionId: 'follows'}], where: ff('from', 'EQUAL', uid), select: {fields: [{fieldPath: 'to'}]}})
       ]);
       if (g !== this.gen) return u;
+      const me = this.myUid(), fol = fr.filter(r => r.document).map(r => docData(r.document).from);
+      if (pub && (fol.includes(me) || this.following.has(uid))) late = true; // 4.24: ya está en sus seguidores (te aceptó): se recarga sin el filtro de públicos
       const prof = pd ? docData(pd) : null; if (prof) { try { prof.stats = JSON.parse(prof.stats || '{}'); } catch (e) { prof.stats = {}; } if (!prof.stats || typeof prof.stats !== 'object') prof.stats = {}; }
       const docs = posts.filter(r => r.document);
       Object.assign(u, {profile: prof, profileAt: Date.now(), at: Date.now(), more: docs.length >= 20, cursor: docs.length ? docs[docs.length - 1].document.name : '', posts: this.order2(docs.map(r => this.parsePost(r.document)).filter(p => p && p.uid === uid)),
-        followers: fr.filter(r => r.document).map(r => docData(r.document).from), following: fg.filter(r => r.document).map(r => docData(r.document).to), loaded: true, err: null});
+        followers: fol, following: fg.filter(r => r.document).map(r => docData(r.document).to), loaded: true, err: null});
     } catch (e) { u.err = e.offline ? 'Sin conexión.' : 'No se ha podido cargar el perfil.'; }
-    u.loading = false; socRender(); return u;
+    u.loading = false; socRender();
+    if (late) this.joined(uid);
+    return u;
+  },
+  // 4.24: te han aceptado la solicitud (aviso «fok» o ya sales en sus seguidores): le sigues al momento, sin esperar a que caduque la lista de seguidos
+  _jn: new Map(), // uid → cuándo se hizo joined (para no repetirlo desde el aviso y desde el perfil)
+  joined(uid){
+    this._jn.set(uid, Date.now()); this.following.add(uid); this.reqOut.delete(uid); this.onFollowChange(uid, true);
+    const u = this.users.get(uid); if (u && u.loaded && !u.loading) this.loadUser(uid, true);
+    renderTabs(); socRender(); this.saveCache();
   },
   // 4.11: si no le sigues, solo sus publicaciones públicas (las reglas rechazan la consulta que podría devolver las de solo seguidores)
   postsWhere(uid){ return uid === this.myUid() || this.following.has(uid) ? ff('uid', 'EQUAL', uid) : {compositeFilter: {op: 'AND', filters: [ff('uid', 'EQUAL', uid), ff('aud', 'EQUAL', 'pub')]}}; },
@@ -5137,7 +5149,8 @@ const Social = {
       this.notifs = list; this.notifLoaded = true; n.err = '';
       if (got.some(x => x.type === 'freq' && !this.reqIn.includes(x.from))) this.loadReqs().catch(() => {}); // 4.11: solicitud nueva
       if (got.some(x => (x.type === 'creq' || x.type === 'cok') && x.ts > last)) Clan.at = 0; // 4.16: te piden entrar o te han aceptado: la liga se recarga al abrirla
-      if (got.some(x => x.type === 'fok' && !this.following.has(x.from))) { got.filter(x => x.type === 'fok').forEach(x => this.reqOut.delete(x.from)); this.followsAt = 0; } // te han aceptado: se recargan los seguidos
+      const fok = [...new Set(got.filter(x => x.type === 'fok' && x.ts > last && !this.following.has(x.from)).map(x => x.from))], g = this.gen;
+      if (fok.length) this.loadFollows().then(() => { if (g === this.gen) fok.forEach(id => { if (this.following.has(id) && Date.now() - (this._jn.get(id) || 0) > 60e3) this.joined(id); }); }).catch(() => { this.followsAt = 0; }); // te han aceptado: se recargan los seguidos ya (4.24; antes se quitaba la solicitud y salía «Pedir seguirle» hasta recargar el feed)
       KV.set('socn:' + uid, {list, full: n.full, ts: Date.now()});
       this.notifCount(); renderTabs();
       const v = cur(); if (tab === 'social' && v && v.type === 'notifs') { this.markSeen(); const miss = [...new Set(list.map(x => x.from).filter(id => id && !this.userOf(id)))]; if (miss.length) this.profilesOf(miss).then(() => this.notifPaint()).catch(() => {}); }
@@ -6395,7 +6408,7 @@ const A = {
     const r = await ask('Dejar de publicar', 'Se borrará la publicación con sus me gusta y comentarios. El entreno sigue en tu historial.', [['0', 'Cancelar'], ['1', 'Dejar de publicar', 'danger']]); closeModal();
     if (r !== '1') return; w.shared = false; Store.mark(); SOC_HIDE.add(p.id); socRender(); toast('Quitado de Social');
   },
-  'soc-user'(el){ go({type: 'user', id: el.dataset.id}); },
+  'soc-user'(el){ const id = el.dataset.id, u = Social.users.get(id); if (u && u.loaded && !Social.following.has(id) && (Social.reqOut.has(id) || (Social.privOf(id) && Date.now() - (u.at || 0) > 30e3))) Social.loadUser(id, true); go({type: 'user', id}); }, // 4.24: privado sin seguirle: se mira si ya te ha aceptado
   'soc-report'(el){ const p = Social.posts.get(el.dataset.id); if (p) Mod.report('post', 'posts/' + p.id, p.uid, [p.title, p.notes].filter(Boolean).join(' · ') + (p.hasPhoto ? ' [con foto]' : '')); },
   'soc-report-c'(el){ const pid = el.dataset.id, cid = el.dataset.c, c = Social.comments.get(pid), m = c && c.list.find(x => x._id === cid); if (m) Mod.report('comment', `posts/${pid}/comments/${cid}`, m.uid, m.text); },
   'soc-report-u'(el){ const uid = el.dataset.id, u = Social.users.get(uid), pr = u && u.profile; Mod.report('user', 'profiles/' + uid, uid, pr ? `${pr.name || ''} @${pr.username || ''}${pr.bio ? ' · ' + pr.bio : ''}${pr.photo ? ' · con foto de perfil' : ''}` : ''); },
@@ -7944,7 +7957,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.23.0';
+const APP_VERSION = '4.24.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
@@ -8068,6 +8081,8 @@ function pullRefresh(){
       await wait(() => !Clan.loading && !(typeof Rel !== 'undefined' && Rel.loading), 7000);
       clanRender();
       if (Clan.err) toast(Clan.err);
+    } else if (tab === 'social' && cur() && cur().type === 'user' && Social.ready()) { // 4.24: tirar en un perfil lo recarga (y los avisos)
+      Social.pollNotifs(true); const u = await Social.loadUser(cur().id, true); socRender(); if (u && u.err) toast(u.err);
     } else if (root && tab === 'social' && Social.ready()) {
       await Social.refresh(true);
       await wait(() => !Social.loading, 7000);
