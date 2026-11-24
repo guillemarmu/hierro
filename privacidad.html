@@ -62,11 +62,11 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <ul>
 <li><strong>Cuenta:</strong> correo electrónico, contraseña y nombre. La contraseña la gestiona Firebase Authentication (Google); nosotros no la vemos.</li>
 <li><strong>Datos de entrenamiento (privados):</strong> entrenos, rutinas, ejercicios propios y ajustes. Se guardan en Google Cloud Firestore y solo los ves tú.</li>
-<li id="salud"><strong>Datos corporales (opcionales):</strong> peso, medidas corporales (grasa, cintura, pecho, brazo y muslo), sexo y altura. Pueden considerarse <strong>datos de salud</strong>, así que solo los guardamos si das tu consentimiento explícito en la app la primera vez que los añades. Se usan solo para tus estadísticas y para ajustar los estándares de fuerza. Se quedan en tu móvil o en tu cuenta privada y nunca se publican. Puedes retirar el consentimiento en la app (Perfil › Tu cuerpo) cuando quieras: al hacerlo se borran.</li>
+<li id="salud"><strong>Datos corporales (opcionales):</strong> peso, medidas corporales (grasa, cintura, pecho, brazo y muslo), sexo y altura. Pueden considerarse <strong>datos de salud</strong>, así que solo los guardamos si das tu consentimiento explícito en la app la primera vez que los añades. Se usan solo para tus estadísticas y para ajustar los estándares de fuerza. Se quedan en tu móvil o en tu cuenta privada y nunca se publican. Si activas «Compartir mi fuerza» en tu clan, se publica un nivel de fuerza calculado con tu peso, pero nunca el peso. Puedes retirar el consentimiento en la app (Perfil › Tu cuerpo) cuando quieras: al hacerlo se borran.</li>
 <li id="edad"><strong>Año de nacimiento (opcional):</strong> solo el año, nunca la fecha completa. Se usa únicamente para ajustar los rangos de fuerza a tu edad. Se queda en tu móvil o en tu cuenta privada y nunca se publica. Lo borras dejando vacío el campo en Perfil › Tu cuerpo.</li>
 <li><strong>Datos sociales (opcionales):</strong> si usas las funciones sociales, tu perfil, los entrenos que publiques, me gusta, comentarios, seguidores y clanes.</li>
 <li id="fotos"><strong>Fotos (opcionales):</strong> si publicas un entreno, las dos fotos que haces en ese momento con la cámara (trasera y frontal) se guardan con la publicación y las ven quienes pueden ver esa publicación. La cámara solo se abre cuando tú lo pides y Hierro no accede a tu galería. Si borras la publicación, se borran sus fotos.</li>
-<li><strong>Notificaciones push (opcionales):</strong> la suscripción push de tu navegador y los datos mínimos para programar el aviso.</li>
+<li><strong>Notificaciones push (opcionales):</strong> la suscripción push de tu navegador y los datos para programar los avisos. Para el fin del descanso, la hora del aviso y su texto (la siguiente serie o el ejercicio), solo para mandar ese aviso. Si activas los mensajes de motivación, además tu nombre de pila, tu zona horaria, los días y nombres de las rutinas de tu plan, la fecha de tu último entreno, tu racha y el tono elegido.</li>
 <li id="ios-salud"><strong>App Salud de Apple (solo en la app de iOS, opcional):</strong> si activas «Guardar mis entrenos en Salud», cada entreno que terminas se apunta en la app Salud de tu iPhone como entrenamiento de fuerza, con su nombre y su hora de inicio y fin. Se escribe directamente en tu iPhone: no recibimos ni leemos ningún dato de Salud y no se usa para publicidad. Lo desactivas en Perfil o en Ajustes › Salud del iPhone.</li>
 <li><strong>Diagnóstico:</strong> si usas una cuenta, la app guarda en ella el estado de la sincronización, la versión de Hierro, el navegador del móvil y los últimos errores técnicos de la app (el mensaje del fallo y en qué parte del código ocurrió), para poder resolver fallos.</li>
 <li><strong>Denuncias:</strong> si denuncias contenido o a un usuario, guardamos quién denuncia, qué denuncia y el motivo.</li>
@@ -75,10 +75,10 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <h2 id="publico">3. Qué es público y qué es privado</h2>
 <p>Tú decides qué compartes. Visible para otros usuarios con cuenta, solo si lo activas o lo publicas:</p>
 <ul>
-<li>Perfil social: nombre de usuario (@), nombre, bio, foto de perfil si la pones y estadísticas resumidas. Puedes poner tu perfil en privado; la foto de perfil la siguen viendo las personas con cuenta en Hierro. Puedes quitarla cuando quieras.</li>
+<li>Perfil social: nombre de usuario (@), nombre, bio, foto de perfil si la pones y un resumen de tu actividad (número de entrenos totales y de los últimos 7 y 30 días, volumen, tiempo entrenado, series por músculo, racha y fecha de tu primer entreno), calculado con todos tus entrenos, también los no publicados. Con el perfil privado ese resumen no se publica. Puedes poner tu perfil en privado; la foto de perfil la siguen viendo las personas con cuenta en Hierro. Puedes quitarla cuando quieras.</li>
 <li>Los entrenos que decidas publicar, con foto opcional, y los me gusta y comentarios que hagas.</li>
-<li>Seguidores y seguidos.</li>
-<li>Clanes: nombre, emblema, miembros y puntuaciones semanales y mensuales de la liga; alianzas y piques entre clanes, con su muro de mensajes.</li>
+<li>Seguidores y seguidos, también con el perfil privado.</li>
+<li>Liga y clanes: tu puntuación semanal y mensual (días entrenados, número de entrenos, récords, mejora, racha y logros), que ven todas las personas con cuenta si tu perfil es público o si estás en un clan; y del clan, su nombre, emblema y miembros; alianzas y piques entre clanes, con su muro de mensajes.</li>
 <li>Tu rango de fuerza global, solo si lo activas.</li>
 </ul>
 <p>Lo demás (entrenos no publicados, rutinas, medidas, peso, sexo, ajustes) es privado.</p>
@@ -99,7 +99,7 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <ul>
 <li><strong>Google (Firebase Authentication y Cloud Firestore):</strong> cuentas y almacenamiento de datos.</li>
 <li><strong>Google (reCAPTCHA / Fraud Defense, a través de Firebase App Check):</strong> si usas una cuenta, la app comprueba que las peticiones vienen de la app de verdad y no de un programa automático. Para ello reCAPTCHA analiza datos técnicos del navegador y del dispositivo. Se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política de privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones</a> de Google.</li>
-<li><strong>Cloudflare (Workers):</strong> servidor que guarda la suscripción push y los datos mínimos para programar los avisos.</li>
+<li><strong>Cloudflare (Workers):</strong> servidor que guarda la suscripción push y los datos para programar los avisos (detallados en el apartado 2).</li>
 <li><strong>GitHub (GitHub Pages):</strong> alojamiento de la web y de las fotos de ejemplo de los ejercicios.</li>
 </ul>
 <p>Si descargas Hierro desde Google Play o el App Store, Google y Apple tratan los datos de la descarga (y, en Android, la app se muestra a través de Chrome) según sus propias políticas de privacidad; Hierro no recibe esos datos.</p>
@@ -122,7 +122,7 @@ footer.pie a{display:inline-block;padding:12px 8px 12px 0;min-height:44px}
 <h2 id="cambios">10. Cambios y contacto</h2>
 <p>Si esta política cambia de forma relevante, lo avisaremos en la app o en esta página. Dudas: <a href="mailto:soporte.hierro.app@gmail.com">soporte.hierro.app@gmail.com</a>. Consulta también las <a href="condiciones.html">condiciones de uso</a>.</p>
 <div class="nota">
-<p>Última actualización: 23 de noviembre de 2026 (año de nacimiento para los rangos)</p>
+<p>Última actualización: 24 de noviembre de 2026 (qué se ve con perfil público y privado, liga, avisos de motivación y «Compartir mi fuerza»)</p>
 </div>
 <footer class="pie"><a href="./">← Volver a Hierro</a> <a href="privacidad.html">Privacidad</a> <a href="condiciones.html">Condiciones</a></footer>
 </div>
