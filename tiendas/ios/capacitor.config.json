@@ -14,5 +14,14 @@
     "contentInset": "never",
     "limitsNavigationsToAppBoundDomains": true,
     "scheme": "Hierro"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "banner",
+        "list",
+        "sound"
+      ]
+    }
   }
 }

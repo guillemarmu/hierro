@@ -7,7 +7,7 @@ Para no ser «una web metida en una app» (norma 4.2 de Apple) añade cosas nati
 - **Salud**: guarda en Apple Salud los entrenos de fuerza terminados (plugin propio `plugins/hierro-health`, Swift + HealthKit, `HKWorkoutBuilder`, tipo `traditionalStrengthTraining`). Solo escribe el entreno (inicio, fin y nombre), no lee nada ni guarda calorías. Ningún plugin de npm guarda workouts (`@capgo/capacitor-health` los trata como solo lectura), por eso es local.
 - **Vibración nativa** (`@capacitor/haptics`) en lugar de `navigator.vibrate`, que iOS no tiene.
 
-El push nativo **no está incluido todavía** (ver «Qué falta»).
+- **Avisos push** (`@capacitor/push-notifications` 8.1.3): los avisos de Social (te piden seguirte, te siguen, me gusta, comentarios, clan) y los mensajes de motivación llegan por APNs. La web pide el permiso y el token con `Native.push` (`native.js`); el Worker `hierro-avisos` guarda el token y manda a APNs. Al tocar un aviso social se abre Social › Avisos. Solo sale en compilaciones que traigan el plugin: en las antiguas de TestFlight la web no enseña nada de esto.
 
 El puente entre la web y lo nativo es `hierro-pwa/native.js`: no hace nada fuera de la app. Contrato:
 
@@ -20,11 +20,11 @@ El puente entre la web y lo nativo es `hierro-pwa/native.js`: no hace nada fuera
 
 | Archivo | Qué es |
 |---|---|
-| `package.json` | Capacitor 8.6.2, Haptics 8.0.2 y el plugin local (versiones exactas; sin `package-lock.json`, que no se puede subir cómodamente con el editor web) |
-| `capacitor.config.json` | appId `io.github.guillemarmu.hierro`, URL remota, dominios, `contentInset: never` |
+| `package.json` | Capacitor 8.6.2, Haptics 8.0.2, Push Notifications 8.1.3 y los plugins locales (versiones exactas; sin `package-lock.json`, que no se puede subir cómodamente con el editor web) |
+| `capacitor.config.json` | appId `io.github.guillemarmu.hierro`, URL remota, dominios, `contentInset: never`, y `PushNotifications.presentationOptions` (`banner`, `list`, `sound`: los avisos se ven también con la app abierta) |
 | `www/index.html` | Página mínima que redirige (Capacitor exige una carpeta web) |
 | `plugins/hierro-health/` | Plugin Swift de Salud (`isAvailable`, `requestAuthorization`, `saveWorkout`) |
-| `App.entitlements` | HealthKit y solo HealthKit |
+| `App.entitlements` | HealthKit y `aps-environment` = `production` (push) |
 | `preparar.sh` | Crea y parchea el proyecto de Xcode (solo macOS) |
 
 La carpeta `ios/` que genera Capacitor **no se guarda** en el repo (`.gitignore`): se crea siempre con `preparar.sh`.
@@ -61,7 +61,7 @@ Para App Review: la interfaz de la app tiene que ofrecer el interruptor de Salud
 3. Versión = `APP_VERSION`; compilación = 100 + número de ejecución (o el manual, que tiene que ser mayor que el último subido).
 4. A los 10-30 min sale en TestFlight. Para probarla: App Store Connect › Hierro › TestFlight › añadir probadores internos (tu Apple ID) y la app TestFlight en el iPhone.
 
-3. **Push nativo (siguiente paso)**: se ha quitado hasta que el Worker pueda enviar a APNs. Hará falta: clave APNs (`.p8`) como secreto del Worker de Cloudflare (`hierro-avisos`); que el Worker envíe a APNs (JWT ES256, `api.push.apple.com`, topic = appId) y guarde los tokens; volver a añadir `@capacitor/push-notifications`, `UIBackgroundModes` = `remote-notification` y `aps-environment` en `App.entitlements`; la capacidad Push en el App ID; y `Native.push.token()` en `native.js`.
+3. **Push nativo: pasos fuera del código.** En developer.apple.com, el App ID `io.github.guillemarmu.hierro` tiene que tener la capacidad **Push Notifications** (con `-allowProvisioningUpdates` Xcode suele activarla solo; si el perfil falla por `aps-environment`, se activa a mano). El Worker necesita la clave APNs (`.p8`, Key ID y Team ID) como secretos y enviar a `api.push.apple.com` con topic = appId. `preparar.sh` parchea `AppDelegate.swift` para reenviar el token al plugin (falla si no encuentra el sitio). Para probar: TestFlight envía con el entorno de **producción**, que es el de `aps-environment` = `production`; una compilación desde Xcode con perfil de desarrollo necesitaría `development`.
 4. **Capturas** de iPhone, ficha, cuenta de prueba para los revisores (ver `../ficha.md`) y política de privacidad actualizada.
 5. **Mejora futura**: Live Activity del descanso en la pantalla de bloqueo (ActivityKit + extensión de widget; requiere Xcode/Swift y notificaciones push de Live Activity).
 

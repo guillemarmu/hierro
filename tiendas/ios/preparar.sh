@@ -40,7 +40,7 @@ poner NSCameraUsageDescription string "Hierro usa la cámara para la foto doble 
 poner NSHealthUpdateUsageDescription string "Hierro guarda en Salud los entrenos de fuerza que terminas, con su hora de inicio y de fin, solo si lo activas en los ajustes de la app. Puedes desactivarlo cuando quieras."
 poner NSHealthShareUsageDescription string "Hierro no lee ningún dato de Salud: solo escribe los entrenos de fuerza que terminas, y únicamente si lo activas en los ajustes de la app."
 
-# Entitlements (HealthKit). Sin firmar no se aplican, pero dejan el proyecto listo.
+# Entitlements (HealthKit y push). Sin firmar no se aplican, pero dejan el proyecto listo.
 if [ "${SIN_ENTITLEMENTS:-0}" != 1 ]; then
   cp App.entitlements "$APP/App/App.entitlements"
   PBX="$APP/App.xcodeproj/project.pbxproj"
@@ -49,6 +49,24 @@ if [ "${SIN_ENTITLEMENTS:-0}" != 1 ]; then
   fi
   grep -q 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements' "$PBX" || { echo "No se pudo enlazar App.entitlements." >&2; exit 1; }
 fi
+
+# Push remoto (APNs): @capacitor/push-notifications espera que AppDelegate reenvíe el token (o el fallo) del registro a NotificationCenter.
+# Se inserta tras «var window: UIWindow?» (está en las plantillas de Capacitor 8, SPM y Pods). Idempotente; si no encuentra el sitio, falla.
+DELEGADO="$APP/App/AppDelegate.swift"
+[ -f "$DELEGADO" ] || { echo "No existe $DELEGADO: algo ha fallado en 'cap add ios'." >&2; exit 1; }
+if ! grep -q 'capacitorDidRegisterForRemoteNotifications' "$DELEGADO"; then
+  PUSH_SWIFT='    // Avisos push: se reenvían al plugin PushNotifications (preparar.sh)
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+' perl -0pi -e 's/(^[ \t]*var window: UIWindow\?[ \t]*\n)/$1\n$ENV{PUSH_SWIFT}/m' "$DELEGADO"
+fi
+grep -q 'name: .capacitorDidRegisterForRemoteNotifications' "$DELEGADO" && grep -q 'name: .capacitorDidFailToRegisterForRemoteNotifications' "$DELEGADO" \
+  || { echo "No se pudo parchear $DELEGADO para el push (no encuentro «var window: UIWindow?»)." >&2; exit 1; }
 
 # Live Activity: entreno en curso en la pantalla de bloqueo y la Dynamic Island.
 # La app declara que usa Live Activities y se le añade la extensión de widget de live/ (gema xcodeproj de CocoaPods).
