@@ -1,4 +1,4 @@
-// 4.25: dentro de Coach.fetch, antes de «return new Response('not found'…)»
+// 4.26: dentro de Coach.fetch, antes de «return new Response('not found'…)»
     if (path === '/rl') { // límite simple por clave y hora (en memoria; el DO es único)
       const now = Date.now(), m = this.rl || (this.rl = new Map());
       if (m.size > 5000) for (const [x, v] of m) if (now - v.t > 3600e3) m.delete(x);
@@ -21,21 +21,21 @@
       return new Response('ok');
     }
     if (path === '/notify') {
-      const seen = this.seen || (this.seen = new Map()), now = Date.now(), sk = d.to + '/' + d.id;
-      if (seen.size > 5000) for (const [x, t] of seen) if (now - t > 600e3) seen.delete(x);
-      if (now - (seen.get(sk) || 0) < 600e3) return new Response('skip'); // el mismo aviso (p. ej. quitar y volver a dar me gusta) solo una vez cada 10 min
-      seen.set(sk, now);
-      const list = (await st.get('d:' + d.to)) || []; if (!list.length) return new Response('skip');
-      let sent = 0; const keep = [];
+      // El mismo aviso (quitar y volver a dar me gusta, dejar de seguir y volver…) solo una vez al día. Se guarda en el DO
+      // ('s:<para>/<id>' → hora) para que no se olvide al reiniciarse; el cron de cada hora borra los de más de un día.
+      const now = Date.now(), sk = 's:' + d.to + '/' + d.id;
+      if (now - ((await st.get(sk)) || 0) < 864e5) return new Response('ok');
+      await st.put(sk, now);
+      const list = (await st.get('d:' + d.to)) || []; if (!list.length) return new Response('ok'); // siempre «ok»: no se dice si el otro tiene móviles
+      const keep = [];
       for (const dv of list) {
         if (now - (dv.at || 0) > 90 * 864e5) { await st.delete(devKey(dv)); continue; } // 3 meses sin abrir la app
         try {
           const r = await sendAny(devSub(dv), d.msg, this.env, {t: d.type, tag: 'hierro-social', url: './?go=notifs', ttl: 24 * 3600, collapse: d.id, thread: 'social'});
           if (r.gone) { await st.delete(devKey(dv)); continue; }
-          if (r.status >= 200 && r.status < 300) sent++;
         } catch (e) { console.log('notify send', String(e).slice(0, 150)); }
         keep.push(dv);
       }
       if (keep.length !== list.length) await st.put('d:' + d.to, keep);
-      return new Response(sent ? 'ok' : 'skip');
+      return new Response('ok');
     }

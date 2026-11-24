@@ -1,4 +1,4 @@
-/* ---------- 4.25: avisos sociales por push (APNs para la app de iOS y Web Push para la web) ----------
+/* ---------- 4.26: avisos sociales por push (APNs para la app de iOS y Web Push para la web) ----------
    La app registra cada aparato con su sesión de Firebase (POST /dev/reg) y, al crear un aviso en Firestore
    (solicitud, aceptación, seguimiento, me gusta, comentario, petición de clan o entrada en clan), pide POST /notify.
    El Worker comprueba la sesión (idToken firmado por Google), comprueba en Firestore, con la sesión de quien lo manda,
@@ -44,6 +44,7 @@ const fsv = v => !v ? undefined : 'stringValue' in v ? v.stringValue : 'integerV
   : 'arrayValue' in v ? (v.arrayValue.values || []).map(fsv) : 'nullValue' in v ? null : undefined;
 async function fsGet(path, idToken){
   const r = await fetch(FS_BASE + path, {headers: {Authorization: 'Bearer ' + idToken}});
+  if (r.status === 403) console.log('fs 403', path.split('/')[0]); // sin permiso (o App Check obligatorio): el aviso no se manda
   if (r.status === 404 || r.status === 403) return null;
   if (!r.ok) throw new Error('fs ' + r.status);
   const d = await r.json(), o = {}; for (const [k, v] of Object.entries(d.fields || {})) o[k] = fsv(v);
@@ -143,8 +144,19 @@ async function socialRoute(path, b, env, out, ip){
   // /notify: límite por remitente antes de leer Firestore (cada aviso cuesta hasta 3 lecturas)
   const lim = await stub.fetch('https://coach/rl', {method: 'POST', body: JSON.stringify({k: 'n:' + uid, max: NOTIFY_PER_HOUR})});
   if (!lim.ok) return out('busy', 429);
-  if (typeof b.id !== 'string' || !SAFE_ID.test(b.id)) return out('bad id', 400);
+  // El id del aviso lo calcula el servidor (el cliente no puede inventarse uno nuevo en cada llamada para saltarse la deduplicación)
+  const id = socialId(uid, b); if (!id || b.id !== id) return out('bad id', 400);
   let msg; try { msg = await socialMessage(uid, b, b.idToken); } catch (e) { console.log('notify fs', String(e).slice(0, 100)); return out('error', 502); }
   if (!msg) return out('skip');
-  return call('/notify', {to: b.to, id: b.id, type: b.type, msg});
+  return call('/notify', {to: b.to, id, type: b.type, msg});
+}
+// Mismos ids deterministas que pone la app al crear el aviso (Social.notify)
+export function socialId(f, b){
+  const ok = v => typeof v === 'string' && SAFE_ID.test(v) ? v : '';
+  const t = b.type, pid = ok(b.pid), cid = ok(b.cid), clan = ok(b.clan);
+  if (t === 'freq' || t === 'fok' || t === 'follow') return f + '_' + t;
+  if (t === 'like') return pid && f + '_like_' + pid;
+  if (t === 'comment') return cid && f + '_c_' + cid;
+  if (t === 'creq' || t === 'cok') return clan && f + '_' + t + '_' + clan;
+  return '';
 }
