@@ -58,7 +58,7 @@ const go_ = (t, v) => { tab = t; navStack[t] = v ? [v] : []; render(); };
 const SCREENS = {
   home: () => go_('home'), train: () => go_('train'), social: () => go_('social'), clan: () => go_('clan'), me: () => go_('me'),
   workout: () => go_('me', {type: 'workout', id: 'w0'}), stats: () => go_('me', {type: 'stats'}), ranks: () => go_('me', {type: 'ranks'}),
-  rankhow: () => go_('me', {type: 'rankhow'}), exercise: () => go_('me', {type: 'exercise', id: [...exMap.keys()][0]}),
+  rankhow: () => go_('me', {type: 'rankhow'}), brute: () => go_('me', {type: 'brute'}), exercise: () => go_('me', {type: 'exercise', id: [...exMap.keys()][0]}),
   month: () => { const d = new Date(); go_('me', {type: 'month', ym: d.getFullYear() * 12 + d.getMonth()}); }, plan: () => go_('me', {type: 'plan'}), myex: () => go_('me', {type: 'myex'}),
   editor: () => { go_('train'); A['start-empty'](); const ks = [...exMap.keys()]; ED.data.exercises.push({exId: ks[0], notes: '', sets: [{t: 'w', kg: 20, reps: 12, done: true}, {t: 'n', kg: 62.5, reps: 8, done: true}, {t: 'n', kg: null, reps: null, done: false}]}, {exId: ks[1], notes: '', sets: [{t: 'n', kg: 40, reps: 10, done: false}]}); renderEditor(); },
   picker: () => { SCREENS.editor(); openPicker('add'); const q = document.querySelector('#pkSearch'); q.value = 'press'; q.dispatchEvent(new Event('input', {bubbles: true})); }, // filtrado: la lista entera mide más de 9.000 px
