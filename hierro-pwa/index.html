@@ -304,6 +304,7 @@ table.sets tr+tr td{border-top:1px solid var(--linea)}
 .restline svg{width:16px;height:16px}
 .plates{display:inline-flex;align-items:center;justify-content:flex-end;text-align:right;min-width:0;gap:8px;font-size:13.5px;font-weight:700;color:var(--apagado);font-variant-numeric:tabular-nums}
 .plates .pl{display:inline-flex;align-items:center;gap:2px}
+.plates .pl-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;min-width:0;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:right;cursor:pointer}
 .plates .pl u{display:block;width:14px;height:4px;background:#7c838b;border-radius:0 2px 2px 0}
 .plates .pl i{display:block;width:7px;border-radius:2.5px}
 .sgrid{display:grid;grid-template-columns:44px minmax(0,1.1fr) minmax(0,1fr) minmax(0,.85fr) 52px;gap:6px;align-items:center}
@@ -1386,14 +1387,18 @@ function heat(t, theme){
 }
 const fillBar = pct => { const p = Math.max(0, Math.min(100, +pct || 0)); return `<div class="fill" style="width:${p}%;background:${heat(p / 100)}"></div>`; };
 
-/* Discos por lado para una barra de 20 kg. Si no cuadra exacto, lo más cercano por debajo. */
+/* Discos por lado para una barra de `bar` kg (20 por defecto). Si no cuadra exacto, lo más cercano por debajo. */
 const PLATES = [[25, '#d63f1c', 26], [20, '#3d7de0', 26], [15, '#f0c02e', 23], [10, '#3fa35c', 20], [5, '#f4f1e8', 16], [2.5, '#8d949d', 12], [1.25, '#5d646d', 10]];
-function platesFor(kg){
-  if (!(kg >= 20)) return null;
-  let side = (kg - 20) / 2, sum = 0; const list = [];
+function platesFor(kg, bar = 20){
+  if (!(kg >= bar)) return null;
+  let side = (kg - bar) / 2, sum = 0; const list = [];
   for (const [p] of PLATES) while (side - p >= -1e-9 && list.length < 14) { list.push(p); side -= p; sum += p; }
-  return {list, total: 20 + sum * 2, exact: Math.abs(20 + sum * 2 - kg) < 1e-6};
+  return {list, total: bar + sum * 2, exact: Math.abs(bar + sum * 2 - kg) < 1e-6};
 }
+/* 4.27.1 · Peso de la barra de cada ejercicio (S.settings.bars = {exId: kg}; sin apuntar, 20). Lo pidió Guillermo con su barra Z de 6,5 kg. */
+const BAR = {def: 20, max: 40, opts: [20, 15, 10, 7.5, 5]};
+const okBar = v => typeof v === 'number' && v >= 0 && v <= BAR.max;
+const barOf = id => { const b = S.settings.bars, v = isObj(b) ? b[id] : null; return okBar(v) ? v : BAR.def; };
 
 /* =========================================================
    Biblioteca de ejercicios  (nombre | músculo | material | tipo | otros nombres)
@@ -3783,14 +3788,17 @@ function renderEditor(keepScroll = true){
   if (keepScroll) $('#editor .ebody').scrollTop = st;
   ED.just = null; ED.prc = null;
 }
-function platesHTML(e){
+// Línea de discos del editor. Tocarla cambia el peso de la barra de ese ejercicio (ex-bar).
+function platesHTML(e, ei){
   const x = exOf(e.exId); if (!ED || ED.mode !== 'active' || x.equip !== 'barra' || x.type !== 'wr') return '';
   const si = e.sets.findIndex(q => !q.done); if (si < 0) return '';
-  const kg = e.sets[si].kg ?? (phFor(e, si) || {}).kg, r = kg == null ? null : platesFor(kg); if (!r) return '';
-  if (!r.list.length) return `<span>Solo la barra${r.exact ? '' : ' (20 kg)'}</span>`;
+  const bar = barOf(e.exId), bk = fmtN(bar, 2) + '\u00a0kg', kg = e.sets[si].kg ?? (phFor(e, si) || {}).kg, r = kg == null ? null : platesFor(kg, bar);
+  const btn = (inner, lbl) => `<button class="pl-btn" data-act="ex-bar" data-ei="${ei}" aria-label="${lbl}. Barra de ${bk}. Cambiar el peso de la barra">${inner}</button>`;
+  if (!r) return btn(`<span>Barra ${bk}</span>`, kg == null ? 'Sin peso' : 'Menos que la barra');
+  if (!r.list.length) return btn(`<span>Solo la barra${r.exact ? '' : ` (${bk})`}</span>`, 'Solo la barra');
   const groups = []; r.list.forEach(p => { const g = groups[groups.length - 1]; if (g && g[0] === p) g[1]++; else groups.push([p, 1]); });
-  const txt = groups.map(([p, n]) => (n > 1 ? n + '×' : '') + fmtN(p, 2)).join(' + ');
-  return `<span class="pl" aria-hidden="true"><u></u>${r.list.map(p => { const [, c, hh] = PLATES.find(q => q[0] === p); return `<i style="height:${hh}px;background:${c}"></i>`; }).join('')}</span><span>${txt} por lado${r.exact ? '' : ` (${fmtN(r.total, 2)} kg)`}</span>`;
+  const txt = groups.map(([p, n]) => (n > 1 ? n + '×' : '') + fmtN(p, 2)).join(' + ') + ' por lado' + (r.exact ? '' : ` (${fmtN(r.total, 2)} kg)`);
+  return btn(`<span class="pl" aria-hidden="true"><u></u>${r.list.map(p => { const [, c, hh] = PLATES.find(q => q[0] === p); return `<i style="height:${hh}px;background:${c}"></i>`; }).join('')}</span><span>${txt}</span>`, txt);
 }
 function effBtnHTML(s, ei, si, ef){
   const t = effFmt(s.rpe, ef);
@@ -3830,7 +3838,7 @@ function exCardHTML(e, ei){
   return `<div class="excard ${e.ss ? 'ss' : ''}" id="ex-${ei}">
     <div class="exh">${photoUrl(x) ? `<button class="exthumb" data-act="ed-ex-info" data-id="${x.id}" aria-label="Ver ${esc(x.name)}">${photoImg(x)}</button>` : ''}<button class="nm" data-act="ed-ex-info" data-id="${x.id}">${esc(x.name)}</button>${chk ? rkChipLive(e) : ''}${e.ss ? '<span class="pill accent">Superserie</span>' : MUSCLES[x.muscle] ? `<span class="pill">${esc(MUSCLES[x.muscle])}</span>` : ''}<button class="iconbtn" data-act="ex-menu" data-ei="${ei}" aria-label="Opciones del ejercicio">${ICON.dots}</button></div>
     <textarea class="note" rows="1" data-act="ex-note" data-ei="${ei}" placeholder="Añadir notas…" aria-label="Notas">${esc(e.notes || '')}</textarea>
-    ${m !== 'past' ? `<div class="exinfo"><button class="restline" data-act="ex-rest" data-ei="${ei}" aria-label="Descanso ${rest ? fmtClock(rest) : 'desactivado'}${e.rest == null ? ', por defecto' : ', ajustado'}. Cambiar">${ICON.clock} Descanso ${rest ? fmtClock(rest) : 'desactivado'}</button><span class="plates" id="pl-${ei}">${platesHTML(e)}</span></div>` : ''}
+    ${m !== 'past' ? `<div class="exinfo"><button class="restline" data-act="ex-rest" data-ei="${ei}" aria-label="Descanso ${rest ? fmtClock(rest) : 'desactivado'}${e.rest == null ? ', por defecto' : ', ajustado'}. Cambiar">${ICON.clock} Descanso ${rest ? fmtClock(rest) : 'desactivado'}</button><span class="plates" id="pl-${ei}">${platesHTML(e, ei)}</span></div>` : ''}
     <div class="sgrid hd ${chk ? '' : 'nochk'} ${efc}"><div>Serie</div><div>Anterior</div><div>${cols[0]}</div><div>${cols[1] || ''}</div>${ef ? `<div>${ef === 'rpe' ? 'RPE' : 'RIR'}</div>` : ''}${chk ? '<div></div>' : ''}</div>
     ${rows}
     <button class="addset" data-act="add-set" data-ei="${ei}">${ICON.plus.replace('<svg', '<svg width="16" height="16"')} Añadir serie</button></div>`;
@@ -3840,7 +3848,7 @@ function edTouch(){
     Store.mark('active'); const s = edStats(); const v = $('#edVol'), n = $('#edSets'); if (v) v.textContent = fmtKg(s.vol); if (n) n.textContent = s.n;
     const tot = ED.data.exercises.reduce((a, e) => a + e.sets.length, 0), tt = $('#edTot'), tb = $('#edTemp');
     if (tt) tt.textContent = tot; if (tb) tb.style.width = (tot ? Math.min(100, s.n / tot * 100) : 0) + '%';
-    ED.data.exercises.forEach((e, ei) => { const pl = $('#pl-' + ei); if (pl) pl.innerHTML = platesHTML(e); });
+    ED.data.exercises.forEach((e, ei) => { const pl = $('#pl-' + ei); if (pl) pl.innerHTML = platesHTML(e, ei); });
   }
 }
 
@@ -6411,6 +6419,24 @@ const A = {
     const ei = +el.dataset.ei;
     modal('Descanso', `<div class="menu"><button data-act="ex-rest-set" data-ei="${ei}" data-s="">Por defecto (${S.settings.rest ? fmtClock(S.settings.rest) : 'desactivado'})</button>${[0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300].map(s => `<button data-act="ex-rest-set" data-ei="${ei}" data-s="${s}">${s ? fmtClock(s) : 'Sin descanso'}</button>`).join('')}</div>`);
   },
+  'ex-bar'(el){
+    const ei = +el.dataset.ei, e = ED && ED.data.exercises[ei]; if (!e) return;
+    const cur = barOf(e.exId), other = !BAR.opts.includes(cur);
+    modal('Peso de la barra', `<div class="small muted">${esc(exOf(e.exId).name)}. Se guarda para este ejercicio.</div>
+      <div class="seg" role="group" aria-label="Peso de la barra">${BAR.opts.map(k => `<button data-act="ex-bar-set" data-ei="${ei}" data-kg="${k}" aria-pressed="${k === cur}" aria-label="${fmtN(k, 2)} kg">${fmtN(k, 2)}</button>`).join('')}</div>
+      <label class="f">Otro peso (kg)<input inputmode="decimal" id="barKg" placeholder="Ej.: 6,5" value="${other ? fmtN(cur, 2) : ''}"></label>`,
+      `<button class="btn primary" data-act="ex-bar-set" data-ei="${ei}">Guardar</button>`);
+  },
+  'ex-bar-set'(el){
+    const e = ED && ED.data.exercises[+el.dataset.ei]; if (!e) return;
+    const v = el.dataset.kg != null ? +el.dataset.kg : num(($('#barKg') || {}).value);
+    if (v == null) { closeModal(); return; } // «Guardar» con «Otro peso» vacío: no cambia nada
+    if (!okBar(v)) { toast(`Pon un peso entre 0 y ${BAR.max} kg`); return; }
+    const b = isObj(S.settings.bars) ? {...S.settings.bars} : {};
+    if (v === BAR.def) delete b[e.exId]; else b[e.exId] = Math.round(v * 100) / 100;
+    S.settings.bars = b; Store.mark('meta'); closeModal(); renderEditor(true);
+    toast(`Barra de ${fmtN(v, 2)} kg en ${exOf(e.exId).name}`);
+  },
   'ex-rest-set'(el){ ED.data.exercises[+el.dataset.ei].rest = el.dataset.s === '' ? null : +el.dataset.s; closeModal(); renderEditor(); edTouch(); },
   'rest-add'(el){ if (!REST) return; REST.end = Math.max(Date.now() + 1000, REST.end + +el.dataset.d * 1000); REST.total = Math.max(REST.total, (REST.end - Date.now()) / 1000); REST.fired = false; drawRest(); },
   'rest-skip'(){ REST = null; drawRest(); restLockNotif(false); },
@@ -8262,7 +8288,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.27.0';
+const APP_VERSION = '4.27.1';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
