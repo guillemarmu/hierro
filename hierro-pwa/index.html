@@ -1209,6 +1209,23 @@ input.sw[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offse
 .avatar.av-big{width:120px;height:120px;font-size:44px;margin:8px auto}
 .av-pick{position:relative;overflow:hidden}
 #modal input.av-zoom{width:100%;min-height:44px;padding:0;box-shadow:none;background:none;accent-color:var(--acc)}
+/* ===== 4.27 · Fuerza bruta ===== */
+.br-e{display:grid;place-items:center;font-size:22px;line-height:1}
+.br-e.lg{font-size:38px;flex:none}
+.br-e.xl{font-size:68px;line-height:1.1}
+.br-h{flex:1;min-width:0}.br-h small{display:block;font-size:13px}
+.br-h h3{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.br-v{font-size:22px;line-height:1}
+.br-trs{display:flex;flex-direction:column}
+.br-tr{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:48px;padding:6px 0;border-top:1px solid var(--linea)}
+.br-tr>div{min-width:0}.br-tr b{display:block;font-size:14.5px;overflow-wrap:anywhere}
+.br-tr small{display:block;color:var(--apagado);font-size:13px}
+.br-tr em{font-style:normal;font-weight:700;font-size:13.5px;color:var(--apagado);white-space:nowrap}
+.br-tr:not(.off) em{color:var(--ok-t)}
+.br-tr.off .br-e{filter:grayscale(1);opacity:.5}
+.br-lad>div{min-height:44px}
+.br-ls .rk-row small{white-space:normal}
+.br-lad>div>span>small{display:block;font-size:12.5px;font-weight:400}
 </style>
 </head>
 <body>
@@ -2170,7 +2187,7 @@ const Sync = {
       const nm = w => String(w.delete || (w.update && w.update.name) || '').split('/documents/')[1] + (w.updateMask ? ' [' + w.updateMask.fieldPaths.join(',') + ']' : '');
       const info = {v: APP_VERSION, at: Date.now(), ua: navigator.userAgent.slice(0, 160), sa: isStandalone(), text: syncInfo().text, errs: this.errs,
         meta: d.meta ? {synced: Store.synced.meta, now: d.meta, parts, sk} : null, w: d.w.map(([w]) => w.id).slice(0, 20), del: d.del.slice(0, 20), active: !!d.active,
-        social: si.map(([w]) => nm(w)).slice(0, 20), clan: ci.length ? {synced: Store.synced.score, now: hashOf(Clan.body()), noMonths: !!Clan.noMonths, body: JSON.stringify(Clan.body()).slice(0, 3000)} : null};
+        social: si.map(([w]) => nm(w)).slice(0, 20), clan: ci.length ? {synced: Store.synced.score, now: hashOf(Clan.body()), noMonths: !!Clan.noMonths, noAbs: !!Clan.noAbs, body: JSON.stringify(Clan.body()).slice(0, 3000)} : null};
       await Cloud.commit([Cloud.write(['users', Cloud.session.uid, 'state', 'diag-' + dev], {json: info})]);
     } catch (e) { console.warn('diag', e); }
   }
@@ -2794,7 +2811,7 @@ function streakGrid(weeks = 26){
    ========================================================= */
 let tab = 'home';
 const navStack = {home: [], train: [], social: [], clan: [], me: []};
-const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, calMonth: null, mMetric: 'waist', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false};
+const UI = {hQuery: '', exQuery: '', exMuscle: '', exMetric: 'kg', exTab: 'prog', exRange: 'all', feedN: 15, calMonth: null, mMetric: 'waist', stRange: '3m', stMetric: 'vol', stGroup: 'Espalda', stSec: 'act', stView: 'radar', stMore: {}, rkMore: false, brMore: false};
 const cur = () => navStack[tab][navStack[tab].length - 1];
 function go(view){ navTo(() => { navStack[tab].push(view); }); }
 function back(){ navTo(() => { navStack[tab].pop(); }, {keep: true}); }
@@ -2881,6 +2898,7 @@ function render(){
   else if (v && v.type === 'stats') { title = 'Estadísticas'; html = viewStats(); }
   else if (v && v.type === 'ranks') { title = 'Rangos'; html = viewRanks(); }
   else if (v && v.type === 'rankhow') { title = 'Cómo funcionan'; html = viewRankHow(); }
+  else if (v && v.type === 'brute') { title = 'Fuerza bruta'; html = viewBrute(); }
   else if (v && v.type === 'plan') { title = 'Mi plan'; html = viewPlan(); }
   else if (v && v.type === 'month') { title = 'Informe mensual'; html = viewMonth(v.ym); }
   else if (v && v.type === 'post') { title = 'Entreno'; html = viewPost(v.id); }
@@ -3126,7 +3144,7 @@ function viewExercise(id){
   <div class="seg" role="group">${[['prog', 'Progreso'], ['hist', 'Historial'], ['rec', 'Chiquipuntos']].map(([k, l]) => `<button data-act="ex-tab" data-k="${k}" aria-pressed="${UI.exTab === k}">${l}</button>`).join('')}</div>`;
   if (!all.length) return h.slice(0, h.indexOf('<div class="seg" role="group">')) + `<div class="card empty">${EI('🏁')}<h3>Aún sin estrenar</h3><div>Cuando lo hagas en un entreno, aquí verás tu progreso, tu historial y tus chiquipuntos.</div></div>` + customExBtns(x);
   if (UI.exTab === 'prog') {
-    h += rkExCardHTML(id);
+    h += rkExCardHTML(id) + brExCardHTML(id);
     const metrics = x.type === 'wr' ? [['kg', 'Peso máx.'], ['e1rm', '1RM est.'], ['vol', 'Mejor serie'], ['sess', 'Volumen sesión'], ['reps', 'Reps máx.']]
       : x.type === 'bw' ? [['reps', 'Reps máx.'], ['tot', 'Reps totales'], ['kg', 'Lastre máx.']]
       : x.type === 'dur' ? [['sec', 'Mejor tiempo'], ['tsec', 'Tiempo total']] : x.type === 'kgm' ? [['kg', 'Peso máx.'], ['m', 'Distancia máx.'], ['tm', 'Distancia total']] : [['km', 'Distancia'], ['min', 'Minutos']];
@@ -3348,6 +3366,7 @@ function viewRanks(){
   } else if (R.bw) {
     h += `<div class="card stack rk-hero">${rkIcon(-1, 84)}<h2>Aún no hay rangos</h2><div class="muted">Haz un entreno con ejercicios de fuerza y aquí verás tu rango en cada uno.</div>${sexTxt}</div>`;
   }
+  h += brNavHTML(true);
   if (n) {
     const mus = R.mus, th = themeNow(), tiers = [...new Set(Object.values(mus).filter(m => m && m.idx >= 0).map(m => rkTier(m.idx)))].sort((a, b) => a - b);
     h += `<div class="card stack"><h3>Mapa de rangos</h3><div class="bm-lg">${bodyMap({}, {fills: rkFills(th), label: 'Mapa corporal pintado por rango'})}</div>
@@ -3390,6 +3409,66 @@ function viewRankHow(){
     + `<div class="card stack"><h3>La escalera</h3><div class="rk-ladder">${ladder}</div></div>`
     + C('De dónde salen los números', 'No usamos datos de otros usuarios. Los listones vienen de tablas públicas de estándares de fuerza por peso corporal, y son orientativos: una máquina de tu gimnasio puede ser más dura o más blanda que otra. Los ejercicios asistidos, el cardio y los que no tienen un estándar fiable no llevan rango.')
     + C('Privacidad', 'Tu peso, tu altura, tu edad y tu sexo se quedan en tu móvil y en tu cuenta. Si quieres, puedes enseñar a tus amigos solo la insignia de tu rango global.');
+}
+
+/* 4.27 · Pantalla «Fuerza bruta» y sus tarjetas (ver brAll) */
+const brBar = prog => `<div class="rk-bar" aria-hidden="true" style="--rk:var(--acc)"><i style="width:${(Math.max(prog > 0 ? 3 : 0, Math.min(100, prog * 100))).toFixed(1)}%"></i></div>`;
+const brEmoS = (i, cls = '') => `<span class="br-e ${cls}" aria-hidden="true">${brEmo(i)}</span>`;
+// 1RM que hace falta en un ejercicio para el siguiente animal y, con barra o mancuernas, una serie de ejemplo
+function brNext(E){
+  if (E.idx >= BR_TOP) return 'Lo más bruto que hay. Ahora, a mantenerlo.';
+  const T = BR_TIERS[E.idx + 1], rm = T[0] / 100 * E.f.k * BR.ref, r = clamp(E.s.reps || 5, 1, BR.capWr);
+  let ej = '';
+  if (!E.f.bw) { const st = E.f.x.equip === 'barra' || E.f.x.equip === 'smith' ? 2.5 : 1, kg = Math.ceil((r === 1 ? rm : rm / (1 + r / 30)) / st - 1e-9) * st; ej = ` (por ejemplo, ${fmtN(kg)} kg × ${r})`; }
+  return `Siguiente: ${T[1]} <b>${T[2]}</b> con un 1RM de ${fmtN(Math.ceil(rm), 0)} kg${ej}.`;
+}
+// Detalle del ejercicio, debajo del rango
+function brExCardHTML(id){
+  const E = brAll().ex.get(id); if (!E) return '';
+  const o = brObj(E.rm), kg = fmtN(Math.round(E.rm), 0) + ' kg';
+  return `<div class="card stack" id="brEx"><div class="rk-xh">${brEmoS(E.idx, 'lg')}<div class="br-h"><small class="muted">Fuerza bruta</small><h3>${brName(E.idx)}</h3></div><span class="small muted num">${kg}</span></div>${brBar(E.prog)}
+    <div>Tu mejor 1RM estimado: <b>${kg}</b>${E.f.bw ? ' (tu peso más el lastre)' : E.f.x.equip === 'mancuernas' ? ' por mancuerna' : ''}${o ? `, como ${o[2]} ${o[1]}` : ''}.</div><div class="small muted">${brNext(E)}</div>
+    <div><button class="rk-lnk" data-act="go-brute">Ver tu fuerza bruta</button></div></div>`;
+}
+// Acceso desde Rangos y Perfil
+function brNavHTML(card){
+  const B = brAll(), sub = B.n ? `Global: ${brName(B.idx)}` : 'Lo que levantas en kilos, sin dividir por tu peso';
+  return card ? `<button class="card tap row rk-sc" data-act="go-brute">${brEmoS(B.idx)}<div><b>Fuerza bruta</b><small>${sub}</small></div><i aria-hidden="true">›</i></button>`
+    : `<button data-act="go-brute">${brEmoS(B.idx)}<div><b>Fuerza bruta</b><small>${sub}</small></div><i>›</i></button>`;
+}
+function brTonHTML(ton){
+  const got = BR_TON.filter(t => ton >= t[0]), nx = BR_TON.find(t => ton < t[0]), last = got[got.length - 1];
+  const head = last ? `Has movido <b>${brT(ton)}</b> en total: más que ${last[2]} ${last[1]}.` : ton > 0 ? `Has movido <b>${brT(ton)}</b> en total.` : 'Aún no has movido ningún kilo.';
+  return `<div class="card stack" id="brTon"><div class="row between"><h3>Toneladas movidas</h3><span class="small muted num">${got.length} de ${BR_TON.length}</span></div><div>${head}</div>
+    ${nx ? `${brBar(ton / nx[0])}<div class="small muted">Siguiente: ${nx[2]} ${nx[1]} (${brT(nx[0])}). Te faltan ${brT(nx[0] - ton)}.</div>` : '<div class="small muted">Las tienes todas. Eres una grúa.</div>'}
+    <div class="br-trs">${BR_TON.map(t => { const ok = ton >= t[0];
+      return `<div class="br-tr${ok ? '' : ' off'}"><span class="br-e" aria-hidden="true">${t[1]}</span><div><b>${t[2][0].toUpperCase() + t[2].slice(1)}</b><small>${brT(t[0])}</small></div><em>${ok ? '<span role="img" aria-label="Conseguido">✓</span>' : `${Math.floor(Math.min(.99, ton / t[0]) * 100)} %`}</em></div>`; }).join('')}</div>
+    <div class="small muted">Suma de todo el peso que has levantado, calentamientos incluidos (kilos × repeticiones).</div></div>`;
+}
+function viewBrute(){
+  const B = brAll(); let h = '';
+  if (B.n) {
+    const miss = FZ_GROUPS.filter(([g]) => !B.grp[g]).map(G => G[1].toLowerCase()), N = BR_TIERS[B.idx + 1];
+    h += `<div class="card stack rk-hero">${brEmoS(B.idx, 'xl')}<div class="small muted">Fuerza bruta global</div><h2>${brName(B.idx)}</h2><div style="width:100%">${brBar(B.prog)}</div>
+      <div>${N ? `Vas al ${Math.min(99, Math.round(B.prog * 100))} % de camino a ${N[1]} ${N[2]}.` : 'Arriba del todo: nadie mueve más hierro.'}</div>
+      ${miss.length ? `<div class="small muted">Sin series con peso en ${rkYes(miss)}: ${miss.length > 1 ? 'cuentan' : 'cuenta'} 0 en la media.</div>` : ''}</div>`;
+    h += `<div class="card stack"><h3>Por grupo muscular</h3><div class="rk-list br-ls">${FZ_GROUPS.map(([g, l]) => { const E = B.grp[g];
+      return `<${E ? `button class="rk-row grp" data-act="open-ex" data-id="${esc(E.exId)}"` : 'div class="rk-row grp"'}>${E ? brEmoS(E.idx) : brEmoS(-1)}<div><b>${l}</b><small>${E ? `${esc(exOf(E.exId).name)}, ${fmtN(Math.round(E.rm), 0)} kg` : 'Sin series con peso'}</small>${brBar(E ? E.prog : 0)}</div><em>${E ? brName(E.idx) : '–'}</em></${E ? 'button' : 'div'}>`; }).join('')}</div>
+      <div class="small muted">Cada grupo toma su ejercicio más fuerte. La global es la media de los seis.</div></div>`;
+    const all = [...B.ex.values()].sort((a, b) => b.score - a.score), open = UI.brMore;
+    h += `<div class="card stack"><div class="row between"><h3>Ejercicios</h3><span class="small muted">${all.length}</span></div><div class="rk-list br-ls">${all.slice(0, open ? all.length : BR.lim).map(E => { const o = brObj(E.rm);
+      return `<button class="rk-row" data-act="open-ex" data-id="${esc(E.exId)}">${brEmoS(E.idx)}<div><b>${esc(exOf(E.exId).name)}</b><small>1RM ${fmtN(Math.round(E.rm), 0)} kg${o ? `, como ${o[2]}` : ''}</small></div><em>${brName(E.idx)}</em></button>`; }).join('')}</div>
+      ${all.length > BR.lim ? `<button class="st-more" data-act="br-more">${open ? 'Ver menos' : `Ver los ${all.length} ejercicios`}</button>` : ''}</div>`;
+  } else h += `<div class="card empty">${EI('🐂')}<h3>Aún no hay fuerza bruta</h3><div>Haz un entreno con pesos (press, sentadilla, remo, curl…) y aquí verás qué animal mueves en cada grupo.</div></div>`;
+  h += brTonHTML(B.ton);
+  const r5 = v => fmtN(Math.round(v / 5) * 5, 0) + '\u00a0kg', me = i => B.n && i === B.idx;
+  const lad = BR_TIERS.map((t, i) => [t, i]).reverse().map(([[lo, e, nm], i]) => `<div class="${me(i) ? 'me' : ''}"><span class="br-e" aria-hidden="true">${e}</span><span><b>${nm}</b>${me(i) ? ' <span class="pill accent">Tú</span>' : ''}`
+    + `<small class="muted">${lo ? `Banca ${r5(lo)}, sentadilla ${r5(lo * 1.2)}, peso muerto ${r5(lo * 1.4)}` : `Menos de ${r5(BR_TIERS[1][0])} en banca`}</small></span><small class="muted num">${lo ? 'desde ' + lo : ''}</small></div>`).join('');
+  h += `<div class="card stack"><h3>La escala</h3><div class="rk-ladder br-lad">${lad}</div><div class="small muted">100 puntos es el 1RM de una persona de nivel intermedio de 80 kg. Los kilos de ejemplo son de un 1RM con barra.</div></div>`;
+  h += `<div class="card stack"><h3>Cómo funciona</h3><div>Los rangos dividen lo que levantas entre tu peso. La fuerza bruta no: cuenta los kilos tal cual, así que aquí gana quien más mueve.</div>
+    <div>Se usa tu mejor 1RM estimado de siempre en cada ejercicio, comparado con lo que levanta un intermedio de 80 kg. Así un curl y una sentadilla se miden en la misma escala. En dominadas y fondos cuenta tu peso más el lastre. No se ajusta por sexo, altura ni edad.</div>
+    <div class="small muted">Si activas «Compartir mi fuerza bruta» en tu clan (Clasificación › Fuerza › Bruta), tu clan ve tu animal en cada grupo y el global. Nunca los kilos ni tu peso.</div></div>`;
+  return h;
 }
 
 /* 4.12.4 · Perfil: «Tu cuerpo» (peso, altura y sexo, lo que necesitan los rangos) y «Otras medidas» (opcionales), en tarjetas separadas. */
@@ -3441,7 +3520,7 @@ function viewMe(){
   let h = `<div class="card row me-head" style="gap:14px">${Social.ready() ? myAvatar(name) : `<div class="avatar">${esc(name.slice(0, 1).toUpperCase())}</div>`}<div style="flex:1;min-width:0"><h2 style="overflow:hidden;text-overflow:ellipsis">${esc(name)}</h2><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">${Cloud.session ? esc(Cloud.session.email) : 'Sin cuenta: tus datos están solo en este móvil'}</div>${Cloud.session ? '' : authBtn('Crear cuenta o entrar', 'primary sm')}</div></div>`;
   h += `<div class="card stats"><div class="stat"><b>${tot}</b><span>Entrenos</span></div><div class="stat"><b>${fmtKg(vol)}</b><span>Volumen</span></div><div class="stat"><b>${fmtN(ms / 36e5, 0)} h</b><span>Entrenando</span></div></div>`;
   h += `<div class="card navlist"><button data-act="go-plan"><span>${ICON.list}</span><div><b>Mi plan</b><small>Tu semana tipo y análisis de tus rutinas</small></div><i>›</i></button><button data-act="go-stats"><span>${ICON.chart}</span><div><b>Estadísticas</b><small>Reparto muscular, evolución, ejercicios principales</small></div><i>›</i></button>
-    <button data-act="go-ranks"><span>${rkIcon(rkAll().glob ? rkAll().glob.idx : -1, 26)}</span><div><b>Rangos</b><small>${rkAll().glob ? 'Global: ' + rkName(rkAll().glob.idx) : 'Tu nivel en cada ejercicio y músculo'}</small></div><i>›</i></button>
+    <button data-act="go-ranks"><span>${rkIcon(rkAll().glob ? rkAll().glob.idx : -1, 26)}</span><div><b>Rangos</b><small>${rkAll().glob ? 'Global: ' + rkName(rkAll().glob.idx) : 'Tu nivel en cada ejercicio y músculo'}</small></div><i>›</i></button>${brNavHTML()}
     <button data-act="go-month" data-ym="${S.workouts.some(w => { const d = new Date(w.start); return d.getFullYear() * 12 + d.getMonth() === now.getFullYear() * 12 + now.getMonth(); }) ? now.getFullYear() * 12 + now.getMonth() : pm}"><span>${ICON.trophy}</span><div><b>Informe mensual</b><small>Tu mes comparado con el anterior, chiquipuntos y constancia</small></div><i>›</i></button>${S.customEx.length ? `<button data-act="go-myex"><span>${ICON.dumbbell}</span><div><b>Ejercicios propios</b><small>${plural(S.customEx.length, 'ejercicio creado por ti', 'ejercicios creados por ti')}</small></div><i>›</i></button>` : ''}</div>`;
   const sg = streakGrid(26);
   h += `<div class="card stack"><div class="row between"><h3>Últimas 26 semanas</h3><span class="small muted">${plural(sg.days, 'día', 'días')}, ${weekStreak() === 1 ? '1 sem. seguida' : weekStreak() + ' sem. seguidas'}</span></div>${sg.svg}<div class="small muted">Cada cuadro es un día; más color, más volumen.</div></div>`;
@@ -6449,6 +6528,8 @@ const A = {
   'go-ranks'(){ go({type: 'ranks'}); },
   'go-rankhow'(){ go({type: 'rankhow'}); },
   'rk-more'(){ UI.rkMore = !UI.rkMore; render(); },
+  'go-brute'(){ go({type: 'brute'}); },
+  'br-more'(){ UI.brMore = !UI.brMore; render(); },
   'rk-mus'(el){
     const k = el.dataset.k, M = rkAll().mus[k]; if (!M) return;
     modal(`${esc(MUSCLES[k] || k)} · ${rkName(M.idx)}`, `<div class="small muted" style="margin-bottom:6px">Sale de estos ejercicios; los que más series llevan pesan más.</div><div class="rk-list">${M.ex.map(E => `<button class="rk-row" data-act="open-ex" data-id="${esc(E.exId)}"><span>${rkIcon(E.idx, 26)}</span><div><b>${esc(exOf(E.exId).name)}</b><small>${plural(E.sets, 'serie', 'series')}</small></div><em>${rkName(E.idx)}</em></button>`).join('')}</div>`);
@@ -7020,7 +7101,7 @@ function rkSust(win){ // win: puntos de las últimas ≤6 sesiones, de la más r
   const a = win.map((n, j) => ({n, w: RK.rec[j]})).sort((p, q) => q.n - p.n || q.w - p.w).slice(0, m);
   let s = 0, w = 0; for (const o of a) { s += o.n * o.w; w += o.w; } return w ? s / w : 0;
 }
-function rkReset(){ rkAll.c = null; }
+function rkReset(){ rkAll.c = null; brAll.c = null; }
 // peso que usan los rangos para un entreno que empieza en t: el último válido anterior y, si no hay, el primero (null sin pesos)
 function bwPicker(list){
   const ms = list.filter(okW).sort((a, b) => a.date - b.date);
@@ -7094,6 +7175,57 @@ function rkDiff(a, b){
   return out;
 }
 const rkPublic = () => { const R = rkAll(); return R.glob && (S.settings.rkShare ?? RK.shareDef) ? R.glob.idx : null; };
+/* 4.27 · Fuerza bruta: lo que levantas en kilos, sin dividir por tu peso (los rangos sí lo dividen). Lo pidió un amigo de Guillermo.
+   Puntos de un ejercicio = tu mejor 1RM estimado de siempre ÷ 1RM de un intermedio de 80 kg × 100, con los mismos estándares que
+   los rangos (rkInfo: FZ_STD, RK_STD y los de respaldo de los ejercicios propios). Así un curl y una sentadilla van en la misma escala,
+   pero quien más kilos mueve, más arriba está. Grupo = su mejor ejercicio; global = media de los 6 grupos de FZ_GROUPS (vacío = 0).
+   En dominadas y fondos la carga es tu peso + el lastre (sin peso apuntado no cuentan). Sin sexo, altura ni edad: es fuerza bruta.
+   Al clan (scores.abs) solo va el escalón de cada grupo y del global, nunca los kilos: con la fuerza relativa al lado, los kilos
+   exactos dejarían calcular el peso corporal. */
+const BR = {ref: 80, capWr: 12, capBw: 20, max: 400, lim: 8};
+const BR_TIERS = [[0, '🐈', 'Gato'], [40, '🐺', 'Lobo'], [60, '🐗', 'Jabalí'], [80, '🐻', 'Oso'], [100, '🐂', 'Toro'], [120, '🦬', 'Bisonte'], [140, '🦏', 'Rinoceronte'], [165, '🐘', 'Elefante'], [195, '🦖', 'T-Rex']];
+const BR_TOP = BR_TIERS.length - 1;
+// Con qué se compara un 1RM (kg aproximados)
+const BR_OBJ = [[4, '🐈', 'un gato'], [10, '🍉', 'una sandía grande'], [23, '🧳', 'una maleta facturada'], [35, '🐕', 'un pastor alemán'], [45, '🐺', 'un lobo'],
+  [70, '🧍', 'una persona'], [85, '🦘', 'un canguro rojo'], [110, '🐼', 'un panda gigante'], [140, '🛵', 'un escúter'], [190, '🦁', 'un león'],
+  [230, '🏍️', 'una moto grande'], [300, '🐻', 'un oso pardo'], [450, '🎹', 'un piano de cola'], [550, '🐴', 'un caballo'], [900, '🐂', 'un toro'], [1300, '🚗', 'un coche']];
+// Trofeos de tonelaje: kilos movidos en toda tu historia (volumen de todos los entrenos)
+const BR_TON = [[500, '🎹', 'un piano de cola'], [1500, '🚗', 'un coche'], [6000, '🐘', 'un elefante africano'], [12000, '🚌', 'un autobús'], [40000, '🚛', 'un camión cargado'],
+  [120000, '🚂', 'una locomotora'], [150000, '🐋', 'una ballena azul'], [204000, '🗽', 'la Estatua de la Libertad'], [400000, '✈️', 'un avión jumbo cargado'],
+  [2970000, '🚀', 'el cohete Saturno V'], [7300000, '🗼', 'el hierro de la Torre Eiffel'], [52000000, '🚢', 'el Titanic']];
+const brTier = n => { let i = 0; while (i < BR_TOP && n >= BR_TIERS[i + 1][0]) i++; return i; };
+const brName = i => BR_TIERS[i] ? BR_TIERS[i][2] : 'Sin animal';
+const brEmo = i => BR_TIERS[i] ? BR_TIERS[i][1] : '–';
+const brProg = n => { const i = brTier(n); return i >= BR_TOP ? 1 : (n - BR_TIERS[i][0]) / (BR_TIERS[i + 1][0] - BR_TIERS[i][0]); };
+const brObj = (kg, list = BR_OBJ) => { let o = null; for (const x of list) if (kg >= x[0]) o = x; return o; };
+const brT = kg => kg >= 1000 ? fmtN(kg / 1000, kg >= 1e5 ? 0 : 1) + ' t' : fmtN(kg, 0) + ' kg'; // toneladas con espacio duro
+function brRm(f, s, bw){
+  if (!isWork(s) || !(s.reps > 0)) return 0;
+  const load = f.bw ? (bw > 0 ? bw + (+s.kg || 0) : 0) : (+s.kg || 0); if (!(load > 0)) return 0;
+  return s.reps === 1 ? load : load * (1 + Math.min(s.reps, f.bw ? BR.capBw : BR.capWr) / 30);
+}
+// {ex: Map exId → {rm, score, idx, prog, s, t}, grp: {pe: E…}, n (grupos con datos), tot, idx, prog, ton (kg de toda tu historia)}
+function brAll(){
+  if (brAll.c) return brAll.c;
+  const bwAt = bwPicker(S.measures), info = new Map(), ex = new Map(); let ton = 0;
+  for (const w of S.workouts) {
+    ton += wVolume(w); let bw;
+    for (const e of w.exercises) {
+      let f = info.get(e.exId); if (f === undefined) { const r = rkInfo(e.exId); info.set(e.exId, f = r && r.mode === 'load' ? r : null); }
+      if (!f) continue; if (f.bw && bw === undefined) bw = bwAt(w.start);
+      for (const s of e.sets) { const rm = brRm(f, s, bw), E = ex.get(e.exId); if (rm > 0 && (!E || rm > E.rm)) ex.set(e.exId, {exId: e.exId, rm, s, t: w.start, f}); }
+    }
+  }
+  ex.forEach(E => { E.score = Math.min(BR.max, E.rm / (E.f.k * BR.ref) * 100); E.idx = brTier(E.score); E.prog = brProg(E.score); });
+  const grp = {};
+  for (const [g, , ms] of FZ_GROUPS) ex.forEach(E => { if (ms.includes(E.f.x.muscle) && (!grp[g] || E.score > grp[g].score)) grp[g] = E; });
+  const n = Object.keys(grp).length, tot = FZ_GROUPS.reduce((a, [g]) => a + (grp[g] ? grp[g].score : 0), 0) / FZ_GROUPS.length;
+  return brAll.c = {ex, grp, n, tot, idx: n ? brTier(tot) : -1, prog: brProg(tot), ton};
+}
+// Lo que se publica en el clan: solo escalones (0-8)
+function brPublic(){ const B = brAll(); if (!B.n) return null; const o = {t: B.idx}; for (const g in B.grp) o[g] = B.grp[g].idx; return o; }
+const brPubOf = s => { const a = s && s.abs; if (!a || typeof a !== 'object' || !('t' in a)) return null; const o = {t: clamp(Math.round(a.t), 0, BR_TOP)};
+  for (const [g] of FZ_GROUPS) if (g in a) o[g] = clamp(Math.round(a[g]), 0, BR_TOP); return o; };
 // [id, emoji, nombre, cómo se consigue, progreso (valor, meta) | null si es un premio]
 const LOGROS = [
   ['w1', '🎉', 'Primer entreno', 'Registra tu primer entreno', s => [s.n, 1]],
@@ -7259,8 +7391,8 @@ function relSide(c, per, K = clanKeys()){
 
 const Clan = {
   uid: null, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false,
-  rank: 'pts', lift: 'total', per: 'w', emo: null, allLogros: false,
-  check(){ const u = Social.myUid() || null; if (this.uid !== u) Object.assign(this, {uid: u, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false, noMonths: false, sc: null}); },
+  rank: 'pts', lift: 'total', per: 'w', fz: 'rel', emo: null, allLogros: false,
+  check(){ const u = Social.myUid() || null; if (this.uid !== u) Object.assign(this, {uid: u, clans: [], scores: new Map(), extra: new Map(), fetching: new Set(), loaded: false, loading: false, err: null, at: 0, denied: false, noMonths: false, noAbs: false, sc: null}); },
   myCid(){ return S.settings.clan || ''; },
   mine(){ const c = this.clans.find(x => x._id === this.myCid()); return c && (c.members || []).includes(Social.myUid()) ? c : null; },
   // Resumen público (scores/{uid}). Sin peso corporal: solo semanas, racha, logros y, si lo activas, el cociente de fuerza relativa.
@@ -7270,6 +7402,8 @@ const Clan = {
       ach: L.ach.filter(id => S.settings.relShare || !REL_ACH.has(id))};
     if (!this.noMonths) b.months = L.months; // meses (versión 4.5): si las reglas publicadas aún no los admiten, se dejan fuera
     if (S.settings.relShare && Object.keys(L.fz.r).length) b.rel = L.fz.r; // nivel por grupo (6 claves: las reglas admiten hasta 6)
+    // 4.27: fuerza bruta, solo escalones. Nunca junto con la relativa: con las dos se podría acotar el peso (rel × peso ÷ 80 = bruta)
+    if (S.settings.brShare && !S.settings.relShare && !this.noAbs) { const a = brPublic(); if (a) b.abs = a; }
     return b;
   },
   // Escrituras para la sincronización (van en un commit aparte: si fallan, no frenan nada más)
@@ -7288,6 +7422,8 @@ const Clan = {
     catch (e) {
       if (e.offline || e.session) throw e;
       // reglas antiguas (sin «months»): se reintenta con el resumen de siempre
+      // 4.27: reglas sin «abs» (fuerza bruta): primero se quita eso
+      if (e.status === 403 && !this.noAbs && this.body().abs) { this.noAbs = true; return this.push(); }
       if (e.status === 403 && !this.noMonths) { this.noMonths = true; return this.push(); }
       if (e.status === 403) this.denied = true; console.warn('Clan', e); Sync.err('clan', e); return 0;
     }
@@ -7439,7 +7575,8 @@ function clanHowHTML(){
     <p><b>🔥 Constancia.</b> 10 puntos por cada día que entrenas, hasta 5 días (50 puntos). Cuenta el entreno si tiene al menos 3 series.</p>
     <p><b>✨ Chiquipuntos.</b> 3 puntos por cada ejercicio en el que bates una marca personal, hasta 30 puntos a la semana.</p>
     <p><b>📈 Mejora.</b> Tu mejor marca de la semana en cada ejercicio (1RM estimado, repeticiones o tiempo) frente a tu mejor marca de las 8 semanas anteriores. Cada 1 % de mejora son 2 puntos; como mucho un 10 % por ejercicio y 40 puntos a la semana. Solo cuentan ejercicios que hayas hecho al menos 2 veces en esas 8 semanas, así que bajar peso a propósito no sirve de nada.</p>
-    <p><b>💪 Fuerza relativa (si quieres).</b> Tu 1RM estimado de las últimas 12 semanas dividido entre tu peso. Solo se publica el resultado (por ejemplo 1,35×), nunca tu peso.</p>
+    <p><b>💪 Fuerza (si la compartes).</b> Relativa: tu mejor serie de las últimas 12 semanas en cada grupo comparada con lo normal para tu peso (100 es nivel intermedio).
+      Bruta: tu mejor 1RM estimado de siempre en kilos, sin tener en cuenta tu peso, convertido en un animal (de 🐈 gato a 🦖 T-Rex). Se comparte una de las dos, no ambas, y solo el nivel o el animal: nunca tu peso ni tus kilos.</p>
     <p><b>📅 Semana, mes y año.</b> Cada semana cuenta entera en el mes en que cae su lunes (la del 29 de diciembre al 4 de enero es de diciembre). El mes suma sus semanas y el año suma sus meses, así que el mes que ves es el de la semana en curso.</p>
     <p><b>🔒 Entrar en un clan.</b> Si el clan pide permiso, su jefe acepta o rechaza tu solicitud. Con el enlace de invitación de un miembro entras directo. Solo se puede estar en un clan.</p>
     <p><b>🛡️ Clan contra clan.</b> Media de puntos por miembro activo (quien ha entrenado en las últimas 4 semanas o en el periodo): un clan de 3 compite igual que uno de 20.</p>
@@ -7464,7 +7601,33 @@ function clanLeft(){
   const ms = clanKeys().next - Date.now(), d = Math.floor(ms / 864e5);
   return d >= 2 ? `Quedan ${d} días` : d === 1 ? 'Queda 1 día' : `Quedan ${Math.max(1, Math.ceil(ms / 36e5))} h`;
 }
-// Filas de una clasificación. ms: [{uid, me, name, s, c?}]; kind: pts | mip | rel | con; per: w | m | y (rel siempre es la última)
+// 4.27 · Fuerza bruta en la clasificación del clan. Valor para ordenar: con «Total», (escalón global + 1) × 100 + suma de (escalón + 1) de los grupos (desempate);
+// con un grupo, su escalón + 1. Así un 🐈 (escalón 0) no queda como «sin datos».
+function brVal(a){ if (!a) return null; if (Clan.lift === 'total') return (a.t + 1) * 100 + FZ_GROUPS.reduce((n, [g]) => n + (g in a ? a[g] + 1 : 0), 0); return Clan.lift in a ? a[Clan.lift] + 1 : null; }
+const brIdxOf = v => (Clan.lift === 'total' ? Math.floor(v / 100) : v) - 1;
+const brShown = v => { const i = brIdxOf(v); return `<span class="br-v" role="img" aria-label="${brName(i)}">${brEmo(i)}</span>`; };
+function brSub(r){
+  if (r.v != null) {
+    const a = brPubOf(r.s), i = brIdxOf(r.v);
+    if (Clan.lift !== 'total') { const E = r.me ? brAll().grp[Clan.lift] : null; return E ? `${brName(i)}: ${exOf(E.exId).name}` : brName(i); }
+    return brName(i) + ': ' + FZ_GROUPS.filter(([g]) => g in a).sort((p, q) => a[q[0]] - a[p[0]]).map(([g, l]) => `${l} ${brName(a[g]).toLowerCase()}`).join(', ');
+  }
+  if (r.me) return !S.settings.brShare ? 'Activa «Compartir» para salir' : Clan.noAbs ? 'Aún no se puede publicar: falta actualizar el servidor' : 'Sin series con peso' + (Clan.lift === 'total' ? '' : ' de ' + fzName(Clan.lift).toLowerCase());
+  return 'No comparte su fuerza bruta';
+}
+// Fuerza: relativa o bruta, grupo y «Compartir mi fuerza» (una sola casilla para las dos)
+function clanFzHTML(L){
+  const ab = Clan.fz === 'abs';
+  return `<div class="seg sm" role="group" aria-label="Tipo de fuerza">${[['rel', 'Relativa'], ['abs', 'Bruta']].map(([k, l]) => `<button data-act="cl-fz" data-k="${k}" aria-pressed="${(ab ? 'abs' : 'rel') === k}">${l}</button>`).join('')}</div>
+    <div class="chips">${REL_TABS.map(([k, l]) => `<button class="chip" data-act="cl-lift" data-k="${k}" aria-pressed="${Clan.lift === k}">${l}</button>`).join('')}</div>
+    ${ab ? `<label class="row cl-share"><input type="checkbox" class="sw" id="clBr" ${S.settings.brShare ? 'checked' : ''}><span><b>Compartir mi fuerza bruta</b><br>
+      <span class="small muted">Tu mejor 1RM estimado de siempre en cada grupo, en kilos y sin tener en cuenta tu peso, convertido en un animal. El total es la media de los 6 grupos. Solo se publica el animal, nunca los kilos. Se comparte la relativa o la bruta, no las dos: juntas dejarían calcular tu peso.</span></span></label>`
+      : `<label class="row cl-share"><input type="checkbox" class="sw" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza relativa</b><br>
+      <span class="small muted">Tu mejor serie de las últimas ${CL.relWeeks} semanas en cada grupo, comparada con lo normal para tu peso: 100 es nivel intermedio.
+      El total es la media de los 6 grupos. Solo se publica el nivel, nunca tu peso. ${L.bw ? 'Se calcula con tu último peso (Perfil › Tu cuerpo).' : 'Para activarlo apunta tu peso en Perfil › Tu cuerpo.'} Se comparte la relativa o la bruta, no las dos.</span></span></label>`}
+    ${L.bw || ab ? '' : '<button class="btn sm" data-act="cl-weight">Apuntar mi peso</button>'}`;
+}
+// Filas de una clasificación. ms: [{uid, me, name, s, c?}]; kind: pts | mip | rel | abs | con; per: w | m | y (rel siempre es la última)
 function clanRankRows(ms, kind, per = Clan.per, opts = {}){
   ms = ms.filter(m => !m.blocked); // 4.14: las personas bloqueadas no salen en las clasificaciones
   const K = clanKeys();
@@ -7473,6 +7636,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
     const x = pv.get(m.uid);
     if (kind === 'pts') return x.pts;
     if (kind === 'mip') return Math.round(x.impr * 10) / 10;
+    if (kind === 'abs') return brVal(brPubOf(m.s));
     if (kind === 'rel') { const r = m.s && m.s.rel; if (!fzNew(r)) return null; const v = Clan.lift === 'total' ? fzTotal(r) : clamp(r[Clan.lift], 0, CL.maxFz); return v > 0 ? Math.round(v) : null; }
     return x.days;
   };
@@ -7480,7 +7644,7 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
   let rows = ms.map(m => ({...m, v: val(m), t: tie(m)})).sort((a, b) => (b.v ?? -1) - (a.v ?? -1) || b.t - a.t || a.name.localeCompare(b.name, 'es'));
   if (opts.limit) rows = rows.slice(0, opts.limit);
   const max = Math.max(1e-9, ...rows.map(r => r.v || 0));
-  const unit = {pts: 'pts', mip: '%', rel: '', con: 'días'}[kind];
+  const unit = {pts: 'pts', mip: '%', rel: '', abs: '', con: 'días'}[kind];
   const gname = Clan.lift === 'total' ? '' : fzName(Clan.lift), L = kind === 'rel' ? myLeague() : null;
   const relSub = r => {
     const fr = r.s && r.s.rel;
@@ -7498,10 +7662,10 @@ function clanRankRows(ms, kind, per = Clan.per, opts = {}){
     if (has) pos++;
     let sub = kind === 'pts' ? `${plural(x.days, 'día', 'días')}, ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}, +${fmtN(x.impr)} % de mejora`
       : kind === 'mip' ? `${plural(x.n, 'entreno', 'entrenos')} y ${plural(x.prs, 'chiquipunto', 'chiquipuntos')}`
-      : kind === 'rel' ? relSub(r)
+      : kind === 'rel' ? relSub(r) : kind === 'abs' ? brSub(r)
       : st ? `Racha de ${plural(st, 'semana seguida', 'semanas seguidas')}` : 'Sin racha ahora mismo';
-    if (kind !== 'rel' && x.partial) sub = 'App sin actualizar: solo sus 8 últimas semanas';
-    const shown = !has ? '–' : kind === 'mip' ? '+' + fmtN(r.v) : fmtN(r.v, 0);
+    if (kind !== 'rel' && kind !== 'abs' && x.partial) sub = 'App sin actualizar: solo sus 8 últimas semanas';
+    const shown = !has ? '–' : kind === 'abs' ? brShown(r.v) : kind === 'mip' ? '+' + fmtN(r.v) : fmtN(r.v, 0);
     const medal = has && r.v > 0 ? ['🥇', '🥈', '🥉'][pos - 1] : null;
     const tag = opts.badge && r.c ? ` <span class="rl-tag" aria-label="${esc(r.c.name)}">${esc(r.c.emoji)}</span>` : '';
     return `<button class="cl-row${r.me ? ' me' : ''}" data-act="${r.me ? 'soc-user' : 'cl-cmp'}" data-id="${esc(r.uid)}"><b class="cl-pos${medal ? ' md' : ''}">${medal || (has ? pos : '')}</b>${avatar(r.name, 'sm', clamp((((r.s || {}).weeks || {})[K.cur] || {}).days, 0, 7), r.uid)}<span class="cl-nm"><b>${esc(r.name)}${r.me ? ' <em>(tú)</em>' : ''}${tag}</b><small>${esc(sub)}</small><i class="cl-bar"><span style="width:${has ? Math.round((r.v || 0) / max * 100) : 0}%"></span></i></span><span class="cl-val num">${shown}${has && unit ? `<small>${unit}</small>` : ''}</span></button>`;
@@ -7573,16 +7737,11 @@ function viewClan(){
       <div class="cl-when"><span class="pill accent">${clanLeft()}</span><span class="small muted">${cw.pts > 0 ? `Vas ${myPos}.º de ${c.members.length}` : 'Aún sin puntos esta semana'}</span></div></div>
       <div class="cl-mix" role="img" aria-label="${parts.map(([l, v]) => `${l} ${v}`).join(', ')}">${parts.map(([, v, , col]) => v ? `<i style="width:${v / CL_MAXPTS * 100}%;background:${col}"></i>` : '').join('')}</div>
       <div class="cl-leg">${parts.map(([l, v, mx, col]) => `<span><em><i style="background:${col}"></i>${l}</em><b class="num">${v}<small>/${mx}</small></b></span>`).join('')}</div>${cw.pts > 0 ? '' : '<button class="btn sm primary" data-act="tab" data-tab="train">Entrenar y sumar puntos</button>'}</div></div>`;
-  const per = Clan.per, cap = kind === 'rel' ? '' : `<div class="small muted cl-cap">${perName(per, K)} · ${per === 'w' ? clanLeft().toLowerCase() : per === 'm' ? `semanas que empiezan en ${K.mes}` : `suma de los meses de ${K.yr}`}</div>`;
-  h += `<div class="card stack" id="clRank"><div class="row between"><h3>Clasificación</h3>${kind === 'rel' ? '<span class="small muted">100 = intermedio</span>' : perSeg(per)}</div>
+  const per = Clan.per, rk = kind === 'rel' && Clan.fz === 'abs' ? 'abs' : kind, cap = kind === 'rel' ? '' : `<div class="small muted cl-cap">${perName(per, K)} · ${per === 'w' ? clanLeft().toLowerCase() : per === 'm' ? `semanas que empiezan en ${K.mes}` : `suma de los meses de ${K.yr}`}</div>`;
+  h += `<div class="card stack" id="clRank"><div class="row between"><h3>Clasificación</h3>${rk === 'rel' ? '<span class="small muted">100 = intermedio</span>' : rk === 'abs' ? '<span class="small muted">En kilos, sin tu peso</span>' : perSeg(per)}</div>
     <div class="seg sm" role="group" aria-label="Clasificación">${[['pts', 'Puntos'], ['mip', 'Mejora'], ['rel', 'Fuerza'], ['con', 'Constancia']].map(([k, l]) => `<button data-act="cl-rank" data-k="${k}" aria-pressed="${kind === k}">${l}</button>`).join('')}</div>`;
-  if (kind === 'rel') {
-    h += `<div class="chips">${REL_TABS.map(([k, l]) => `<button class="chip" data-act="cl-lift" data-k="${k}" aria-pressed="${Clan.lift === k}">${l}</button>`).join('')}</div>
-      <label class="row cl-share"><input type="checkbox" class="sw" id="clRel" ${S.settings.relShare ? 'checked' : ''} ${L.bw ? '' : 'disabled'}><span><b>Compartir mi fuerza</b><br>
-        <span class="small muted">Tu mejor serie de las últimas ${CL.relWeeks} semanas en cada grupo, comparada con lo normal para tu peso: 100 es nivel intermedio. El total es la media de los 6 grupos. Solo se publica el nivel, nunca tu peso. ${L.bw ? 'Se calcula con tu último peso (Perfil › Tu cuerpo).' : 'Para activarlo apunta tu peso en Perfil › Tu cuerpo.'}</span></span></label>
-      ${L.bw ? '' : '<button class="btn sm" data-act="cl-weight">Apuntar mi peso</button>'}`;
-  }
-  h += `${cap}<div class="cl-list">${clanRankRows(Clan.members(c), kind, per)}</div>
+  if (kind === 'rel') h += clanFzHTML(L);
+  h += `${cap}<div class="cl-list">${clanRankRows(Clan.members(c), rk, per)}</div>
     ${kind === 'mip' ? '<div class="small muted">Suma de lo que has mejorado frente a tus propias marcas. Aquí gana quien más progresa, no quien más levanta.</div>' : kind === 'con' ? '<div class="small muted">Días entrenados. Si hay empate, gana la racha de semanas seguidas.</div>' : kind === 'pts' ? '<div class="small muted">Toca a alguien para compararte.</div>' : ''}</div>`;
   h += relPiquesHTML(K) + relAllianceHTML(K) + clanAwardsHTML(c) + clanVsHTML(per === 'w' ? T : Clan.table(per), c._id, per) + clanLogrosHTML(L) + clanHowHTML();
   h += `<button class="btn block" data-act="cl-invite">Invitar al clan</button>
@@ -7859,6 +8018,7 @@ function clanCmpHTML(uid){
   const rows = [['Puntos', x.pts, y.pts, v => fmtN(v, 0)], ['Días', x.days, y.days, v => fmtN(v, 0)], ['Entrenos', x.n, y.n, v => fmtN(v, 0)], ['Chiquipuntos', x.prs, y.prs, v => fmtN(v, 0)], ['Mejora', x.impr, y.impr, v => '+' + fmtN(v) + ' %'], ['Racha', sa, sb, v => v + ' sem.']];
   const fa = a && a.rel, fb = b && b.rel;
   if (fzNew(fa) && fzNew(fb)) { rows.push(['Fuerza', fzTotal(fa), fzTotal(fb), v => fmtN(v, 0)]); FZ_GROUPS.forEach(([g, l]) => { const p = Math.round(clamp(fa[g], 0, CL.maxFz)), q = Math.round(clamp(fb[g], 0, CL.maxFz)); if (p || q) rows.push([l, p, q, v => v ? fmtN(v, 0) : '–']); }); }
+  const ba = brPubOf(a), bb = brPubOf(b); if (ba && bb) rows.push(['Fuerza bruta', ba.t + 1, bb.t + 1, v => brEmo(v - 1)]);
   const d = x.pts - y.pts;
   const verdict = !b ? `${first} todavía no compite en la liga.` : d > 0 ? `💪 Le sacas <b>${plural(d, 'punto', 'puntos')}</b> ${perThis(per)}` : d < 0 ? `😤 Te saca <b>${plural(-d, 'punto', 'puntos')}</b> ${perThis(per)}. ¡A por ${first}!` : `🤝 Empate ${perThis(per)}: el próximo entreno decide`;
   return `<div id="clCmp" class="stack" data-id="${esc(uid)}">
@@ -7901,6 +8061,7 @@ Object.assign(A, {
   'cl-refresh'(){ Clan.err = null; Clan.load(true); clanRender(); },
   'cl-rank'(el){ Clan.rank = el.dataset.k; clanRender(); },
   'cl-lift'(el){ Clan.lift = el.dataset.k; clanRender(); },
+  'cl-fz'(el){ Clan.fz = el.dataset.k === 'abs' ? 'abs' : 'rel'; clanRender(); },
   'cl-logros'(){ Clan.allLogros = !Clan.allLogros; clanRender(); },
   'cl-weight'(){ navTo(() => { tab = 'me'; navStack.me = []; }); A['add-weight'](); },
   'cl-new'(){ clanForm(null); },
@@ -8076,7 +8237,13 @@ Object.assign(A, {
     catch (e) { if (e.name === 'NotAllowedError') await copy(); } // 4.16: si el móvil no deja compartir (tras esperar la clave), se copia; cancelar no hace nada
   }
 });
-document.addEventListener('change', ev => { if (ev.target.id === 'clRel') { S.settings.relShare = ev.target.checked; Store.mark(); clanRender(); toast(ev.target.checked ? 'Compartes tu nivel de fuerza (nunca tu peso)' : 'Ya no compartes tu fuerza'); } });
+// 4.27: «Compartir mi fuerza» relativa o bruta, nunca las dos (juntas dejarían acotar el peso corporal)
+document.addEventListener('change', ev => {
+  const k = {clRel: 'relShare', clBr: 'brShare'}[ev.target.id]; if (!k) return;
+  const o = k === 'relShare' ? 'brShare' : 'relShare', was = !!S.settings[o];
+  S.settings[k] = ev.target.checked; if (ev.target.checked) S.settings[o] = false; Store.mark(); clanRender();
+  toast(!ev.target.checked ? 'Ya no compartes tu fuerza' : was ? `Compartes tu fuerza ${k === 'brShare' ? 'bruta' : 'relativa'} y dejas de compartir la ${k === 'brShare' ? 'relativa' : 'bruta'}` : 'Compartes tu nivel de fuerza (nunca tu peso ni tus kilos)');
+});
 // Al borrar la cuenta: salir del clan (o pasarlo a otro / borrarlo si eres el jefe)
 async function clanOnDelete(){
   const me = Social.myUid(), cid = S.settings.clan; if (!me) return;
@@ -8095,7 +8262,7 @@ window.addEventListener('pagehide', () => Store.flushNow());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Store.flushNow(); });
 
 /* ---------- Instalación y actualizaciones (PWA) ---------- */
-const APP_VERSION = '4.26.0';
+const APP_VERSION = '4.27.0';
 const UA = navigator.userAgent;
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /android/i.test(UA);
